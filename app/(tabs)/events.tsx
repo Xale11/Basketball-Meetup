@@ -4,8 +4,16 @@ import { useState } from 'react';
 import { Search, Filter, Plus, Calendar, Users, DollarSign, MapPin, Clock } from 'lucide-react-native';
 import { EventCard } from '@/components/EventCard';
 import { mockEvents } from '@/utils/mockData';
+import { useAuth } from '@/hooks/useAuth';
+import { auth } from '@/firebase/firebase';
+import { useEffect } from 'react';
 
 export default function EventsScreen() {
+  const { checkAuth } = useAuth();
+  useEffect(() => {
+    checkAuth();
+  }, [auth.currentUser]);
+  
   const [showCreateEvent, setShowCreateEvent] = useState(false);
   const [selectedTab, setSelectedTab] = useState('upcoming');
 

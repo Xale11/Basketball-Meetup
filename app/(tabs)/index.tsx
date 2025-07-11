@@ -6,9 +6,14 @@ import { EventCard } from '@/components/EventCard';
 import { useAuth } from '@/hooks/useAuth';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { mockCourts, mockEvents } from '@/utils/mockData';
+import { auth } from '@/firebase/firebase';
+import { useEffect } from 'react';
 
 export default function HomeScreen() {
-  const { user, loading } = useAuth();
+  const { checkAuth, user, loading } = useAuth();
+  useEffect(() => {
+    checkAuth();
+  }, [auth.currentUser]);
 
   if (loading) {
     return <LoadingSpinner />;

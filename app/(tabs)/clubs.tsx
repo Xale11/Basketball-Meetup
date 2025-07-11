@@ -5,9 +5,15 @@ import { Search, Filter, Plus, Users, Calendar, DollarSign, Settings, Crown, Map
 import { ClubCard } from '@/components/ClubCard';
 import { mockClubs } from '@/utils/mockData';
 import { useAuth } from '@/hooks/useAuth';
+import { auth } from '@/firebase/firebase';
+import { useEffect } from 'react';
 
 export default function ClubsScreen() {
-  const { user } = useAuth();
+  const { user, checkAuth } = useAuth();
+  useEffect(() => {
+    checkAuth();
+  }, [auth.currentUser]);
+
   const [showCreateClub, setShowCreateClub] = useState(false);
   const [selectedTab, setSelectedTab] = useState('discover');
   const [clubName, setClubName] = useState('');

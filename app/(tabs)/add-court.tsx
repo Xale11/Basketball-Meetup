@@ -4,8 +4,16 @@ import { useState } from 'react';
 import { router } from 'expo-router';
 import { ArrowLeft, MapPin, Plus, X } from 'lucide-react-native';
 import { ImagePicker } from '@/components/ImagePicker';
+import { useAuth } from '@/hooks/useAuth';
+import { auth } from '@/firebase/firebase';
+import { useEffect } from 'react';
 
 export default function AddCourtScreen() {
+  const { checkAuth } = useAuth();
+  useEffect(() => {
+    checkAuth();
+  }, [auth.currentUser]);
+
   const [courtName, setCourtName] = useState('');
   const [address, setAddress] = useState('');
   const [description, setDescription] = useState('');

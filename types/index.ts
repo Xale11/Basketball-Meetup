@@ -5,7 +5,7 @@ export interface User {
   avatar?: string;
   isClubAdmin?: boolean;
   clubId?: string;
-  createdAt: Date;
+  createdAt: string;
 }
 
 export interface Court {

@@ -1,11 +1,18 @@
 import { View, Text, StyleSheet, TouchableOpacity, Modal, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Search, Filter, MapPin, Navigation, Users, Clock } from 'lucide-react-native';
 import { CourtCard } from '@/components/CourtCard';
 import { mockCourts } from '@/utils/mockData';
+import { useAuth } from '@/hooks/useAuth';
+import { auth } from '@/firebase/firebase';
 
 export default function MapScreen() {
+  const { checkAuth } = useAuth();
+  useEffect(() => {
+    checkAuth();
+  }, [auth.currentUser]);
+  
   const [showCourtDetails, setShowCourtDetails] = useState(false);
   const [selectedCourt, setSelectedCourt] = useState(mockCourts[0]);
   const [isCheckedIn, setIsCheckedIn] = useState(false);

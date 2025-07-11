@@ -2,11 +2,14 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'rea
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Settings, CreditCard as Edit, Trophy, Calendar, MapPin, Users, Star, ChevronRight, CreditCard, Bell, Shield } from 'lucide-react-native';
 import { useAuth } from '@/hooks/useAuth';
-import { useRequireAuth } from '@/hooks/useRequireAuth';
+import { useEffect } from 'react';
+import { auth } from '@/firebase/firebase';
 
 export default function ProfileScreen() {
-  const { user, logout } = useAuth();
-  useRequireAuth();
+  const { user, logout, checkAuth } = useAuth();
+  useEffect(() => {
+    checkAuth();
+  }, [auth.currentUser]);
 
   const stats = [
     { label: 'Events Joined', value: '12', icon: Calendar },

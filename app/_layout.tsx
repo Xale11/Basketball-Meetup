@@ -12,10 +12,11 @@ import {
   Inter_700Bold,
 } from '@expo-google-fonts/inter';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
+import { auth } from '@/firebase/firebase';
 
 export default function RootLayout() {
   useFrameworkReady();
-  const { user, loading } = useAuth();
+  const { user, loading, checkAuth } = useAuth();
 
   const [fontsLoaded] = useFonts({
     'Inter-Regular': Inter_400Regular,
@@ -26,11 +27,17 @@ export default function RootLayout() {
 
   useEffect(() => {
     if (!loading && fontsLoaded) {
-      if (user) {
-        router.replace('/(tabs)');
-      } else {
-        router.replace('/auth/login');
+      const isUserAuthenticated = async () => {
+        const isAuth = await checkAuth();
+        if (isAuth) {
+          console.log(auth.currentUser);
+          router.push('/(tabs)');
+        } else {
+          console.log("User is not authenticated");
+          router.replace('/auth/login');
+        }
       }
+      isUserAuthenticated();
     }
   }, [user, loading, fontsLoaded]);
 
