@@ -57,8 +57,9 @@ export default {
       }
     },
     "ios": {
-      "config": {
-        "googleMapsApiKey":  process.env.GOOGLE_MAPS_API_KEY,
+      bundleIdentifier: "com.xale11.basketballmeetupapp",
+      config: {
+        googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY,
       },
     }
   }
