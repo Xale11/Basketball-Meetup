@@ -15,6 +15,8 @@ export default function HomeScreen() {
     checkAuth();
   }, [auth.currentUser]);
 
+  console.log(user);
+
   if (loading) {
     return <LoadingSpinner />;
   }

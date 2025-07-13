@@ -1,11 +1,12 @@
-import { View, Text, StyleSheet, TouchableOpacity, Modal, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, ScrollView, ViewStyle, TextStyle } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useEffect, useState } from 'react';
-import { Search, Filter, MapPin, Navigation, Users, Clock } from 'lucide-react-native';
+import { Search, Filter, MapPin, Navigation, Users, Clock, Maximize2, Minimize2 } from 'lucide-react-native';
 import { CourtCard } from '@/components/CourtCard';
 import { mockCourts } from '@/utils/mockData';
 import { useAuth } from '@/hooks/useAuth';
 import { auth } from '@/firebase/firebase';
+import InteractiveMap from '@/components/InteractiveMap';
 
 export default function MapScreen() {
   const { checkAuth } = useAuth();
@@ -16,6 +17,7 @@ export default function MapScreen() {
   const [showCourtDetails, setShowCourtDetails] = useState(false);
   const [selectedCourt, setSelectedCourt] = useState(mockCourts[0]);
   const [isCheckedIn, setIsCheckedIn] = useState(false);
+  const [showFullScreen, setShowFullScreen] = useState(false);
 
   const handleCourtPress = (court: any) => {
     setSelectedCourt(court);
@@ -26,119 +28,133 @@ export default function MapScreen() {
     setIsCheckedIn(!isCheckedIn);
   };
 
+  // Dynamic styles based on state
+  const mapContainerStyle: ViewStyle = {
+    height: showFullScreen ? 700 : 300,
+    backgroundColor: '#E9ECEF',
+    position: 'relative',
+  };
+
+  
+
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Basketball Courts</Text>
-        <View style={styles.headerActions}>
-          <TouchableOpacity style={styles.iconButton}>
-            <Search size={24} color="#1A1A1A" />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.iconButton}>
-            <Filter size={24} color="#1A1A1A" />
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      <View style={styles.mapContainer}>
-        <View style={styles.mapPlaceholder}>
-          <MapPin size={48} color="#FF6B35" />
-          <Text style={styles.mapPlaceholderText}>Interactive Map</Text>
-          <Text style={styles.mapPlaceholderSubtext}>Courts and events will appear here</Text>
-        </View>
-        
-        <View style={styles.mapOverlay}>
-          <TouchableOpacity style={styles.locationButton}>
-            <Navigation size={20} color="#FFFFFF" />
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      <ScrollView style={styles.courtsList} showsVerticalScrollIndicator={false}>
-        <Text style={styles.courtsListTitle}>Courts Near You</Text>
-        {mockCourts.map((court) => (
-          <CourtCard 
-            key={court.id} 
-            court={court} 
-            onPress={() => handleCourtPress(court)} 
-          />
-        ))}
-      </ScrollView>
-
-      <Modal
-        visible={showCourtDetails}
-        animationType="slide"
-        presentationStyle="pageSheet"
-        onRequestClose={() => setShowCourtDetails(false)}
-      >
-        <SafeAreaView style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>{selectedCourt.name}</Text>
-            <TouchableOpacity onPress={() => setShowCourtDetails(false)}>
-              <Text style={styles.closeButton}>Close</Text>
+      <ScrollView showsVerticalScrollIndicator={false}>
+        <View style={styles.header}>
+          <Text style={styles.title}>Basketball Courts</Text>
+          <View style={styles.headerActions}>
+            <TouchableOpacity style={styles.iconButton}>
+              <Search size={24} color="#1A1A1A" />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.iconButton}>
+              <Filter size={24} color="#1A1A1A" />
             </TouchableOpacity>
           </View>
+        </View>
+
+        <View style={mapContainerStyle}>
+          {/* Map placeholder */}
+          <InteractiveMap />
           
-          <ScrollView style={styles.modalContent}>
-            <View style={styles.courtInfo}>
-              <View style={styles.infoRow}>
-                <MapPin size={20} color="#666" />
-                <Text style={styles.infoText}>{selectedCourt.address}</Text>
-              </View>
-              <View style={styles.infoRow}>
-                <Users size={20} color="#666" />
-                <Text style={styles.infoText}>
-                  {selectedCourt.checkedInUsers.length} players checked in
-                </Text>
-              </View>
-              <View style={styles.infoRow}>
-                <Clock size={20} color="#666" />
-                <Text style={styles.infoText}>Open 24/7</Text>
-              </View>
-            </View>
+          <View style={styles.mapOverlay}>
+            <TouchableOpacity style={styles.locationButton}>
+              <Navigation size={20} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
 
-            <View style={styles.amenitiesSection}>
-              <Text style={styles.sectionTitle}>Amenities</Text>
-              <View style={styles.amenitiesGrid}>
-                {selectedCourt.amenities.map((amenity, index) => (
-                  <View key={index} style={styles.amenityChip}>
-                    <Text style={styles.amenityText}>{amenity}</Text>
-                  </View>
-                ))}
-              </View>
-            </View>
+          <View style={styles.fullScreenButton}>
+            <TouchableOpacity onPress={() => setShowFullScreen(prev => !prev)} style={styles.locationButton}>
+              {!showFullScreen ? <Maximize2 size={20} color="#FFFFFF" /> : <Minimize2 size={20} color="#FFFFFF" />}
+            </TouchableOpacity>
+          </View>
+        </View>
 
-            <View style={styles.playersSection}>
-              <Text style={styles.sectionTitle}>Players Currently Here</Text>
-              {selectedCourt.checkedInUsers.length > 0 ? (
-                <View style={styles.playersList}>
-                  {selectedCourt.checkedInUsers.map((userId, index) => (
-                    <View key={index} style={styles.playerItem}>
-                      <View style={styles.playerAvatar}>
-                        <Text style={styles.playerInitial}>J</Text>
-                      </View>
-                      <Text style={styles.playerName}>Player {index + 1}</Text>
+        <View style={styles.courtsList}>
+          <Text style={styles.courtsListTitle}>Courts Near You</Text>
+          {mockCourts.map((court) => (
+            <CourtCard 
+              key={court.id} 
+              court={court} 
+              onPress={() => handleCourtPress(court)} 
+            />
+          ))}
+        </View>
+
+        <Modal
+          visible={showCourtDetails}
+          animationType="slide"
+          presentationStyle="pageSheet"
+          onRequestClose={() => setShowCourtDetails(false)}
+        >
+          <SafeAreaView style={styles.modalContainer}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>{selectedCourt.name}</Text>
+              <TouchableOpacity onPress={() => setShowCourtDetails(false)}>
+                <Text style={styles.closeButton}>Close</Text>
+              </TouchableOpacity>
+            </View>
+            
+            <ScrollView style={styles.modalContent}>
+              <View style={styles.courtInfo}>
+                <View style={styles.infoRow}>
+                  <MapPin size={20} color="#666" />
+                  <Text style={styles.infoText}>{selectedCourt.address}</Text>
+                </View>
+                <View style={styles.infoRow}>
+                  <Users size={20} color="#666" />
+                  <Text style={styles.infoText}>
+                    {selectedCourt.checkedInUsers.length} players checked in
+                  </Text>
+                </View>
+                <View style={styles.infoRow}>
+                  <Clock size={20} color="#666" />
+                  <Text style={styles.infoText}>Open 24/7</Text>
+                </View>
+              </View>
+
+              <View style={styles.amenitiesSection}>
+                <Text style={styles.sectionTitle}>Amenities</Text>
+                <View style={styles.amenitiesGrid}>
+                  {selectedCourt.amenities.map((amenity, index) => (
+                    <View key={index} style={styles.amenityChip}>
+                      <Text style={styles.amenityText}>{amenity}</Text>
                     </View>
                   ))}
                 </View>
-              ) : (
-                <Text style={styles.emptyText}>No players checked in</Text>
-              )}
-            </View>
-          </ScrollView>
+              </View>
 
-          <View style={styles.modalFooter}>
-            <TouchableOpacity 
-              style={[styles.checkInButton, isCheckedIn && styles.checkedInButton]}
-              onPress={handleCheckIn}
-            >
-              <Text style={[styles.checkInText, isCheckedIn && styles.checkedInText]}>
-                {isCheckedIn ? 'Check Out' : 'Check In'}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </SafeAreaView>
-      </Modal>
+              <View style={styles.playersSection}>
+                <Text style={styles.sectionTitle}>Players Currently Here</Text>
+                {selectedCourt.checkedInUsers.length > 0 ? (
+                  <View style={styles.playersList}>
+                    {selectedCourt.checkedInUsers.map((userId, index) => (
+                      <View key={index} style={styles.playerItem}>
+                        <View style={styles.playerAvatar}>
+                          <Text style={styles.playerInitial}>J</Text>
+                        </View>
+                        <Text style={styles.playerName}>Player {index + 1}</Text>
+                      </View>
+                    ))}
+                  </View>
+                ) : (
+                  <Text style={styles.emptyText}>No players checked in</Text>
+                )}
+              </View>
+            </ScrollView>
+
+            <View style={styles.modalFooter}>
+              <TouchableOpacity 
+                style={[styles.checkInButton, isCheckedIn && styles.checkedInButton]}
+                onPress={handleCheckIn}
+              >
+                <Text style={[styles.checkInText, isCheckedIn && styles.checkedInText]}>
+                  {isCheckedIn ? 'Check Out' : 'Check In'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </SafeAreaView>
+        </Modal>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -172,11 +188,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: '#F8F9FA',
   },
-  mapContainer: {
-    height: 300,
-    backgroundColor: '#E9ECEF',
-    position: 'relative',
-  },
   mapPlaceholder: {
     flex: 1,
     justifyContent: 'center',
@@ -196,6 +207,11 @@ const styles = StyleSheet.create({
   mapOverlay: {
     position: 'absolute',
     bottom: 16,
+    right: 16,
+  },
+  fullScreenButton: {
+    position: 'absolute',
+    top: 16,
     right: 16,
   },
   locationButton: {
