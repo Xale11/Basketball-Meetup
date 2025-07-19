@@ -9,10 +9,7 @@ import { auth } from '@/firebase/firebase';
 import { useEffect } from 'react';
 
 export default function AddCourtScreen() {
-  const { checkAuth } = useAuth();
-  useEffect(() => {
-    checkAuth();
-  }, [auth.currentUser]);
+  const {  } = useAuth();
 
   const [courtName, setCourtName] = useState('');
   const [address, setAddress] = useState('');

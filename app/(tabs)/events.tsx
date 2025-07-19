@@ -9,10 +9,7 @@ import { auth } from '@/firebase/firebase';
 import { useEffect } from 'react';
 
 export default function EventsScreen() {
-  const { checkAuth } = useAuth();
-  useEffect(() => {
-    checkAuth();
-  }, [auth.currentUser]);
+  const {  } = useAuth();
   
   const [showCreateEvent, setShowCreateEvent] = useState(false);
   const [selectedTab, setSelectedTab] = useState('upcoming');

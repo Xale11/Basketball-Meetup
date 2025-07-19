@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { User } from '@/types';
 import { mockUser } from '@/utils/mockData';
-import { createUserWithEmailAndPassword, User as FirebaseUser, signInWithEmailAndPassword, signOut, deleteUser } from 'firebase/auth';
+import { createUserWithEmailAndPassword, User as FirebaseUser, signInWithEmailAndPassword, signOut, deleteUser, onAuthStateChanged } from 'firebase/auth';
 import { auth, db } from '@/firebase/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { cleanObject } from '@/utils/cleanObject';
@@ -9,8 +9,45 @@ import { router, usePathname } from 'expo-router';
 
 export const useAuth = () => {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true); // Start as true, set false after auth state known
   const pathname = usePathname();
+
+  // Listen for auth state changes
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      console.log('firebaseUser', firebaseUser);
+      if (firebaseUser) {
+        try {
+          const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
+          if (userDoc.exists()) {
+            setUser(userDoc.data() as User);
+          } else {
+            // fallback: minimal user info if not in Firestore
+            setUser({
+              id: firebaseUser.uid,
+              email: firebaseUser.email || '',
+              name: firebaseUser.displayName || 'User',
+              createdAt: firebaseUser.metadata.creationTime ?? new Date().toISOString(),
+              avatar: firebaseUser.photoURL || undefined,
+              isClubAdmin: false,
+              clubId: undefined,
+            });
+          }
+        } catch (error) {
+          console.error('Error fetching user data:', error);
+          setUser(null);
+        }
+      } else {
+        setUser(null);
+        if (!pathname.startsWith('/auth')) {
+          router.replace('/auth/login');
+          return;
+        }
+      }
+      setLoading(false);
+    });
+    return unsubscribe;
+  }, []);
 
   const addUserToDb = async (user: User) => {
     try {
@@ -24,14 +61,9 @@ export const useAuth = () => {
 
   const login = async (email: string, password: string) => {
     setLoading(true);
-
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      const user: FirebaseUser = userCredential.user;
-      if (!user) {
-        throw new Error('User not found');
-      }
-      setUser({ ...mockUser, email, name: user.displayName || 'User' });
+      await signInWithEmailAndPassword(auth, email, password);
+      // onAuthStateChanged will handle user state
     } catch (error: any) {
       const errorCode = error.code;
       const errorMessage = error.message;
@@ -46,7 +78,7 @@ export const useAuth = () => {
     setLoading(true);
     try {
       await signOut(auth);
-      setUser(null);
+      // onAuthStateChanged will handle user state
     } catch (error: any) {
       console.error('Logout error:', error.code, error.message);
       throw new Error(error.code + ' ' + error.message);
@@ -55,40 +87,25 @@ export const useAuth = () => {
     }
   };
 
-  const checkAuth = async () => {
-    if (!auth.currentUser && !pathname.startsWith('/auth')) {
-      router.replace('/auth/login');
-      return false;
-    }
-
-    if (auth.currentUser) {
-      try {
-        const userDoc = await getDoc(doc(db, 'users', auth.currentUser.uid));
-        if (userDoc.exists()) {
-          const userData: User = userDoc.data() as User;
-          setUser(userData);
-        }
-      } catch (error) {
-        console.error('Error fetching user data:', error);
-        return false;
-      }
-    }
-    
-    setLoading(false);
-    return true;
-  };
+  // const checkAuth = async () => {
+  //   if (!auth.currentUser && !pathname.startsWith('/auth')) {
+  //     router.replace('/auth/login');
+  //     return false;
+  //   }
+  //   // user state is handled by onAuthStateChanged
+  //   setLoading(false);
+  //   return true;
+  // };
 
   const register = async (email: string, password: string, name: string) => {
     setLoading(true);
     let firebaseUser: FirebaseUser | null = null;
-
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       firebaseUser = userCredential.user;
       if (!firebaseUser) {
         throw new Error('User not found');
       }
-      
       const userData: User = {
         id: firebaseUser.uid,
         email,
@@ -98,9 +115,8 @@ export const useAuth = () => {
         isClubAdmin: false,
         clubId: undefined,
       }
-      
       await addUserToDb(cleanObject(userData));
-      setUser(userData);
+      // onAuthStateChanged will handle user state
     } catch (error: any) {
       // If Firestore upload failed, delete the user from Auth
       if (firebaseUser) {
@@ -110,7 +126,6 @@ export const useAuth = () => {
           console.error('Failed to delete user from Auth:', deleteError);
         }
       }
-      
       const errorCode = error.code;
       const errorMessage = error.message;
       console.error(errorCode, errorMessage);
@@ -128,6 +143,5 @@ export const useAuth = () => {
     login,
     logout,
     register,
-    checkAuth,
   };
 };

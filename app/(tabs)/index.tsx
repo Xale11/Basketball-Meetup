@@ -10,10 +10,7 @@ import { auth } from '@/firebase/firebase';
 import { useEffect } from 'react';
 
 export default function HomeScreen() {
-  const { checkAuth, user, loading } = useAuth();
-  useEffect(() => {
-    checkAuth();
-  }, [auth.currentUser]);
+  const { user, loading } = useAuth();
 
   console.log(user);
 

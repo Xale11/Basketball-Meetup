@@ -6,10 +6,7 @@ import { useEffect } from 'react';
 import { auth } from '@/firebase/firebase';
 
 export default function ProfileScreen() {
-  const { user, logout, checkAuth } = useAuth();
-  useEffect(() => {
-    checkAuth();
-  }, [auth.currentUser]);
+  const { user, logout } = useAuth();
 
   const stats = [
     { label: 'Events Joined', value: '12', icon: Calendar },

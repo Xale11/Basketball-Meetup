@@ -9,10 +9,7 @@ import { auth } from '@/firebase/firebase';
 import InteractiveMap from '@/components/InteractiveMap';
 
 export default function MapScreen() {
-  const { checkAuth } = useAuth();
-  useEffect(() => {
-    checkAuth();
-  }, [auth.currentUser]);
+  const {  } = useAuth();
   
   const [showCourtDetails, setShowCourtDetails] = useState(false);
   const [selectedCourt, setSelectedCourt] = useState(mockCourts[0]);

@@ -9,10 +9,7 @@ import { auth } from '@/firebase/firebase';
 import { useEffect } from 'react';
 
 export default function ClubsScreen() {
-  const { user, checkAuth } = useAuth();
-  useEffect(() => {
-    checkAuth();
-  }, [auth.currentUser]);
+  const { user } = useAuth();
 
   const [showCreateClub, setShowCreateClub] = useState(false);
   const [selectedTab, setSelectedTab] = useState('discover');
