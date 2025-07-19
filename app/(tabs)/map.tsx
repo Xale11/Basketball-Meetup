@@ -52,12 +52,6 @@ export default function MapScreen() {
         <View style={mapContainerStyle}>
           {/* Map placeholder */}
           <InteractiveMap />
-          
-          <View style={styles.mapOverlay}>
-            <TouchableOpacity style={styles.locationButton}>
-              <Navigation size={20} color="#FFFFFF" />
-            </TouchableOpacity>
-          </View>
 
           <View style={styles.fullScreenButton}>
             <TouchableOpacity onPress={() => setShowFullScreen(prev => !prev)} style={styles.locationButton}>

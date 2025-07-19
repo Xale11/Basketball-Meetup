@@ -5,7 +5,7 @@ export const mockUser: User = {
   email: 'john.doe@example.com',
   name: 'John Doe',
   avatar: 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=400',
-  createdAt: new Date(),
+  createdAt: new Date().toISOString(),
 };
 
 export const mockCourts: Court[] = [
