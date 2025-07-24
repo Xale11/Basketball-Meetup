@@ -28,39 +28,39 @@ export interface OpeningHours {
   alwaysOpen: boolean;
   timezone: string; // extensive list timezones based on luxon library
   monday: {
-      alwaysOpen: boolean;
-      openTime: string;
-      closeTime: string;
+    alwaysOpen: boolean;
+    openTime: string;
+    closeTime: string;
   };
   tuesday: {
-      alwaysOpen: boolean;
-      openTime: string;
-      closeTime: string;
+    alwaysOpen: boolean;
+    openTime: string;
+    closeTime: string;
   };
   wednesday: {
-      alwaysOpen: boolean;
-      openTime: string;
-      closeTime: string;
+    alwaysOpen: boolean;
+    openTime: string;
+    closeTime: string;
   };
   thursday: {
-      alwaysOpen: boolean;
-      openTime: string;
-      closeTime: string;
+    alwaysOpen: boolean;
+    openTime: string;
+    closeTime: string;
   };
   friday: {
-      alwaysOpen: boolean;
-      openTime: string;
-      closeTime: string;
+    alwaysOpen: boolean;
+    openTime: string;
+    closeTime: string;
   };
   saturday: {
-      alwaysOpen: boolean;
-      openTime: string;
-      closeTime: string;
+    alwaysOpen: boolean;
+    openTime: string;
+    closeTime: string;
   };
   sunday: {
-      alwaysOpen: boolean;
-      openTime: string;
-      closeTime: string;
+    alwaysOpen: boolean;
+    openTime: string;
+    closeTime: string;
   };
 }
   
