@@ -106,9 +106,9 @@ export default function MapScreen() {
               <View style={styles.amenitiesSection}>
                 <Text style={styles.sectionTitle}>Amenities</Text>
                 <View style={styles.amenitiesGrid}>
-                  {selectedCourt.amenities.map((amenity, index) => (
+                  {selectedCourt.tags.map((tag: string, index: number) => (
                     <View key={index} style={styles.amenityChip}>
-                      <Text style={styles.amenityText}>{amenity}</Text>
+                      <Text style={styles.amenityText}>{tag}</Text>
                     </View>
                   ))}
                 </View>
@@ -118,7 +118,7 @@ export default function MapScreen() {
                 <Text style={styles.sectionTitle}>Players Currently Here</Text>
                 {selectedCourt.checkedInUsers.length > 0 ? (
                   <View style={styles.playersList}>
-                    {selectedCourt.checkedInUsers.map((userId, index) => (
+                    {selectedCourt.checkedInUsers.map((userId: string, index: number) => (
                       <View key={index} style={styles.playerItem}>
                         <View style={styles.playerAvatar}>
                           <Text style={styles.playerInitial}>J</Text>

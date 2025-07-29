@@ -17,9 +17,19 @@ export interface Event {
   pricing: string[]; // list of ticketIds
   ticketDeadline: 'upcoming' | 'live'
   isPrivate: boolean;
-  participants: EventParticipant[], // contains user type and transaction type for refering payment and handling refunds
+  participants: string[], // list of userIds
   status: 'upcoming' | 'live' | 'completed' | 'cancelled';
   createdAt: string;
   acceptingParticipants: boolean
   verifyParticipants: boolean
+}
+
+export interface Ticket {
+  id: string;
+  eventId: string;
+  name: string;
+  description: string;
+  price: number;
+  maxQuantity: number;
+  quantitySold: number;
 }

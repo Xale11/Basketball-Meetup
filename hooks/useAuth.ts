@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
-import { User } from '@/types';
 import { mockUser } from '@/utils/mockData';
 import { createUserWithEmailAndPassword, User as FirebaseUser, signInWithEmailAndPassword, signOut, deleteUser, onAuthStateChanged } from 'firebase/auth';
 import { auth, db } from '@/firebase/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { cleanObject } from '@/utils/cleanObject';
 import { router, usePathname } from 'expo-router';
+import { User } from '@/types/user';
 
 export const useAuth = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -29,8 +29,10 @@ export const useAuth = () => {
               name: firebaseUser.displayName || 'User',
               createdAt: firebaseUser.metadata.creationTime ?? new Date().toISOString(),
               avatar: firebaseUser.photoURL || undefined,
-              isClubAdmin: false,
-              clubId: undefined,
+              over18: true,
+              clubs: [],
+              courtHistory: [],
+              badges: [],
             });
           }
         } catch (error) {
@@ -112,8 +114,10 @@ export const useAuth = () => {
         name,
         createdAt: firebaseUser.metadata.creationTime ?? new Date().toISOString(),
         avatar: firebaseUser?.photoURL || undefined,
-        isClubAdmin: false,
-        clubId: undefined,
+        over18: true,
+        clubs: [],
+        courtHistory: [],
+        badges: [],
       }
       await addUserToDb(cleanObject(userData));
       // onAuthStateChanged will handle user state

@@ -113,7 +113,7 @@ export default function ClubsScreen() {
         {selectedTab === 'managed' && (
           <View>
             <Text style={styles.sectionTitle}>Clubs You Manage</Text>
-            {user?.isClubAdmin ? (
+            {user?.clubs.some((club) => club.role === 'admin') ? (
               mockClubs.filter(club => club.adminId === user.id).map((club) => (
                 <ClubCard 
                   key={club.id} 
