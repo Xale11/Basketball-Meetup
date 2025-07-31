@@ -1,6 +1,7 @@
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Calendar, Users, DollarSign, MapPin } from 'lucide-react-native';
-import { Event } from '@/types';
+import { Event } from '@/types/event';
+import { findCheapestTicket } from '@/utils/findCheapTicket';
 
 interface EventCardProps {
   event: Event;
@@ -8,14 +9,6 @@ interface EventCardProps {
 }
 
 export function EventCard({ event, onPress }: EventCardProps) {
-  const formatDate = (date: Date) => {
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
 
   return (
     <TouchableOpacity style={styles.container} onPress={onPress}>
@@ -23,26 +16,40 @@ export function EventCard({ event, onPress }: EventCardProps) {
         <Text style={styles.title}>{event.title}</Text>
         <View style={styles.priceTag}>
           <DollarSign size={16} color="#FFFFFF" />
-          <Text style={styles.price}>{event.price === 0 ? 'Free' : `$${event.price}`}</Text>
+          <Text style={styles.price}>
+            {event.pricing.length === 0 ? 'Free' : `$${findCheapestTicket(event.pricing)?.price}`}
+          </Text>
         </View>
       </View>
-      
+
       <Text style={styles.description}>{event.description}</Text>
-      
+
       <View style={styles.infoRow}>
         <Calendar size={16} color="#666" />
-        <Text style={styles.infoText}>{formatDate(event.startDate)}</Text>
+        <Text style={styles.infoText}>
+          {new Date(event.startDate).toLocaleDateString('en-GB', {
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+          })}
+        </Text>
       </View>
-      
+
       <View style={styles.infoRow}>
         <Users size={16} color="#666" />
         <Text style={styles.infoText}>
           {event.currentParticipants}/{event.maxParticipants} participants
         </Text>
       </View>
-      
+
       <View style={styles.footer}>
-        <View style={[styles.statusBadge, { backgroundColor: getStatusColor(event.status) }]}>
+        <View
+          style={[
+            styles.statusBadge,
+            { backgroundColor: getStatusColor(event.status) },
+          ]}
+        >
           <Text style={styles.statusText}>{event.status.toUpperCase()}</Text>
         </View>
         <TouchableOpacity style={styles.joinButton}>
@@ -55,11 +62,16 @@ export function EventCard({ event, onPress }: EventCardProps) {
 
 const getStatusColor = (status: string) => {
   switch (status) {
-    case 'upcoming': return '#FF6B35';
-    case 'live': return '#28A745';
-    case 'completed': return '#6C757D';
-    case 'cancelled': return '#DC3545';
-    default: return '#FF6B35';
+    case 'upcoming':
+      return '#FF6B35';
+    case 'live':
+      return '#28A745';
+    case 'completed':
+      return '#6C757D';
+    case 'cancelled':
+      return '#DC3545';
+    default:
+      return '#FF6B35';
   }
 };
 

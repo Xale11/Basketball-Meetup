@@ -22,6 +22,7 @@ export interface Court {
   rating?: number;
   reviews?: Review[];
   openingHours: OpeningHours;
+  verified: boolean;
 }
   
 export interface OpeningHours {

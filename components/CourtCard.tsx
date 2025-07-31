@@ -1,6 +1,6 @@
 import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
 import { MapPin, Users, Star } from 'lucide-react-native';
-import { Court } from '@/types';
+import { Court } from '@/types/courts';
 
 interface CourtCardProps {
   court: Court;
@@ -11,7 +11,7 @@ export function CourtCard({ court, onPress }: CourtCardProps) {
   return (
     <TouchableOpacity style={styles.container} onPress={onPress}>
       <Image 
-        source={{ uri: court.images[0] }} 
+        source={{ uri: court?.images?.[0] }} 
         style={styles.image}
         resizeMode="cover"
       />
@@ -32,9 +32,9 @@ export function CourtCard({ court, onPress }: CourtCardProps) {
           </View>
         </View>
         <View style={styles.amenitiesRow}>
-          {court.amenities.slice(0, 3).map((amenity, index) => (
+          {court.tags.slice(0, 3).map((tag, index) => (
             <View key={index} style={styles.amenityTag}>
-              <Text style={styles.amenityText}>{amenity}</Text>
+              <Text style={styles.amenityText}>{tag}</Text>
             </View>
           ))}
         </View>

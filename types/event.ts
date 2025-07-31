@@ -14,7 +14,7 @@ export interface Event {
   endDate: string;
   maxParticipants: number; //if zero, that means unlimited
   currentParticipants: number;
-  pricing: string[]; // list of ticketIds
+  pricing: Ticket[]; // list of tickets
   ticketDeadline: 'upcoming' | 'live'
   isPrivate: boolean;
   participants: string[], // list of userIds
