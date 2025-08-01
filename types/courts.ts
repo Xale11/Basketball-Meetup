@@ -8,6 +8,7 @@ export interface CourtVisit {
 export interface Court {
   id: string;
   name: string;
+  description: string;
   location: {
     latitude: number;
     longitude: number;
