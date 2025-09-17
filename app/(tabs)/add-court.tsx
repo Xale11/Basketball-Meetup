@@ -1,4 +1,15 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Switch } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  TextInput,
+  Alert,
+  Switch,
+  Button,
+  Platform,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState } from 'react';
 import { router } from 'expo-router';
@@ -8,9 +19,10 @@ import { useAuth } from '@/hooks/useAuth';
 import { auth } from '@/firebase/firebase';
 import { useEffect } from 'react';
 import { OpeningHours } from '@/types/courts';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 export default function AddCourtScreen() {
-  const { } = useAuth();
+  const {} = useAuth();
 
   const [courtName, setCourtName] = useState('');
   const [address, setAddress] = useState('');
@@ -29,6 +41,13 @@ export default function AddCourtScreen() {
     saturday: { alwaysOpen: false, openTime: '09:00', closeTime: '21:00' },
     sunday: { alwaysOpen: false, openTime: '09:00', closeTime: '21:00' },
   });
+  const [time, setTime] = useState(new Date());
+  const [showPicker, setShowPicker] = useState(true);
+
+  const onChange = (event: any, selectedDate?: Date) => {
+    setShowPicker(false);
+    if (selectedDate) setTime(selectedDate);
+  };
 
   const commonAmenities = [
     'Outdoor Court',
@@ -58,7 +77,7 @@ export default function AddCourtScreen() {
   };
 
   const handleRemoveAmenity = (amenity: string) => {
-    setAmenities(amenities.filter(a => a !== amenity));
+    setAmenities(amenities.filter((a) => a !== amenity));
   };
 
   const handleAddCustomAmenity = () => {
@@ -68,18 +87,22 @@ export default function AddCourtScreen() {
     }
   };
 
-  const updateDayHours = (day: keyof Omit<OpeningHours, 'alwaysOpen' | 'timezone'>, field: 'alwaysOpen' | 'openTime' | 'closeTime', value: boolean | string) => {
-    setOpeningHours(prev => ({
+  const updateDayHours = (
+    day: keyof Omit<OpeningHours, 'alwaysOpen' | 'timezone'>,
+    field: 'alwaysOpen' | 'openTime' | 'closeTime',
+    value: boolean | string
+  ) => {
+    setOpeningHours((prev) => ({
       ...prev,
       [day]: {
         ...prev[day],
-        [field]: value
-      }
+        [field]: value,
+      },
     }));
   };
 
   const updateGlobalAlwaysOpen = (value: boolean) => {
-    setOpeningHours(prev => ({
+    setOpeningHours((prev) => ({
       ...prev,
       alwaysOpen: value,
       monday: { ...prev.monday, alwaysOpen: value },
@@ -99,17 +122,18 @@ export default function AddCourtScreen() {
     }
 
     // Here you would typically save to your backend
-    Alert.alert(
-      'Success',
-      'Court added successfully!',
-      [{ text: 'OK', onPress: () => router.back() }]
-    );
+    Alert.alert('Success', 'Court added successfully!', [
+      { text: 'OK', onPress: () => router.back() },
+    ]);
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={styles.backButton}
+        >
           <ArrowLeft size={24} color="#1A1A1A" />
         </TouchableOpacity>
         <Text style={styles.title}>Add New Court</Text>
@@ -162,13 +186,15 @@ export default function AddCourtScreen() {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Photos</Text>
-          <Text style={styles.sectionSubtitle}>Add photos to help players find and recognize the court</Text>
+          <Text style={styles.sectionSubtitle}>
+            Add photos to help players find and recognize the court
+          </Text>
 
           {images.map((image, index) => (
             <View key={index} style={styles.imageContainer}>
               <ImagePicker
                 selectedImage={image}
-                onImageSelected={() => { }}
+                onImageSelected={() => {}}
                 onImageRemoved={() => handleRemoveImage(index)}
                 placeholder="Court Photo"
               />
@@ -178,14 +204,18 @@ export default function AddCourtScreen() {
           {images.length < 5 && (
             <ImagePicker
               onImageSelected={handleAddImage}
-              placeholder={images.length === 0 ? "Add First Photo" : "Add Another Photo"}
+              placeholder={
+                images.length === 0 ? 'Add First Photo' : 'Add Another Photo'
+              }
             />
           )}
         </View>
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Amenities</Text>
-          <Text style={styles.sectionSubtitle}>Select all amenities available at this court</Text>
+          <Text style={styles.sectionSubtitle}>
+            Select all amenities available at this court
+          </Text>
 
           <View style={styles.amenitiesGrid}>
             {commonAmenities.map((amenity) => (
@@ -193,7 +223,7 @@ export default function AddCourtScreen() {
                 key={amenity}
                 style={[
                   styles.amenityChip,
-                  amenities.includes(amenity) && styles.amenityChipSelected
+                  amenities.includes(amenity) && styles.amenityChipSelected,
                 ]}
                 onPress={() =>
                   amenities.includes(amenity)
@@ -201,10 +231,12 @@ export default function AddCourtScreen() {
                     : handleAddAmenity(amenity)
                 }
               >
-                <Text style={[
-                  styles.amenityText,
-                  amenities.includes(amenity) && styles.amenityTextSelected
-                ]}>
+                <Text
+                  style={[
+                    styles.amenityText,
+                    amenities.includes(amenity) && styles.amenityTextSelected,
+                  ]}
+                >
                   {amenity}
                 </Text>
               </TouchableOpacity>
@@ -230,12 +262,16 @@ export default function AddCourtScreen() {
 
           {amenities.length > 0 && (
             <View style={styles.selectedAmenities}>
-              <Text style={styles.selectedAmenitiesTitle}>Selected Amenities:</Text>
+              <Text style={styles.selectedAmenitiesTitle}>
+                Selected Amenities:
+              </Text>
               <View style={styles.selectedAmenitiesGrid}>
                 {amenities.map((amenity) => (
                   <View key={amenity} style={styles.selectedAmenityChip}>
                     <Text style={styles.selectedAmenityText}>{amenity}</Text>
-                    <TouchableOpacity onPress={() => handleRemoveAmenity(amenity)}>
+                    <TouchableOpacity
+                      onPress={() => handleRemoveAmenity(amenity)}
+                    >
                       <X size={16} color="#666" />
                     </TouchableOpacity>
                   </View>
@@ -250,13 +286,17 @@ export default function AddCourtScreen() {
             <Clock size={20} color="#FF6B35" />
             <Text style={styles.sectionTitle}>Opening Hours</Text>
           </View>
-          <Text style={styles.sectionSubtitle}>Set when your court is available for play</Text>
+          <Text style={styles.sectionSubtitle}>
+            Set when your court is available for play
+          </Text>
 
           {/* Global Always Open Toggle */}
           <View style={styles.alwaysOpenContainer}>
             <View style={styles.alwaysOpenTextContainer}>
               <Text style={styles.label}>Always Open</Text>
-              <Text style={styles.alwaysOpenSubtitle}>Court is available 24/7</Text>
+              <Text style={styles.alwaysOpenSubtitle}>
+                Court is available 24/7
+              </Text>
             </View>
             <Switch
               value={openingHours.alwaysOpen}
@@ -267,10 +307,6 @@ export default function AddCourtScreen() {
           </View>
 
           {!openingHours.alwaysOpen && (
-
-
-
-
             <>
               {/* Timezone Selection */}
               <View style={styles.inputGroup}>
@@ -278,7 +314,9 @@ export default function AddCourtScreen() {
                 <TextInput
                   style={styles.input}
                   value={openingHours.timezone}
-                  onChangeText={(value) => setOpeningHours(prev => ({ ...prev, timezone: value }))}
+                  onChangeText={(value) =>
+                    setOpeningHours((prev) => ({ ...prev, timezone: value }))
+                  }
                   placeholder="e.g., America/New_York"
                   placeholderTextColor="#999"
                 />
@@ -298,23 +336,51 @@ export default function AddCourtScreen() {
                   <View style={styles.dayHeader}>
                     <Text style={styles.dayLabel}>{label}</Text>
                     <Switch
-                      value={openingHours[key as keyof Omit<OpeningHours, 'alwaysOpen' | 'timezone'>].alwaysOpen}
-                      onValueChange={(value) => updateDayHours(key as keyof Omit<OpeningHours, 'alwaysOpen' | 'timezone'>, 'alwaysOpen', value)}
+                      value={
+                        openingHours[
+                          key as keyof Omit<
+                            OpeningHours,
+                            'alwaysOpen' | 'timezone'
+                          >
+                        ].alwaysOpen
+                      }
+                      onValueChange={(value) =>
+                        updateDayHours(
+                          key as keyof Omit<
+                            OpeningHours,
+                            'alwaysOpen' | 'timezone'
+                          >,
+                          'alwaysOpen',
+                          value
+                        )
+                      }
                       trackColor={{ false: '#E9ECEF', true: '#FF6B35' }}
-                      thumbColor={openingHours[key as keyof Omit<OpeningHours, 'alwaysOpen' | 'timezone'>].alwaysOpen ? '#FFFFFF' : '#FFFFFF'}
+                      thumbColor={
+                        openingHours[
+                          key as keyof Omit<
+                            OpeningHours,
+                            'alwaysOpen' | 'timezone'
+                          >
+                        ].alwaysOpen
+                          ? '#FFFFFF'
+                          : '#FFFFFF'
+                      }
                     />
                   </View>
-                  
-                  {!openingHours[key as keyof Omit<OpeningHours, 'alwaysOpen' | 'timezone'>].alwaysOpen && (
+
+                  {!openingHours[
+                    key as keyof Omit<OpeningHours, 'alwaysOpen' | 'timezone'>
+                  ].alwaysOpen && (
                     <View style={styles.timeInputsContainer}>
                       <View style={styles.timeInputGroup}>
-                        <Text style={styles.timeLabel}>Open</Text>
-                        <TextInput
-                          style={styles.timeInput}
-                          value={openingHours[key as keyof Omit<OpeningHours, 'alwaysOpen' | 'timezone'>].openTime}
-                          onChangeText={(value) => updateDayHours(key as keyof Omit<OpeningHours, 'alwaysOpen' | 'timezone'>, 'openTime', value)}
-                          placeholder="09:00"
-                          placeholderTextColor="#999"
+                        <DateTimePicker
+                          value={time}
+                          mode="time"
+                          is24Hour={true}
+                          display={
+                            Platform.OS === 'ios' ? 'spinner' : 'default'
+                          }
+                          onChange={onChange}
                         />
                       </View>
                       <Text style={styles.timeSeparator}>to</Text>
@@ -322,8 +388,24 @@ export default function AddCourtScreen() {
                         <Text style={styles.timeLabel}>Close</Text>
                         <TextInput
                           style={styles.timeInput}
-                          value={openingHours[key as keyof Omit<OpeningHours, 'alwaysOpen' | 'timezone'>].closeTime}
-                          onChangeText={(value) => updateDayHours(key as keyof Omit<OpeningHours, 'alwaysOpen' | 'timezone'>, 'closeTime', value)}
+                          value={
+                            openingHours[
+                              key as keyof Omit<
+                                OpeningHours,
+                                'alwaysOpen' | 'timezone'
+                              >
+                            ].closeTime
+                          }
+                          onChangeText={(value) =>
+                            updateDayHours(
+                              key as keyof Omit<
+                                OpeningHours,
+                                'alwaysOpen' | 'timezone'
+                              >,
+                              'closeTime',
+                              value
+                            )
+                          }
                           placeholder="21:00"
                           placeholderTextColor="#999"
                         />
