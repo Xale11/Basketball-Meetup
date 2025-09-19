@@ -20,9 +20,10 @@ import { auth } from '@/firebase/firebase';
 import { useEffect } from 'react';
 import { OpeningHours } from '@/types/courts';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import TimeInput from '@/components/TimeInput';
 
 export default function AddCourtScreen() {
-  const {} = useAuth();
+  const { } = useAuth();
 
   const [courtName, setCourtName] = useState('');
   const [address, setAddress] = useState('');
@@ -41,13 +42,8 @@ export default function AddCourtScreen() {
     saturday: { alwaysOpen: false, openTime: '09:00', closeTime: '21:00' },
     sunday: { alwaysOpen: false, openTime: '09:00', closeTime: '21:00' },
   });
-  const [time, setTime] = useState(new Date());
-  const [showPicker, setShowPicker] = useState(true);
 
-  const onChange = (event: any, selectedDate?: Date) => {
-    setShowPicker(false);
-    if (selectedDate) setTime(selectedDate);
-  };
+  console.log(openingHours);
 
   const commonAmenities = [
     'Outdoor Court',
@@ -92,13 +88,20 @@ export default function AddCourtScreen() {
     field: 'alwaysOpen' | 'openTime' | 'closeTime',
     value: boolean | string
   ) => {
-    setOpeningHours((prev) => ({
-      ...prev,
-      [day]: {
-        ...prev[day],
-        [field]: value,
-      },
-    }));
+    if ((field === 'openTime' && value > openingHours[day].closeTime) || (field === 'closeTime' && value < openingHours[day].openTime)) {
+      Alert.alert('Error', 'Open time must be before close time');
+      return false;
+    } else {
+      setOpeningHours((prev) => ({
+        ...prev,
+        [day]: {
+          ...prev[day],
+          [field]: value,
+        },
+      }));
+      return true;
+    }
+
   };
 
   const updateGlobalAlwaysOpen = (value: boolean) => {
@@ -194,7 +197,7 @@ export default function AddCourtScreen() {
             <View key={index} style={styles.imageContainer}>
               <ImagePicker
                 selectedImage={image}
-                onImageSelected={() => {}}
+                onImageSelected={() => { }}
                 onImageRemoved={() => handleRemoveImage(index)}
                 placeholder="Court Photo"
               />
@@ -335,83 +338,54 @@ export default function AddCourtScreen() {
                 <View key={key} style={styles.dayHoursContainer}>
                   <View style={styles.dayHeader}>
                     <Text style={styles.dayLabel}>{label}</Text>
-                    <Switch
-                      value={
-                        openingHours[
-                          key as keyof Omit<
-                            OpeningHours,
-                            'alwaysOpen' | 'timezone'
-                          >
-                        ].alwaysOpen
-                      }
-                      onValueChange={(value) =>
-                        updateDayHours(
-                          key as keyof Omit<
-                            OpeningHours,
-                            'alwaysOpen' | 'timezone'
-                          >,
-                          'alwaysOpen',
-                          value
-                        )
-                      }
-                      trackColor={{ false: '#E9ECEF', true: '#FF6B35' }}
-                      thumbColor={
-                        openingHours[
-                          key as keyof Omit<
-                            OpeningHours,
-                            'alwaysOpen' | 'timezone'
-                          >
-                        ].alwaysOpen
-                          ? '#FFFFFF'
-                          : '#FFFFFF'
-                      }
-                    />
+                    <View style={styles.openAllDayContainer}>
+                      <Text>Open All Day</Text>
+                      <Switch
+                        trackColor={{ false: '#E9ECEF', true: '#FF6B35' }}
+                        thumbColor={openingHours[key as keyof Omit<OpeningHours, 'alwaysOpen' | 'timezone'>].alwaysOpen ? '#FFFFFF' : '#FFFFFF'}
+                        value={openingHours[key as keyof Omit<OpeningHours, 'alwaysOpen' | 'timezone'>].alwaysOpen}
+                        onValueChange={(value) => {
+                          updateDayHours(key as keyof Omit<OpeningHours, 'alwaysOpen' | 'timezone'>, 'alwaysOpen', value)
+                        }}
+                      />
+                    </View>
                   </View>
 
                   {!openingHours[
                     key as keyof Omit<OpeningHours, 'alwaysOpen' | 'timezone'>
                   ].alwaysOpen && (
-                    <View style={styles.timeInputsContainer}>
-                      <View style={styles.timeInputGroup}>
-                        <DateTimePicker
-                          value={time}
-                          mode="time"
-                          is24Hour={true}
-                          display={
-                            Platform.OS === 'ios' ? 'spinner' : 'default'
-                          }
-                          onChange={onChange}
-                        />
-                      </View>
-                      <Text style={styles.timeSeparator}>to</Text>
-                      <View style={styles.timeInputGroup}>
-                        <Text style={styles.timeLabel}>Close</Text>
-                        <TextInput
-                          style={styles.timeInput}
-                          value={
-                            openingHours[
-                              key as keyof Omit<
-                                OpeningHours,
-                                'alwaysOpen' | 'timezone'
-                              >
-                            ].closeTime
-                          }
-                          onChangeText={(value) =>
+                      <View style={styles.timeInputsContainer}>
+                        <TimeInput
+                          defaultValue={'09:00'}
+                          label="Open Time"
+                          onChange={(time: string) =>
                             updateDayHours(
                               key as keyof Omit<
                                 OpeningHours,
                                 'alwaysOpen' | 'timezone'
                               >,
-                              'closeTime',
-                              value
-                            )
+                              'openTime', time)
                           }
-                          placeholder="21:00"
-                          placeholderTextColor="#999"
                         />
+                        <Text style={styles.timeSeparator}>to</Text>
+                        <View style={styles.timeInputGroup}>
+                          <TimeInput
+                            defaultValue={'21:00'}
+                            label='Close Time'
+                            onChange={(time: string) =>
+                              updateDayHours(
+                                key as keyof Omit<
+                                  OpeningHours,
+                                  'alwaysOpen' | 'timezone'
+                                >,
+                                'closeTime',
+                                time
+                              )
+                            }
+                          />
+                        </View>
                       </View>
-                    </View>
-                  )}
+                    )}
                 </View>
               ))}
             </>
@@ -674,6 +648,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '500',
     color: '#1A1A1A',
+  },
+  openAllDayContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   timeInputsContainer: {
     flexDirection: 'row',

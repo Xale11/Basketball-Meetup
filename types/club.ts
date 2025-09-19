@@ -30,6 +30,6 @@ export interface TrainingSession {
 
 export interface UserClubAssociation {
   clubId: string;
-  role: ClubRole;
+  roles: ClubRole[];
   joinedAt: string;
 }
