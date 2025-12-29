@@ -41,6 +41,7 @@
     "expo-web-browser": "~14.2.0",
     "firebase": "^11.10.0",
     "lucide-react-native": "^0.475.0",
+    "ngeohash": "^0.6.3",
     "react": "19.0.0",
     "react-dom": "19.0.0",
     "react-native": "0.79.5",
@@ -60,6 +61,7 @@
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
+    "@types/ngeohash": "^0.6.8",
     "@types/react": "~19.0.10",
     "typescript": "~5.8.3"
   }
