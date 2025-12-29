@@ -89,7 +89,7 @@ export default function MapScreen() {
               <View style={styles.courtInfo}>
                 <View style={styles.infoRow}>
                   <MapPin size={20} color="#666" />
-                  <Text style={styles.infoText}>{selectedCourt.address}</Text>
+                  <Text style={styles.infoText}>{selectedCourt.location.address}</Text>
                 </View>
                 <View style={styles.infoRow}>
                   <Users size={20} color="#666" />
