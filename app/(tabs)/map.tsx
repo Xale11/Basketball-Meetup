@@ -103,12 +103,12 @@ export default function MapScreen() {
                 </View>
               </View>
 
-              <View style={styles.amenitiesSection}>
-                <Text style={styles.sectionTitle}>Amenities</Text>
-                <View style={styles.amenitiesGrid}>
+              <View style={styles.tagsSection}>
+                <Text style={styles.sectionTitle}>Tags</Text>
+                <View style={styles.tagsGrid}>
                   {selectedCourt.tags.map((tag: string, index: number) => (
-                    <View key={index} style={styles.amenityChip}>
-                      <Text style={styles.amenityText}>{tag}</Text>
+                    <View key={index} style={styles.tagChip}>
+                      <Text style={styles.tagText}>{tag}</Text>
                     </View>
                   ))}
                 </View>
@@ -270,17 +270,17 @@ const styles = StyleSheet.create({
     color: '#1A1A1A',
     marginLeft: 12,
   },
-  amenitiesSection: {
+  tagsSection: {
     paddingVertical: 20,
     borderBottomWidth: 1,
     borderBottomColor: '#F0F0F0',
   },
-  amenitiesGrid: {
+  tagsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     marginTop: 12,
   },
-  amenityChip: {
+  tagChip: {
     backgroundColor: '#F8F9FA',
     borderRadius: 16,
     paddingHorizontal: 12,
@@ -288,7 +288,7 @@ const styles = StyleSheet.create({
     marginRight: 8,
     marginBottom: 8,
   },
-  amenityText: {
+  tagText: {
     fontSize: 14,
     color: '#1A1A1A',
     fontWeight: '500',

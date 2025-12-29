@@ -19,11 +19,13 @@ export const mockCourts: Court[] = [
   {
     id: '1',
     name: 'Central Park Basketball Court',
+    description: 'A popular outdoor basketball court located in the heart of Central Park. Features full court with lighting for evening games.',
     location: {
       latitude: 40.7829,
       longitude: -73.9654,
+      geohash: '',
+      address: '1 Central Park, New York, NY 10023',
     },
-    address: '1 Central Park, New York, NY 10023',
     images: [
       'https://images.pexels.com/photos/1752757/pexels-photo-1752757.jpeg?auto=compress&cs=tinysrgb&w=800',
       'https://images.pexels.com/photos/1080882/pexels-photo-1080882.jpeg?auto=compress&cs=tinysrgb&w=800',
@@ -37,7 +39,6 @@ export const mockCourts: Court[] = [
     reviews: [],
     openingHours: {
       alwaysOpen: true,
-      timezone: 'America/New_York',
       monday: { alwaysOpen: true, openTime: '', closeTime: '' },
       tuesday: { alwaysOpen: true, openTime: '', closeTime: '' },
       wednesday: { alwaysOpen: true, openTime: '', closeTime: '' },
@@ -46,15 +47,18 @@ export const mockCourts: Court[] = [
       saturday: { alwaysOpen: true, openTime: '', closeTime: '' },
       sunday: { alwaysOpen: true, openTime: '', closeTime: '' },
     },
+    verified: true,
   },
   {
     id: '2',
     name: 'Brooklyn Bridge Park Courts',
+    description: 'Scenic half-court basketball courts with stunning waterfront views. Perfect for casual games and pickup matches.',
     location: {
       latitude: 40.7009,
       longitude: -73.9969,
+      geohash: '',
+      address: '334 Furman St, Brooklyn, NY 11201',
     },
-    address: '334 Furman St, Brooklyn, NY 11201',
     images: [
       'https://images.pexels.com/photos/1080882/pexels-photo-1080882.jpeg?auto=compress&cs=tinysrgb&w=800',
     ],
@@ -67,7 +71,6 @@ export const mockCourts: Court[] = [
     reviews: [],
     openingHours: {
       alwaysOpen: true,
-      timezone: 'America/New_York',
       monday: { alwaysOpen: true, openTime: '', closeTime: '' },
       tuesday: { alwaysOpen: true, openTime: '', closeTime: '' },
       wednesday: { alwaysOpen: true, openTime: '', closeTime: '' },
@@ -76,6 +79,7 @@ export const mockCourts: Court[] = [
       saturday: { alwaysOpen: true, openTime: '', closeTime: '' },
       sunday: { alwaysOpen: true, openTime: '', closeTime: '' },
     },
+    verified: false,
   },
 ];
 

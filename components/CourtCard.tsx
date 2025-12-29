@@ -19,7 +19,7 @@ export function CourtCard({ court, onPress }: CourtCardProps) {
         <Text style={styles.name}>{court.name}</Text>
         <View style={styles.locationRow}>
           <MapPin size={16} color="#666" />
-          <Text style={styles.address}>{court.address}</Text>
+          <Text style={styles.address}>{court.location.address}</Text>
         </View>
         <View style={styles.statsRow}>
           <View style={styles.stat}>
@@ -31,10 +31,10 @@ export function CourtCard({ court, onPress }: CourtCardProps) {
             <Text style={styles.statText}>{court.checkedInUsers.length}</Text>
           </View>
         </View>
-        <View style={styles.amenitiesRow}>
+        <View style={styles.tagsRow}>
           {court.tags.slice(0, 3).map((tag, index) => (
-            <View key={index} style={styles.amenityTag}>
-              <Text style={styles.amenityText}>{tag}</Text>
+            <View key={index} style={styles.tagChip}>
+              <Text style={styles.tagText}>{tag}</Text>
             </View>
           ))}
         </View>
@@ -96,11 +96,11 @@ const styles = StyleSheet.create({
     color: '#1A1A1A',
     marginLeft: 4,
   },
-  amenitiesRow: {
+  tagsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
   },
-  amenityTag: {
+  tagChip: {
     backgroundColor: '#F8F9FA',
     borderRadius: 12,
     paddingHorizontal: 8,
@@ -108,7 +108,7 @@ const styles = StyleSheet.create({
     marginRight: 8,
     marginBottom: 4,
   },
-  amenityText: {
+  tagText: {
     fontSize: 12,
     color: '#666',
     fontWeight: '500',

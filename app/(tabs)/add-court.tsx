@@ -16,12 +16,15 @@ import { ImagePicker } from '@/components/ImagePicker';
 import { useAuth } from '@/hooks/useAuth';
 import { CreateCourtForm, OpeningHours } from '@/types/courts';
 import TimeInput from '@/components/TimeInput';
-import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
+import {
+  GooglePlaceDetail,
+  GooglePlacesAutocomplete,
+} from 'react-native-google-places-autocomplete';
 import Constants from 'expo-constants';
-
+import ngeohash from 'ngeohash';
 
 export default function AddCourtScreen() {
-  const { } = useAuth();
+  const {} = useAuth();
 
   const [form, setForm] = useState<CreateCourtForm>({
     name: '',
@@ -41,13 +44,13 @@ export default function AddCourtScreen() {
       friday: { alwaysOpen: false, openTime: '09:00', closeTime: '21:00' },
       saturday: { alwaysOpen: false, openTime: '09:00', closeTime: '21:00' },
       sunday: { alwaysOpen: false, openTime: '09:00', closeTime: '21:00' },
-    }, 
-    createdBy: ''
-  })
+    },
+    createdBy: '',
+  });
 
-  const [newAmenity, setNewAmenity] = useState('');
+  const [newTag, setNewTag] = useState('');
 
-  const commonAmenities = [
+  const commonTags = [
     'Outdoor Court',
     'Indoor Court',
     'Full Court',
@@ -61,27 +64,30 @@ export default function AddCourtScreen() {
   ];
 
   const handleAddImage = (uri: string) => {
-    setForm(prev => ({...prev, images: [...prev.images, uri]}));
+    setForm((prev) => ({ ...prev, images: [...prev.images, uri] }));
   };
 
   const handleRemoveImage = (index: number) => {
-    setForm(prev => ({...prev, images: prev.images.filter((_, i) => i !== index)}));
+    setForm((prev) => ({
+      ...prev,
+      images: prev.images.filter((_, i) => i !== index),
+    }));
   };
 
-  const handleAddAmenity = (amenity: string) => {
-    if (!form.tags.includes(amenity)) {
-      setForm(prev => ({ ...prev, tags: [...prev.tags, amenity] }));
+  const handleAddTag = (tag: string) => {
+    if (!form.tags.includes(tag)) {
+      setForm((prev) => ({ ...prev, tags: [...prev.tags, tag] }));
     }
   };
 
-  const handleRemoveAmenity = (amenity: string) => {
-    setForm(prev => ({ ...prev, tags: prev.tags.filter((a) => a !== amenity) }));
+  const handleRemoveTag = (tag: string) => {
+    setForm((prev) => ({ ...prev, tags: prev.tags.filter((a) => a !== tag) }));
   };
 
-  const handleAddCustomAmenity = () => {
-    if (newAmenity.trim() && !form.tags.includes(newAmenity.trim())) {
-      setForm(prev => ({ ...prev, tags: [...prev.tags, newAmenity.trim()] }));
-      setNewAmenity('');
+  const handleAddCustomTag = () => {
+    if (newTag.trim() && !form.tags.includes(newTag.trim())) {
+      setForm((prev) => ({ ...prev, tags: [...prev.tags, newTag.trim()] }));
+      setNewTag('');
     }
   };
 
@@ -90,7 +96,10 @@ export default function AddCourtScreen() {
     field: 'alwaysOpen' | 'openTime' | 'closeTime',
     value: boolean | string
   ) => {
-    if ((field === 'openTime' && value > form.openingHours[day].closeTime) || (field === 'closeTime' && value < form.openingHours[day].openTime)) {
+    if (
+      (field === 'openTime' && value > form.openingHours[day].closeTime) ||
+      (field === 'closeTime' && value < form.openingHours[day].openTime)
+    ) {
       Alert.alert('Error', 'Open time must be before close time');
       return false;
     } else {
@@ -106,7 +115,6 @@ export default function AddCourtScreen() {
       }));
       return true;
     }
-
   };
 
   const updateGlobalAlwaysOpen = (value: boolean) => {
@@ -124,6 +132,24 @@ export default function AddCourtScreen() {
         sunday: { ...prev.openingHours.sunday, alwaysOpen: value },
       },
     }));
+  };
+
+  const addLocationToForm = (loc: GooglePlaceDetail | null) => {
+    if (!loc || !loc?.geometry.location.longitude || !loc?.geometry.location.latitude) {
+      Alert.alert(
+        'Error',
+        'There was an error setting the location. Please try again.'
+      );
+      return
+    } else {
+      setForm((prev) => ({
+        ...prev,
+        longitude: loc?.geometry.location.longitude,
+        latitude: loc?.geometry.location.latitude,
+        geohash: ngeohash.encode(51.5074, -0.1278, 9)
+      }));
+    }
+    
   };
 
   const handleSubmit = () => {
@@ -151,7 +177,11 @@ export default function AddCourtScreen() {
         <View style={styles.placeholder} />
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        style={styles.content}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Basic Information</Text>
 
@@ -160,7 +190,9 @@ export default function AddCourtScreen() {
             <TextInput
               style={styles.input}
               value={form.name}
-              onChangeText={(val) => setForm((prev) => ({...prev, name: val}))}
+              onChangeText={(val) =>
+                setForm((prev) => ({ ...prev, name: val }))
+              }
               placeholder="e.g., Central Park Basketball Court"
               placeholderTextColor="#999"
             />
@@ -183,24 +215,26 @@ export default function AddCourtScreen() {
                 debounce={300}
                 fetchDetails={true}
                 query={{
-                  key: Constants.expoConfig?.extra?.googleMapsApiKey || process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY,
+                  key:
+                    Constants.expoConfig?.extra?.googleMapsApiKey ||
+                    process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY,
                   language: 'en',
-                  type: 'establishment'
+                  type: 'establishment',
                 }}
                 onPress={(data, details) => {
                   if (details?.geometry?.location) {
-                    setForm(prev => ({
+                    setForm((prev) => ({
                       ...prev,
-                      address: details?.formatted_address || data.description || '',
+                      address:
+                        details?.formatted_address || data.description || '',
                       latitude: details.geometry.location.lat,
                       longitude: details.geometry.location.lng,
-                      geohash: '', // TODO: Calculate geohash from lat/lng
+                      geohash: ngeohash.encode(51.5074, -0.1278, 9)
                     }));
                   }
                 }}
                 enablePoweredByContainer={false}
               />
-
             </View>
           </View>
 
@@ -209,7 +243,9 @@ export default function AddCourtScreen() {
             <TextInput
               style={[styles.input, styles.textArea]}
               value={form.description}
-              onChangeText={val => setForm(prev => ({...prev, description: val}))}
+              onChangeText={(val) =>
+                setForm((prev) => ({ ...prev, description: val }))
+              }
               placeholder="Tell players about this court..."
               placeholderTextColor="#999"
               multiline
@@ -228,7 +264,7 @@ export default function AddCourtScreen() {
             <View key={index} style={styles.imageContainer}>
               <ImagePicker
                 selectedImage={image}
-                onImageSelected={() => { }}
+                onImageSelected={() => {}}
                 onImageRemoved={() => handleRemoveImage(index)}
                 placeholder="Court Photo"
               />
@@ -239,73 +275,71 @@ export default function AddCourtScreen() {
             <ImagePicker
               onImageSelected={handleAddImage}
               placeholder={
-                form.images.length === 0 ? 'Add First Photo' : 'Add Another Photo'
+                form.images.length === 0
+                  ? 'Add First Photo'
+                  : 'Add Another Photo'
               }
             />
           )}
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Amenities</Text>
+          <Text style={styles.sectionTitle}>Tags</Text>
           <Text style={styles.sectionSubtitle}>
-            Select all amenities available at this court
+            Select all tags available at this court
           </Text>
 
-          <View style={styles.amenitiesGrid}>
-            {commonAmenities.map((amenity) => (
+          <View style={styles.tagsGrid}>
+            {commonTags.map((tag) => (
               <TouchableOpacity
-                key={amenity}
+                key={tag}
                 style={[
-                  styles.amenityChip,
-                  form.tags.includes(amenity) && styles.amenityChipSelected,
+                  styles.tagChip,
+                  form.tags.includes(tag) && styles.tagChipSelected,
                 ]}
                 onPress={() =>
-                  form.tags.includes(amenity)
-                    ? handleRemoveAmenity(amenity)
-                    : handleAddAmenity(amenity)
+                  form.tags.includes(tag)
+                    ? handleRemoveTag(tag)
+                    : handleAddTag(tag)
                 }
               >
                 <Text
                   style={[
-                    styles.amenityText,
-                    form.tags.includes(amenity) && styles.amenityTextSelected,
+                    styles.tagText,
+                    form.tags.includes(tag) && styles.tagTextSelected,
                   ]}
                 >
-                  {amenity}
+                  {tag}
                 </Text>
               </TouchableOpacity>
             ))}
           </View>
 
-          <View style={styles.customAmenityContainer}>
+          <View style={styles.customTagContainer}>
             <TextInput
-              style={styles.customAmenityInput}
-              value={newAmenity}
-              onChangeText={setNewAmenity}
-              placeholder="Add custom amenity"
+              style={styles.customTagInput}
+              value={newTag}
+              onChangeText={setNewTag}
+              placeholder="Add custom tag"
               placeholderTextColor="#999"
-              onSubmitEditing={handleAddCustomAmenity}
+              onSubmitEditing={handleAddCustomTag}
             />
             <TouchableOpacity
-              style={styles.addAmenityButton}
-              onPress={handleAddCustomAmenity}
+              style={styles.addTagButton}
+              onPress={handleAddCustomTag}
             >
               <Plus size={20} color="#FF6B35" />
             </TouchableOpacity>
           </View>
 
           {form.tags.length > 0 && (
-            <View style={styles.selectedAmenities}>
-              <Text style={styles.selectedAmenitiesTitle}>
-                Selected Amenities:
-              </Text>
-              <View style={styles.selectedAmenitiesGrid}>
-                {form.tags.map((amenity) => (
-                  <View key={amenity} style={styles.selectedAmenityChip}>
-                    <Text style={styles.selectedAmenityText}>{amenity}</Text>
-                    <TouchableOpacity
-                      onPress={() => handleRemoveAmenity(amenity)}
-                    >
+            <View style={styles.selectedTags}>
+              <Text style={styles.selectedTagsTitle}>Selected Tags:</Text>
+              <View style={styles.selectedTagsGrid}>
+                {form.tags.map((tag) => (
+                  <View key={tag} style={styles.selectedTagChip}>
+                    <Text style={styles.selectedTagText}>{tag}</Text>
+                    <TouchableOpacity onPress={() => handleRemoveTag(tag)}>
                       <X size={16} color="#666" />
                     </TouchableOpacity>
                   </View>
@@ -358,10 +392,24 @@ export default function AddCourtScreen() {
                       <Text>Open All Day</Text>
                       <Switch
                         trackColor={{ false: '#E9ECEF', true: '#FF6B35' }}
-                        thumbColor={form.openingHours[key as keyof Omit<OpeningHours, 'alwaysOpen'>].alwaysOpen ? '#FFFFFF' : '#FFFFFF'}
-                        value={form.openingHours[key as keyof Omit<OpeningHours, 'alwaysOpen'>].alwaysOpen}
+                        thumbColor={
+                          form.openingHours[
+                            key as keyof Omit<OpeningHours, 'alwaysOpen'>
+                          ].alwaysOpen
+                            ? '#FFFFFF'
+                            : '#FFFFFF'
+                        }
+                        value={
+                          form.openingHours[
+                            key as keyof Omit<OpeningHours, 'alwaysOpen'>
+                          ].alwaysOpen
+                        }
                         onValueChange={(value) => {
-                          updateDayHours(key as keyof Omit<OpeningHours, 'alwaysOpen'>, 'alwaysOpen', value)
+                          updateDayHours(
+                            key as keyof Omit<OpeningHours, 'alwaysOpen'>,
+                            'alwaysOpen',
+                            value
+                          );
                         }}
                       />
                     </View>
@@ -370,38 +418,42 @@ export default function AddCourtScreen() {
                   {!form.openingHours[
                     key as keyof Omit<OpeningHours, 'alwaysOpen'>
                   ].alwaysOpen && (
-                      <View style={styles.timeInputsContainer}>
+                    <View style={styles.timeInputsContainer}>
+                      <TimeInput
+                        defaultValue={
+                          form.openingHours[
+                            key as keyof Omit<OpeningHours, 'alwaysOpen'>
+                          ].openTime
+                        }
+                        label="Open Time"
+                        onChange={(time: string) =>
+                          updateDayHours(
+                            key as keyof Omit<OpeningHours, 'alwaysOpen'>,
+                            'openTime',
+                            time
+                          )
+                        }
+                      />
+                      <Text style={styles.timeSeparator}>to</Text>
+                      <View style={styles.timeInputGroup}>
                         <TimeInput
-                          defaultValue={form.openingHours[key as keyof Omit<OpeningHours, 'alwaysOpen'>].openTime}
-                          label="Open Time"
+                          defaultValue={
+                            form.openingHours[
+                              key as keyof Omit<OpeningHours, 'alwaysOpen'>
+                            ].closeTime
+                          }
+                          label="Close Time"
                           onChange={(time: string) =>
                             updateDayHours(
-                              key as keyof Omit<
-                                OpeningHours,
-                                'alwaysOpen'
-                              >,
-                              'openTime', time)
+                              key as keyof Omit<OpeningHours, 'alwaysOpen'>,
+                              'closeTime',
+                              time
+                            )
                           }
                         />
-                        <Text style={styles.timeSeparator}>to</Text>
-                        <View style={styles.timeInputGroup}>
-                          <TimeInput
-                            defaultValue={form.openingHours[key as keyof Omit<OpeningHours, 'alwaysOpen'>].closeTime}
-                            label='Close Time'
-                            onChange={(time: string) =>
-                              updateDayHours(
-                                key as keyof Omit<
-                                  OpeningHours,
-                                  'alwaysOpen'
-                                >,
-                                'closeTime',
-                                time
-                              )
-                            }
-                          />
-                        </View>
                       </View>
-                    )}
+                    </View>
+                  )}
                 </View>
               ))}
             </>
@@ -411,7 +463,12 @@ export default function AddCourtScreen() {
 
       <View style={styles.footer}>
         <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
-          <Text style={styles.submitButtonText}>Add Court</Text>
+          <Text
+            style={styles.submitButtonText}
+            onPress={() => console.log(form)}
+          >
+            Add Court
+          </Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -514,13 +571,13 @@ const styles = StyleSheet.create({
   imageContainer: {
     marginBottom: 16,
   },
-  amenitiesGrid: {
+  tagsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 12,
     marginBottom: 20,
   },
-  amenityChip: {
+  tagChip: {
     backgroundColor: '#F8F9FA',
     borderRadius: 20,
     paddingHorizontal: 16,
@@ -528,25 +585,25 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E9ECEF',
   },
-  amenityChipSelected: {
+  tagChipSelected: {
     backgroundColor: '#FF6B35',
     borderColor: '#FF6B35',
   },
-  amenityText: {
+  tagText: {
     fontSize: 14,
     color: '#1A1A1A',
     fontWeight: '500',
   },
-  amenityTextSelected: {
+  tagTextSelected: {
     color: '#FFFFFF',
   },
-  customAmenityContainer: {
+  customTagContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
     marginBottom: 20,
   },
-  customAmenityInput: {
+  customTagInput: {
     flex: 1,
     backgroundColor: '#F8F9FA',
     borderRadius: 12,
@@ -557,7 +614,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E9ECEF',
   },
-  addAmenityButton: {
+  addTagButton: {
     width: 44,
     height: 44,
     borderRadius: 22,
@@ -567,24 +624,24 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#FF6B35',
   },
-  selectedAmenities: {
+  selectedTags: {
     marginTop: 20,
     paddingTop: 20,
     borderTopWidth: 1,
     borderTopColor: '#F0F0F0',
   },
-  selectedAmenitiesTitle: {
+  selectedTagsTitle: {
     fontSize: 14,
     fontWeight: '500',
     color: '#1A1A1A',
     marginBottom: 12,
   },
-  selectedAmenitiesGrid: {
+  selectedTagsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
   },
-  selectedAmenityChip: {
+  selectedTagChip: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#E8F5E8',
@@ -593,7 +650,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     gap: 8,
   },
-  selectedAmenityText: {
+  selectedTagText: {
     fontSize: 12,
     color: '#28A745',
     fontWeight: '500',
