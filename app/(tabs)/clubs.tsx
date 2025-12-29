@@ -5,7 +5,7 @@ import { Search, Filter, Plus, Users, Calendar, DollarSign, Settings, Crown, Map
 import { ClubCard } from '@/components/ClubCard';
 import { mockClubs } from '@/utils/mockData';
 import { useAuth } from '@/hooks/useAuth';
-import { auth } from '@/firebase/firebase';
+import { auth } from '@/api/firebase';
 import { useEffect } from 'react';
 
 export default function ClubsScreen() {

@@ -12,7 +12,7 @@ import {
   Inter_700Bold,
 } from '@expo-google-fonts/inter';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
-import { auth } from '@/firebase/firebase';
+import { auth } from '@/api/firebase';
 
 export default function RootLayout() {
   useFrameworkReady();

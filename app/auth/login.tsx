@@ -5,7 +5,7 @@ import { Link, router } from 'expo-router';
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react-native';
 import { useAuth } from '@/hooks/useAuth';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
-import { auth } from '@/firebase/firebase';
+import { auth } from '@/api/firebase';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');

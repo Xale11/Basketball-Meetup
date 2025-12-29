@@ -5,7 +5,7 @@ import { Search, Filter, MapPin, Navigation, Users, Clock, Maximize2, Minimize2 
 import { CourtCard } from '@/components/CourtCard';
 import { mockCourts } from '@/utils/mockData';
 import { useAuth } from '@/hooks/useAuth';
-import { auth } from '@/firebase/firebase';
+import { auth } from '@/api/firebase';
 import InteractiveMap from '@/components/InteractiveMap';
 
 export default function MapScreen() {

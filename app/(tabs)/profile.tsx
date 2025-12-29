@@ -3,7 +3,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Settings, CreditCard as Edit, Trophy, Calendar, MapPin, Users, Star, ChevronRight, CreditCard, Bell, Shield } from 'lucide-react-native';
 import { useAuth } from '@/hooks/useAuth';
 import { useEffect } from 'react';
-import { auth } from '@/firebase/firebase';
+import { auth } from '@/api/firebase';
 
 export default function ProfileScreen() {
   const { user, logout } = useAuth();

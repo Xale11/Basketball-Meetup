@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { mockUser } from '@/utils/mockData';
 import { createUserWithEmailAndPassword, User as FirebaseUser, signInWithEmailAndPassword, signOut, deleteUser, onAuthStateChanged } from 'firebase/auth';
-import { auth, db } from '@/firebase/firebase';
+import { auth, db } from '@/api/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { cleanObject } from '@/utils/cleanObject';
 import { router, usePathname } from 'expo-router';
