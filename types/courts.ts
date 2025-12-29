@@ -10,10 +10,11 @@ export interface Court {
   name: string;
   description: string;
   location: {
+    address: string;
     latitude: number;
     longitude: number;
+    geohash: string;
   };
-  address: string;
   images?: string[];
   tags: string[]; // amenities - extensive list of options
   checkedInUsers: string[];
@@ -28,7 +29,6 @@ export interface Court {
   
 export interface OpeningHours {
   alwaysOpen: boolean;
-  timezone: string; // extensive list timezones based on luxon library
   monday: {
     alwaysOpen: boolean;
     openTime: string;
@@ -72,4 +72,17 @@ export interface Review {
   rating: number;
   comment: string;
   createdAt: Date;
+}
+
+export interface CreateCourtForm {
+  name: string;
+  description: string;
+  address: string;
+  latitude: number;
+  longitude: number;
+  geohash: string;
+  images: string[];
+  tags: string[]; // amenities - extensive list of options
+  createdBy: string;
+  openingHours: OpeningHours;
 }

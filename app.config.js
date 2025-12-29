@@ -42,7 +42,8 @@ export default {
       router: {},
       eas: {
         projectId: "8a11d484-17b7-4a98-8803-2f8b72c5166c"
-      }
+      },
+      googleMapsApiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY
     },
     android: {
       package: "com.xale11.basketballmeetupapp",
@@ -52,7 +53,7 @@ export default {
       ],
       config: {
         googleMaps: {
-          apiKey: process.env.GOOGLE_MAPS_API_KEY // Remove EXPO_PUBLIC_ prefix
+          apiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY
         }
       }
     },
