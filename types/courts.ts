@@ -81,7 +81,7 @@ export interface CreateCourtForm {
   latitude: number;
   longitude: number;
   geohash: string;
-  images: string[];
+  images: string[]; // Array of local image URIs
   tags: string[]; // amenities - extensive list of options
   createdBy: string;
   openingHours: OpeningHours;

@@ -22,9 +22,12 @@ import {
 } from 'react-native-google-places-autocomplete';
 import Constants from 'expo-constants';
 import ngeohash from 'ngeohash';
+import { useCreateCourt } from '@/hooks/courts/useCreateCourt';
+import { LoadingSpinner } from '@/components/LoadingSpinner';
 
 export default function AddCourtScreen() {
   const {} = useAuth();
+  const { createCourt, data, loading } = useCreateCourt();
 
   const [form, setForm] = useState<CreateCourtForm>({
     name: '',
@@ -37,13 +40,13 @@ export default function AddCourtScreen() {
     tags: [],
     openingHours: {
       alwaysOpen: false,
-      monday: { alwaysOpen: false, openTime: '09:00', closeTime: '21:00' },
-      tuesday: { alwaysOpen: false, openTime: '09:00', closeTime: '21:00' },
-      wednesday: { alwaysOpen: false, openTime: '09:00', closeTime: '21:00' },
-      thursday: { alwaysOpen: false, openTime: '09:00', closeTime: '21:00' },
-      friday: { alwaysOpen: false, openTime: '09:00', closeTime: '21:00' },
-      saturday: { alwaysOpen: false, openTime: '09:00', closeTime: '21:00' },
-      sunday: { alwaysOpen: false, openTime: '09:00', closeTime: '21:00' },
+      monday: { alwaysOpen: false, openTime: '', closeTime: '23:59' },
+      tuesday: { alwaysOpen: false, openTime: '', closeTime: '23:59' },
+      wednesday: { alwaysOpen: false, openTime: '', closeTime: '23:59' },
+      thursday: { alwaysOpen: false, openTime: '', closeTime: '23:59' },
+      friday: { alwaysOpen: false, openTime: '', closeTime: '23:59' },
+      saturday: { alwaysOpen: false, openTime: '', closeTime: '23:59' },
+      sunday: { alwaysOpen: false, openTime: '', closeTime: '23:59' },
     },
     createdBy: '',
   });
@@ -135,33 +138,106 @@ export default function AddCourtScreen() {
   };
 
   const addLocationToForm = (loc: GooglePlaceDetail | null) => {
-    if (!loc || !loc?.geometry.location.longitude || !loc?.geometry.location.latitude) {
+    if (
+      !loc ||
+      (!loc?.geometry.location.longitude &&
+        !loc?.geometry.location.latitude &&
+        !loc?.geometry.location.lng &&
+        !loc?.geometry.location.lat)
+    ) {
       Alert.alert(
         'Error',
-        'There was an error setting the location. Please try again.'
+        'There was an error setting the location. Please try again. (#Lng/Lat)'
       );
-      return
+      return;
     } else {
       setForm((prev) => ({
         ...prev,
-        longitude: loc?.geometry.location.longitude,
-        latitude: loc?.geometry.location.latitude,
-        geohash: ngeohash.encode(51.5074, -0.1278, 9)
+        address: loc?.formatted_address || loc?.formattedAddress,
+        longitude:
+          loc?.geometry.location.longitude || loc?.geometry.location.lng,
+        latitude: loc?.geometry.location.latitude || loc?.geometry.location.lat,
+        geohash: ngeohash.encode(
+          loc?.geometry.location.latitude || loc?.geometry.location.lat,
+          loc?.geometry.location.longitude || loc?.geometry.location.lng,
+          9
+        ),
       }));
     }
-    
+  };
+
+  const isFormValid = (form: CreateCourtForm): boolean => {
+    if (
+      !form.name ||
+      !form.name.trim() ||
+      !form.address ||
+      !form.address.trim()
+    ) {
+      Alert.alert('Error', 'Please fill in court name and address');
+      return false;
+    }
+
+    // Check lat/lon required (may be 0 for some, but likely shouldn't)
+    if (isNaN(form.latitude) || isNaN(form.longitude)) {
+      Alert.alert('Error', 'Location coordinates are missing or invalid.');
+      return false;
+    }
+
+    // Validate opening hours structure for each day
+    if (form.openingHours && !form.openingHours.alwaysOpen) {
+      const days: (keyof Omit<OpeningHours, 'alwaysOpen'>)[] = [
+        'monday',
+        'tuesday',
+        'wednesday',
+        'thursday',
+        'friday',
+        'saturday',
+        'sunday',
+      ];
+      for (const day of days) {
+        const dayHours = form.openingHours[day];
+        if (!dayHours) {
+          Alert.alert('Error', `Opening hours not specified for ${day}.`);
+          return false;
+        }
+        if (!dayHours.openTime.trim() || !dayHours.closeTime.trim()) {
+          Alert.alert(
+            'Error',
+            `Please enter both opening and closing times for ${
+              day.charAt(0).toUpperCase() + day.slice(1)
+            }.`
+          );
+          return false;
+        }
+        // Ensures close time is not before the opening time
+        // We'll stringify and compare as "HH:mm"
+        if (dayHours.openTime.trim() >= dayHours.closeTime.trim()) {
+          Alert.alert(
+            'Error',
+            `For ${
+              day.charAt(0).toUpperCase() + day.slice(1)
+            }, the closing time must be after the opening time.`
+          );
+          return false;
+        }
+      }
+    }
+    return true;
   };
 
   const handleSubmit = () => {
-    if (!form.name.trim() || !form.address.trim()) {
-      Alert.alert('Error', 'Please fill in court name and address');
-      return;
-    }
+    if (!isFormValid(form)) return;
 
-    // Here you would typically save to your backend
-    Alert.alert('Success', 'Court added successfully!', [
-      { text: 'OK', onPress: () => router.back() },
-    ]);
+    createCourt(form, {
+      onSuccess: (_) => {
+        router.replace('/(tabs)/map');
+      },
+      onError: (error) => {
+        console.log(error)
+      }
+    });
+
+    
   };
 
   return (
@@ -202,14 +278,6 @@ export default function AddCourtScreen() {
             <Text style={styles.label}>Address *</Text>
             <View style={styles.addressInput}>
               <MapPin size={20} color="#666" />
-              {/* <TextInput
-                style={styles.addressTextInput}
-                value={address}
-                onChangeText={setAddress}
-                placeholder="Enter court address"
-                placeholderTextColor="#999"
-                multiline
-              /> */}
               <GooglePlacesAutocomplete
                 placeholder="Search for a court"
                 debounce={300}
@@ -221,17 +289,8 @@ export default function AddCourtScreen() {
                   language: 'en',
                   type: 'establishment',
                 }}
-                onPress={(data, details) => {
-                  if (details?.geometry?.location) {
-                    setForm((prev) => ({
-                      ...prev,
-                      address:
-                        details?.formatted_address || data.description || '',
-                      latitude: details.geometry.location.lat,
-                      longitude: details.geometry.location.lng,
-                      geohash: ngeohash.encode(51.5074, -0.1278, 9)
-                    }));
-                  }
+                onPress={(_, details) => {
+                  addLocationToForm(details);
                 }}
                 enablePoweredByContainer={false}
               />
@@ -462,14 +521,15 @@ export default function AddCourtScreen() {
       </ScrollView>
 
       <View style={styles.footer}>
-        <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
-          <Text
-            style={styles.submitButtonText}
-            onPress={() => console.log(form)}
-          >
-            Add Court
-          </Text>
-        </TouchableOpacity>
+        {!loading ? (
+          <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
+            <Text style={styles.submitButtonText}>Add Court</Text>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity style={styles.loadingButton}>
+            <LoadingSpinner color="white" size="large" />
+          </TouchableOpacity>
+        )}
       </View>
     </SafeAreaView>
   );
@@ -677,6 +737,17 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
+  },
+  loadingButton: {
+    backgroundColor: '#FF6B35',
+    borderRadius: 16,
+    paddingVertical: 28,
+    alignItems: 'center',
+    shadowColor: '#FF6B35',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
   },
   sectionHeader: {
     flexDirection: 'row',

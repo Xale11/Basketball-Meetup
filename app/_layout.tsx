@@ -13,6 +13,11 @@ import {
 } from '@expo-google-fonts/inter';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { auth } from '@/api/firebase';
+import {
+  QueryClient,
+  QueryClientProvider,
+  useQueryClient,
+} from '@tanstack/react-query';
 
 export default function RootLayout() {
   useFrameworkReady();
@@ -33,26 +38,36 @@ export default function RootLayout() {
           console.log(auth.currentUser);
           router.push('/(tabs)');
         } else {
-          console.log("User is not authenticated");
+          console.log('User is not authenticated');
           router.replace('/auth/login');
         }
-      }
+      };
       isUserAuthenticated();
     }
   }, [user, loading, fontsLoaded]);
 
+  const queryClient = new QueryClient();
+
   if (!fontsLoaded) {
-    return <LoadingSpinner />;
+    return (
+      <>
+        <QueryClientProvider client={queryClient}>
+          <LoadingSpinner />
+        </QueryClientProvider>
+      </>
+    );
   }
 
   return (
     <>
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="auth" />
-        <Stack.Screen name="+not-found" />
-      </Stack>
-      <StatusBar style="dark" />
+      <QueryClientProvider client={queryClient}>
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="auth" />
+          <Stack.Screen name="+not-found" />
+        </Stack>
+        <StatusBar style="dark" />
+      </QueryClientProvider>
     </>
   );
 }

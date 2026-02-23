@@ -1,24 +1,103 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Modal,
+  TextInput,
+  Alert,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState } from 'react';
-import { Search, Filter, Plus, Calendar, Users, DollarSign, MapPin, Clock } from 'lucide-react-native';
+import {
+  Search,
+  Filter,
+  Plus,
+  Calendar,
+  Users,
+  DollarSign,
+  MapPin,
+  Clock,
+} from 'lucide-react-native';
 import { EventCard } from '@/components/EventCard';
 import { mockEvents } from '@/utils/mockData';
 import { useAuth } from '@/hooks/useAuth';
 import { auth } from '@/api/firebase';
 import { useEffect } from 'react';
+import { CreateEventForm } from '@/types/event';
+import {
+  GooglePlaceDetail,
+  GooglePlacesAutocomplete,
+} from 'react-native-google-places-autocomplete';
+import Constants from 'expo-constants';
+import ngeohash from 'ngeohash';
+import TimeInput from '@/components/TimeInput';
+import DateTimeInput from '@/components/DateTimeInput';
 
 export default function EventsScreen() {
-  const {  } = useAuth();
-  
+  const {} = useAuth();
+
   const [showCreateEvent, setShowCreateEvent] = useState(false);
   const [selectedTab, setSelectedTab] = useState('upcoming');
+  const [form, setForm] = useState<CreateEventForm>({
+    title: '',
+    description: '',
+    courtId: '',
+    mainOrganiserType: 'user',
+    mainOrganiserId: '',
+    organiserUserIds: [],
+    organiserClubIds: [],
+    startDate: '',
+    endDate: '',
+    maxParticipants: 0,
+    pricing: [],
+    ticketDeadline: 'upcoming',
+    isCancelled: false,
+    createdAt: '',
+    acceptingParticipants: true,
+    verifyParticipants: false,
+  });
 
   const tabs = [
     { key: 'upcoming', label: 'Upcoming' },
     { key: 'my-events', label: 'My Events' },
     { key: 'past', label: 'Past' },
   ];
+
+  const addLocationToForm = (loc: GooglePlaceDetail | null) => {
+    if (
+      !loc ||
+      (!loc?.geometry.location.longitude &&
+        !loc?.geometry.location.latitude &&
+        !loc?.geometry.location.lng &&
+        !loc?.geometry.location.lat)
+    ) {
+      Alert.alert(
+        'Error',
+        'There was an error setting the location. Please try again. (#Lng/Lat)'
+      );
+      return;
+    } else {
+      setForm((prev) => ({
+        ...prev,
+        address: loc?.formatted_address || loc?.formattedAddress,
+        longitude:
+          loc?.geometry.location.longitude || loc?.geometry.location.lng,
+        latitude: loc?.geometry.location.latitude || loc?.geometry.location.lat,
+        geohash: ngeohash.encode(
+          loc?.geometry.location.latitude || loc?.geometry.location.lat,
+          loc?.geometry.location.longitude || loc?.geometry.location.lng,
+          9
+        ),
+      }));
+    }
+  };
+
+  const updateEventDateTime = (field: 'startDate' | 'endDate', value: string) => {
+    setForm((prev): CreateEventForm => ({ ...prev, [field]: value }));
+    return true;
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -31,7 +110,7 @@ export default function EventsScreen() {
           <TouchableOpacity style={styles.iconButton}>
             <Filter size={24} color="#1A1A1A" />
           </TouchableOpacity>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.createButton}
             onPress={() => setShowCreateEvent(true)}
           >
@@ -47,7 +126,12 @@ export default function EventsScreen() {
             style={[styles.tab, selectedTab === tab.key && styles.activeTab]}
             onPress={() => setSelectedTab(tab.key)}
           >
-            <Text style={[styles.tabText, selectedTab === tab.key && styles.activeTabText]}>
+            <Text
+              style={[
+                styles.tabText,
+                selectedTab === tab.key && styles.activeTabText,
+              ]}
+            >
               {tab.label}
             </Text>
           </TouchableOpacity>
@@ -56,11 +140,7 @@ export default function EventsScreen() {
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {mockEvents.map((event) => (
-          <EventCard 
-            key={event.id} 
-            event={event} 
-            onPress={() => {}} 
-          />
+          <EventCard key={event.id} event={event} onPress={() => {}} />
         ))}
       </ScrollView>
 
@@ -77,21 +157,105 @@ export default function EventsScreen() {
               <Text style={styles.closeButton}>Cancel</Text>
             </TouchableOpacity>
           </View>
-          
+
           <ScrollView style={styles.modalContent}>
             <View style={styles.formSection}>
-              <Text style={styles.formLabel}>Event Type</Text>
-              <View style={styles.eventTypeGrid}>
-                {['Tournament', 'Pickup Game', 'Training', 'Club Event'].map((type) => (
-                  <TouchableOpacity key={type} style={styles.eventTypeCard}>
-                    <Text style={styles.eventTypeText}>{type}</Text>
-                  </TouchableOpacity>
-                ))}
+              <Text style={styles.formTitle}>Event Information</Text>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.formLabel}>Event Name *</Text>
+                <TextInput
+                  style={styles.input}
+                  value={form.title}
+                  onChangeText={(val) =>
+                    setForm(
+                      (prev): CreateEventForm => ({ ...prev, title: val })
+                    )
+                  }
+                  placeholder="e.g., Community Yoga in the Park"
+                  placeholderTextColor="#999"
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.formLabel}>Address *</Text>
+                <View style={styles.addressInput}>
+                  <MapPin size={20} color="#666" />
+                  <GooglePlacesAutocomplete
+                    placeholder="Search for a location"
+                    debounce={300}
+                    fetchDetails={true}
+                    query={{
+                      key:
+                        Constants.expoConfig?.extra?.googleMapsApiKey ||
+                        process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY,
+                      language: 'en',
+                      type: 'establishment',
+                    }}
+                    onPress={(_, details) => {
+                      addLocationToForm(details);
+                    }}
+                    enablePoweredByContainer={false}
+                  />
+                </View>
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.formLabel}>Description</Text>
+                <TextInput
+                  style={[styles.input, styles.textArea]}
+                  value={form.description}
+                  onChangeText={(val) =>
+                    setForm((prev) => ({ ...prev, description: val }))
+                  }
+                  placeholder="Tell people about this event..."
+                  placeholderTextColor="#999"
+                  multiline
+                  numberOfLines={4}
+                />
               </View>
             </View>
 
             <View style={styles.formSection}>
-              <Text style={styles.formLabel}>Quick Setup</Text>
+              <Text style={styles.formTitle}>Event Time</Text>
+              <View style={styles.timeInputsContainer}>
+                <DateTimeInput
+                  defaultValue={''}
+                  label="Start Time"
+                  onChange={(time: string) =>
+                    updateEventDateTime('startDate', time)
+                  }
+                  
+                />
+                <Text style={styles.timeSeparator}>to</Text>
+                <View style={styles.timeInputGroup}>
+                  <TimeInput
+                    defaultValue={form.endDate}
+                    label="End Time"
+                    onChange={(time: string) =>
+                      updateEventDateTime('endDate', time)
+                    }
+
+                  />
+                </View>
+              </View>
+            </View>
+
+            <View style={styles.formSection}>
+              <Text style={styles.formTitle}>Event Type</Text>
+              <View style={styles.eventTypeGrid}>
+                {['Tournament', 'Pickup Game', 'Training', 'Club Event'].map(
+                  (type) => (
+                    <TouchableOpacity key={type} style={styles.eventTypeCard}>
+                      <Text style={styles.eventTypeText}>{type}</Text>
+                    </TouchableOpacity>
+                  )
+                )}
+              </View>
+            </View>
+
+            <View style={styles.formSection}>
+              <Text style={styles.formTitle}>Quick Setup</Text>
               <View style={styles.quickSetupGrid}>
                 <View style={styles.quickSetupItem}>
                   <Calendar size={24} color="#FF6B35" />
@@ -113,16 +277,21 @@ export default function EventsScreen() {
             </View>
 
             <View style={styles.formSection}>
-              <Text style={styles.formLabel}>Event Templates</Text>
+              <Text style={styles.formTitle}>Event Templates</Text>
               <View style={styles.templatesList}>
-                {['3v3 Tournament', 'Pickup Game', 'Skills Training'].map((template) => (
-                  <TouchableOpacity key={template} style={styles.templateCard}>
-                    <Text style={styles.templateTitle}>{template}</Text>
-                    <Text style={styles.templateDescription}>
-                      Pre-configured settings for quick setup
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+                {['3v3 Tournament', 'Pickup Game', 'Skills Training'].map(
+                  (template) => (
+                    <TouchableOpacity
+                      key={template}
+                      style={styles.templateCard}
+                    >
+                      <Text style={styles.templateTitle}>{template}</Text>
+                      <Text style={styles.templateDescription}>
+                        Pre-configured settings for quick setup
+                      </Text>
+                    </TouchableOpacity>
+                  )
+                )}
               </View>
             </View>
           </ScrollView>
@@ -230,15 +399,87 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   formSection: {
-    paddingVertical: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 20,
+    marginTop: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
   },
-  formLabel: {
+  formTitle: {
     fontSize: 18,
     fontWeight: '600',
     color: '#1A1A1A',
-    marginBottom: 16,
+    marginBottom: 8,
+  },
+  formSubtitle: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 20,
+  },
+  formLabel: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#1A1A1A',
+    marginBottom: 8,
+  },
+  inputGroup: {
+    marginBottom: 20,
+  },
+  input: {
+    backgroundColor: '#F8F9FA',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    fontSize: 16,
+    color: '#1A1A1A',
+    borderWidth: 1,
+    borderColor: '#E9ECEF',
+  },
+  addressInput: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: '#F8F9FA',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    borderWidth: 1,
+    borderColor: '#E9ECEF',
+  },
+  textArea: {
+    height: 100,
+    textAlignVertical: 'top',
+  },
+  timeInputsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  timeInputGroup: {
+    flex: 1,
+  },
+  timeLabel: {
+    fontSize: 12,
+    color: '#666',
+    marginBottom: 4,
+  },
+  timeInput: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 14,
+    color: '#1A1A1A',
+    borderWidth: 1,
+    borderColor: '#E9ECEF',
+  },
+  timeSeparator: {
+    fontSize: 14,
+    color: '#666',
+    fontWeight: '500',
   },
   eventTypeGrid: {
     flexDirection: 'row',
