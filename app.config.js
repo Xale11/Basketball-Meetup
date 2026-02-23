@@ -31,7 +31,15 @@ export default {
       [
         "expo-location",
         {
-          locationAlwaysAndWhenInUsePermission: "Allow $(PRODUCT_NAME) to use your location to show nearby basketball courts."
+          locationAlwaysAndWhenInUsePermission:
+            "Allow $(PRODUCT_NAME) to use your location to show nearby basketball courts."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          photosPermission:
+            "This app needs access to your photos so you can upload and share basketball event or court images."
         }
       ]
     ],
