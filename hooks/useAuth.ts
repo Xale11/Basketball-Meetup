@@ -89,15 +89,15 @@ export const useAuth = () => {
     }
   };
 
-  // const checkAuth = async () => {
-  //   if (!auth.currentUser && !pathname.startsWith('/auth')) {
-  //     router.replace('/auth/login');
-  //     return false;
-  //   }
-  //   // user state is handled by onAuthStateChanged
-  //   setLoading(false);
-  //   return true;
-  // };
+  const checkAuth = async () => {
+    if (!auth.currentUser && !pathname.startsWith('/auth')) {
+      router.replace('/auth/login');
+      return false;
+    }
+    // user state is handled by onAuthStateChanged
+    setLoading(false);
+    return true;
+  };
 
   const register = async (email: string, password: string, name: string) => {
     setLoading(true);
@@ -147,5 +147,6 @@ export const useAuth = () => {
     login,
     logout,
     register,
+    checkAuth,
   };
 };

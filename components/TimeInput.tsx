@@ -14,9 +14,15 @@ interface TimeInputProps {
   onChange: (time: string) => boolean;
   label: string;
   defaultValue: string;
+  mode?: 'time' | 'date' | 'datetime' | 'countdown';
 }
 
-const TimeInput = ({ onChange, label, defaultValue }: TimeInputProps) => {
+const TimeInput = ({
+  onChange,
+  label,
+  defaultValue,
+  mode = 'time',
+}: TimeInputProps) => {
   const [showPicker, setShowPicker] = useState(false);
   const [time, setTime] = useState<Date>();
 
@@ -25,39 +31,68 @@ const TimeInput = ({ onChange, label, defaultValue }: TimeInputProps) => {
     // Just add props for the day and field. Move function from add-court.tsx to here.
     setShowPicker(false);
     if (selectedDate) {
-      if (onChange(selectedDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false }))) {
-        setTime(selectedDate)
+      if (
+        onChange(
+          selectedDate.toLocaleTimeString([], {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false,
+          })
+        )
+      ) {
+        setTime(selectedDate);
       }
-    };
+    }
   };
-  
+
   return (
     <View style={styles.timeInputGroup}>
       <TouchableOpacity onPress={() => setShowPicker(true)}>
         <Text style={styles.timeLabel}>{label}</Text>
         <TextInput
           style={styles.timeInput}
-          value={!time ? defaultValue : time.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false })}
+          value={
+            !time
+              ? defaultValue
+              : time.toLocaleTimeString([], {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  hour12: false,
+                })
+          }
           editable={false}
           onPress={() => setShowPicker(true)}
-          placeholder="09:00"
+          placeholder={defaultValue}
           placeholderTextColor="#999"
         />
       </TouchableOpacity>
-      {showPicker && <DateTimePicker
-        value={time || new Date()}
-        mode="time"
-        is24Hour={true}
-        display={
-          Platform.OS === 'ios' ? 'spinner' : 'default'
-        }
-        onChange={(e) => handleTimePickerChange(e, new Date(e.nativeEvent.timestamp))}
-      />}
+      {showPicker &&
+        (Platform.OS === 'android' && mode === 'datetime' ? (
+          <DateTimePicker
+            value={time || new Date()}
+            mode={mode}
+            is24Hour={true}
+            display={'default'}
+            onChange={(e) =>
+              handleTimePickerChange(e, new Date(e.nativeEvent.timestamp))
+            }
+          />
+        ) : (
+          <DateTimePicker
+            value={time || new Date()}
+            mode={mode}
+            is24Hour={true}
+            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+            onChange={(e) =>
+              handleTimePickerChange(e, new Date(e.nativeEvent.timestamp))
+            }
+          />
+        ))}
     </View>
-  )
-}
+  );
+};
 
-export default TimeInput
+export default TimeInput;
 
 const styles = StyleSheet.create({
   timeInputGroup: {
@@ -77,5 +112,5 @@ const styles = StyleSheet.create({
     color: '#1A1A1A',
     borderWidth: 1,
     borderColor: '#E9ECEF',
-  }
+  },
 });
