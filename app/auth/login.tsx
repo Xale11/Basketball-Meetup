@@ -12,7 +12,7 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
-  const { login, loading } = useAuth();
+  const { loading, signInWithEmail } = useAuth();
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -21,7 +21,7 @@ export default function LoginScreen() {
     }
 
     try {
-      await login(email, password);
+      await signInWithEmail(email, password);
       router.replace('/(tabs)');
     } catch (err) {
       setError('Invalid email or password');

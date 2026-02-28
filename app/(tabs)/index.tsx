@@ -3,16 +3,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Search, Bell, Plus, MapPin, Calendar, Users } from 'lucide-react-native';
 import { CourtCard } from '@/components/CourtCard';
 import { EventCard } from '@/components/EventCard';
-import { useAuth } from '@/hooks/useAuth';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { mockCourts, mockEvents } from '@/utils/mockData';
-import { auth } from '@/api/firebase';
-import { useEffect } from 'react';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function HomeScreen() {
-  const { user, loading } = useAuth();
+  const { user, loading, session } = useAuth();
 
-  console.log(user);
+  console.log(session);
 
   if (loading) {
     return <LoadingSpinner />;

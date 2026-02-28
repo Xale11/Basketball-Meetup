@@ -14,7 +14,7 @@ export default function RegisterScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState('');
-  const { register, loading } = useAuth();
+  const { loading, signUpWithEmail } = useAuth();
 
   const handleRegister = async () => {
     if (!name || !email || !password || !confirmPassword) {
@@ -33,8 +33,15 @@ export default function RegisterScreen() {
     }
 
     try {
-      await register(email, password, name);
-      router.replace('/(tabs)');
+      const session = await signUpWithEmail(email, password, name);
+      
+      if (session) {
+        router.replace('/(tabs)');
+      } else if (!session) {
+        router.replace('/auth/checkEmail');
+      } else {
+        setError('Failed to create account. Please try again.');
+      }
     } catch (err) {
       setError('Failed to create account. Please try again.');
     }

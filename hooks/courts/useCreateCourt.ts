@@ -5,12 +5,12 @@ import { useAuth } from '@/hooks/useAuth';
 import { router } from 'expo-router';
 
 export const useCreateCourt = () => {
-  const { user, loading: authLoading, checkAuth } = useAuth();
+  const { user, loading: authLoading, isAuth } = useAuth();
 
   const mutation = useMutation<Court, Error, CreateCourtForm>({
     mutationFn: async (court: CreateCourtForm) => {
       // Check authentication
-      const isAuthenticated = await checkAuth()
+      const isAuthenticated = await isAuth()
       if (!isAuthenticated) {
         router.replace('/auth/login');
         throw new Error('You must be logged in to create a court');
