@@ -1,3 +1,37 @@
+export interface Event_V2 {
+  id: string;
+  
+  societyId?: string;
+  universityId?: string; // ✅ for discover queries
+
+  name: string;
+  description?: string;
+
+  images?: string[];
+
+  startDate: string;
+  endDate: string;
+
+  location: {
+    address: string;
+    latitude: number;
+    longitude: number;
+    geohash: string;
+  };
+
+  visibility: "PUBLIC" | "SOCIETY_ONLY";
+
+  capacity?: number;
+  attendeeCount: number;
+
+  isCancelled: boolean;
+
+  createdByUserId: string;
+
+  createdAt: number;
+  updatedAt: number;
+}
+
 export interface Event {
   id: string;
   images?: string[];
