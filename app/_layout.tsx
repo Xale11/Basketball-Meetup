@@ -18,10 +18,11 @@ import {
   QueryClientProvider,
   useQueryClient,
 } from '@tanstack/react-query';
+import { AuthProvider } from '@/providers/AuthProvider';
 
 export default function RootLayout() {
   useFrameworkReady();
-  const { user, loading, checkAuth } = useAuth();
+  const { user, loading, session } = useAuth();
 
   const [fontsLoaded] = useFonts({
     'Inter-Regular': Inter_400Regular,
@@ -33,7 +34,7 @@ export default function RootLayout() {
   useEffect(() => {
     if (!loading && fontsLoaded) {
       const isUserAuthenticated = async () => {
-        const isAuth = await checkAuth();
+        const isAuth = session
         if (isAuth) {
           console.log(auth.currentUser);
           router.push('/(tabs)');
@@ -52,7 +53,9 @@ export default function RootLayout() {
     return (
       <>
         <QueryClientProvider client={queryClient}>
-          <LoadingSpinner />
+          <AuthProvider>
+            <LoadingSpinner />
+          </AuthProvider>
         </QueryClientProvider>
       </>
     );
@@ -61,12 +64,14 @@ export default function RootLayout() {
   return (
     <>
       <QueryClientProvider client={queryClient}>
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="(tabs)" />
-          <Stack.Screen name="auth" />
-          <Stack.Screen name="+not-found" />
-        </Stack>
-        <StatusBar style="dark" />
+        <AuthProvider>
+          <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="(tabs)" />
+            <Stack.Screen name="auth" />
+            <Stack.Screen name="+not-found" />
+          </Stack>
+          <StatusBar style="dark" />
+        </AuthProvider>
       </QueryClientProvider>
     </>
   );
