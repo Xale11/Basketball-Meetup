@@ -1,9 +1,22 @@
-export type SocietyRole =
-  | "OWNER"          // (optional) creator / super admin
-  | "PRESIDENT"      // top leader
-  | "EXEC"           // committee / admin team
-  | "MODERATOR"      // can manage content/members, limited
-  | "MEMBER";        // standard
+export enum SocietyRoleIdEnum {
+  OWNER = "OWNER",
+  PRESIDENT = "PRESIDENT",
+  EXEC = "EXEC",
+  MODERATOR = "MODERATOR",
+  MEMBER = "MEMBER",
+}
+
+export enum SocietyMembershipStatusEnum {
+  ACTIVE = "ACTIVE",
+  PENDING = "PENDING",
+  BANNED = "BANNED",
+}
+
+
+export interface SocietyRole {
+  id: string
+  name: string
+}
 
 export interface Society {
   id: string;
@@ -17,21 +30,13 @@ export interface Society {
 }
 
 export interface SocietyMembership {
-  id: string;
 
   societyId: string;
   userId: string;
 
-  role: SocietyRole;
-  status: "ACTIVE" | "PENDING" | "BANNED";
+  roleId: SocietyRoleIdEnum;
+  status: SocietyMembershipStatusEnum;
 
   joinedAt: number;
-
-  // OPTIONAL snapshots (to reduce reads in lists)
-  userDisplayName?: string;
-  userPhotoUrl?: string;
-  societyName?: string;
-
-  createdAt: number;
   updatedAt: number;
 }
