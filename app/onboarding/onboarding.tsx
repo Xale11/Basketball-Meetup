@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -14,37 +14,40 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { User as UserIcon, BookOpen, GraduationCap, CheckCircle2, Camera, ChevronDown, X } from 'lucide-react-native';
+import { User as UserIcon, BookOpen, GraduationCap, CheckCircle2, Camera, ChevronDown, X, Search } from 'lucide-react-native';
 import { useAuth } from '@/hooks/useAuth';
-import { OnboardingStatus } from '@/types/user';
+import { OnboardingStatus, OnboardingUserForm } from '@/types/user';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { ImagePicker } from '@/components/ImagePicker';
-import { UK_UNIVERSITIES } from '@/utils/ukUniversities';
 import { uploadImagesToStorage } from '@/api/utils.api';
+import useFetchUniversities from '@/hooks/universities/useFetchUniversities';
+import useFetchSocietiesByUniId from '@/hooks/societies/useFetchSocietiesByUniId';
+import useOnboardUser from '@/hooks/users/useOnboardUser';
 
 export default function OnboardingScreen() {
   const { user, loading, session } = useAuth();
-
+  const { onboardUser, loading: onboardingLoading } = useOnboardUser();
+  
   const [step, setStep] = useState(1);
-  const [name, setName] = useState(user?.name ?? '');
-  const [bio, setBio] = useState(user?.bio ?? '');
-  const [over18, setOver18] = useState<boolean>(user?.over18 ?? false);
-  const [universityId, setUniversityId] = useState(user?.universityId ?? '');
-  const [course, setCourse] = useState(user?.course ?? '');
   const [photoUri, setPhotoUri] = useState<string | null>(user?.photoUrl ?? null);
   const [selectedSocieties, setSelectedSocieties] = useState<string[]>([]);
+  const [societySearch, setSocietySearch] = useState('');
   const [showUniversityPicker, setShowUniversityPicker] = useState(false);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [form, setForm] = useState<OnboardingUserForm>({
+    id: session?.user?.id ?? '',
+    name: user?.name ?? '',
+    bio: user?.bio ?? '',
+    over18: user?.over18 ?? false,
+    photoUrl: user?.photoUrl ?? '',
+    universityId: user?.universityId ?? '',
+    course: user?.course ?? '',
+    societies: [],
+  });
 
-  // Mock societies list - in production, this would come from an API filtered by university
-  const availableSocieties = [
-    { id: 'basketball-club', name: 'Basketball Club' },
-    { id: 'sports-society', name: 'Sports Society' },
-    { id: 'athletic-association', name: 'Athletic Association' },
-    { id: 'fitness-society', name: 'Fitness Society' },
-    { id: 'recreation-club', name: 'Recreation Club' },
-  ];
+  const { universities, isLoading: universitiesLoading, isError: universitiesError, fetchUniversities } = useFetchUniversities();
+  const { societies, isLoading: societiesLoading, isError: societiesError, fetchSocieties } = useFetchSocietiesByUniId(form.universityId ?? '');
 
   const isLastStep = step === 4;
 
@@ -52,17 +55,18 @@ export default function OnboardingScreen() {
     setError('');
 
     if (step === 1) {
-      if (!name.trim()) {
+      if (!form.name.trim()) {
         setError('Please tell us your name.');
         return;
       }
     }
 
     if (step === 3) {
-        if (!universityId.trim()) {
-            setError('Please select a University');
-            return;
-          }
+      // University is optional. If the user picked one, it must be non-empty.
+      if (form.universityId != null && form.universityId !== '' && !form.universityId.trim()) {
+        setError('Please select a University');
+        return;
+      }
     }
 
     if (isLastStep) {
@@ -92,37 +96,26 @@ export default function OnboardingScreen() {
       setError('');
 
       let photoUrl: string | undefined = undefined;
-      
-      // Upload photo if selected
-      if (photoUri && session?.user?.id) {
-        try {
-          const uploadedUrls = await uploadImagesToStorage([photoUri], 'profiles', session.user.id);
-          photoUrl = uploadedUrls[0];
-        } catch (uploadError) {
-          console.error('Failed to upload photo:', uploadError);
-          // Continue without photo if upload fails
-        }
-      }
 
-      // TODO: Persist onboarding data to your backend / Supabase users table.
-      // This is intentionally left as a placeholder so you can wire it
-      // to your own mutations or RPC functions.
-      //
-      // Example shape you might send:
-      // await updateUserProfile({
-      //   name,
-      //   bio,
-      //   over18,
-      //   universityId: universityId || undefined,
-      //   course: course || undefined,
-      //   photoUrl: photoUrl || undefined,
-      //   onboardingStatus: OnboardingStatus.COMPLETED,
-      // });
-      //
-      // Also create society memberships:
-      // if (selectedSocieties.length > 0) {
-      //   await createSocietyMemberships(session.user.id, selectedSocieties);
+      // Upload photo if selected
+      // if (photoUri && session?.user?.id) {
+      //   try {
+      //     const uploadedUrls = await uploadImagesToStorage([photoUri], 'profiles', session.user.id);
+      //     photoUrl = uploadedUrls[0];
+      //   } catch (uploadError) {
+      //     console.error('Failed to upload photo:', uploadError);
+      //     // Continue without photo if upload fails
+      //   }
       // }
+
+      await onboardUser({
+        form: {
+          ...form,
+          id: form.id || session?.user?.id || '',
+          societies: selectedSocieties,
+        },
+        photoUrl
+      });
 
       router.replace('/(tabs)');
     } catch (e) {
@@ -132,10 +125,39 @@ export default function OnboardingScreen() {
     }
   };
 
-  const selectedUniversity = UK_UNIVERSITIES.find(u => u.id === universityId);
-  const selectedSocietiesNames = availableSocieties
+  const openUniversityPicker = () => {
+    setShowUniversityPicker(true);
+    fetchUniversities();
+  }
+
+  const handleUniversitySelect = (universityId: string) => {
+    setForm(prev => ({
+      ...prev,
+      universityId,
+    }));
+    setSelectedSocieties([]);
+    setSocietySearch('');
+    setShowUniversityPicker(false);
+  }
+
+  const selectedUniversity = universities.find(u => u.id === form.universityId);
+  const selectedSocietiesNames = societies
     .filter(s => selectedSocieties.includes(s.id))
     .map(s => s.name);
+
+  const normalizedSocietyQuery = societySearch.trim().toLowerCase();
+  const filteredSocieties = societies
+    .filter((s) => {
+      if (!normalizedSocietyQuery) return true;
+      return s.name.toLowerCase().includes(normalizedSocietyQuery);
+    })
+    .sort((a, b) => {
+      const aSelected = selectedSocieties.includes(a.id);
+      const bSelected = selectedSocieties.includes(b.id);
+      if (aSelected !== bSelected) return aSelected ? -1 : 1;
+      return a.name.localeCompare(b.name);
+    })
+    .slice(0, 5);
 
   const toggleSociety = (societyId: string) => {
     setSelectedSocieties(prev => 
@@ -145,7 +167,21 @@ export default function OnboardingScreen() {
     );
   };
 
-  if (loading || submitting) {
+  // Keep the submitted form state in sync with what the user selected in the UI.
+  useEffect(() => {
+    setForm((prev) => ({
+      ...prev,
+      societies: selectedSocieties,
+    }));
+  }, [selectedSocieties]);
+
+  useEffect(() => {
+    if (step === 4 && form.universityId) {
+      fetchSocieties();
+    }
+  }, [step, form.universityId]);
+
+  if (loading || submitting || onboardingLoading) {
     return <LoadingSpinner />;
   }
 
@@ -199,8 +235,13 @@ export default function OnboardingScreen() {
                     <TextInput
                       style={styles.input}
                       placeholder="Your name"
-                      value={name}
-                      onChangeText={setName}
+                      value={form.name}
+                      onChangeText={(text) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          name: text,
+                        }))
+                      }
                       autoCapitalize="words"
                     />
                   </View>
@@ -213,9 +254,14 @@ export default function OnboardingScreen() {
                       </Text>
                     </View>
                     <Switch
-                      value={over18}
-                      onValueChange={setOver18}
-                      thumbColor={over18 ? '#FFFFFF' : '#FFFFFF'}
+                      value={form.over18}
+                      onValueChange={(value) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          over18: value,
+                        }))
+                      }
+                      thumbColor={form.over18 ? '#FFFFFF' : '#FFFFFF'}
                       trackColor={{ false: '#E9ECEF', true: '#FF6B35' }}
                     />
                   </View>
@@ -240,8 +286,13 @@ export default function OnboardingScreen() {
                     <TextInput
                       style={[styles.input, styles.textArea]}
                       placeholder="Share your playing style, favorite position, or anything you'd like other players to know."
-                      value={bio}
-                      onChangeText={setBio}
+                      value={form.bio}
+                      onChangeText={(text) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          bio: text,
+                        }))
+                      }
                       multiline
                       numberOfLines={4}
                       textAlignVertical="top"
@@ -255,7 +306,7 @@ export default function OnboardingScreen() {
                   <Text style={styles.sectionTitle}>University (optional)</Text>
                   <TouchableOpacity
                     style={styles.inputContainer}
-                    onPress={() => setShowUniversityPicker(true)}
+                    onPress={openUniversityPicker}
                   >
                     <GraduationCap size={20} color="#666" style={styles.inputIcon} />
                     <Text style={[styles.input, !selectedUniversity && styles.placeholderText]}>
@@ -269,8 +320,13 @@ export default function OnboardingScreen() {
                     <TextInput
                       style={styles.input}
                       placeholder="Course"
-                      value={course}
-                      onChangeText={setCourse}
+                      value={form.course}
+                      onChangeText={(text) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          course: text,
+                        }))
+                      }
                     />
                   </View>
                 </View>
@@ -283,8 +339,33 @@ export default function OnboardingScreen() {
                     Select the societies you're part of
                   </Text>
 
+                  <View style={[styles.inputContainer, styles.societySearchContainer]}>
+                    <Search size={20} color="#666" style={styles.inputIcon} />
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Search societies"
+                      value={societySearch}
+                      onChangeText={setSocietySearch}
+                      autoCorrect={false}
+                      autoCapitalize="none"
+                      clearButtonMode="while-editing"
+                    />
+                  </View>
+
+                  {societiesLoading ? (
+                    <Text style={styles.societyHelperText}>Loading societies…</Text>
+                  ) : societiesError ? (
+                    <Text style={styles.societyHelperText}>Couldn’t load societies. Try again.</Text>
+                  ) : null}
+
+                  {!societiesLoading && filteredSocieties.length === 0 ? (
+                    <Text style={styles.noSocietiesText}>
+                      No societies match “{societySearch.trim()}”.
+                    </Text>
+                  ) : null}
+
                   <View style={styles.societiesContainer}>
-                    {availableSocieties.map((society) => {
+                    {filteredSocieties.map((society) => {
                       const isSelected = selectedSocieties.includes(society.id);
                       return (
                         <TouchableOpacity
@@ -374,28 +455,27 @@ export default function OnboardingScreen() {
               </TouchableOpacity>
             </View>
             <FlatList
-              data={UK_UNIVERSITIES}
+              data={universities}
               keyExtractor={(item) => item.id}
               renderItem={({ item }) => (
                 <TouchableOpacity
                   style={[
                     styles.modalItem,
-                    universityId === item.id && styles.modalItemSelected,
+                    form.universityId === item.id && styles.modalItemSelected,
                   ]}
                   onPress={() => {
-                    setUniversityId(item.id);
-                    setShowUniversityPicker(false);
+                    handleUniversitySelect(item.id);
                   }}
                 >
                   <Text
                     style={[
                       styles.modalItemText,
-                      universityId === item.id && styles.modalItemTextSelected,
+                      form.universityId === item.id && styles.modalItemTextSelected,
                     ]}
                   >
                     {item.name}
                   </Text>
-                  {universityId === item.id && (
+                  {form.universityId === item.id && (
                     <CheckCircle2 size={20} color="#FF6B35" />
                   )}
                 </TouchableOpacity>
@@ -623,6 +703,19 @@ const styles = StyleSheet.create({
   },
   placeholderText: {
     color: '#9CA3AF',
+  },
+  societySearchContainer: {
+    marginBottom: 8,
+  },
+  societyHelperText: {
+    fontSize: 13,
+    color: '#666',
+    marginBottom: 8,
+  },
+  noSocietiesText: {
+    fontSize: 13,
+    color: '#666',
+    marginBottom: 8,
   },
   societiesContainer: {
     flexDirection: 'row',
