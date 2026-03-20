@@ -29,14 +29,14 @@ export interface CreateUserForm {
 }
 
 export interface OnboardingUserForm {
-  email: string;
+  id: string;
   name: string;
   bio?: string;
   over18: boolean;
-  onboardingStatus: OnboardingStatus;
   photoUrl?: string;
   universityId?: string;
   course?: string;
+  societies?: string[];
 }
 
 
