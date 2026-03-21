@@ -26,7 +26,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [claims, setClaims] = useState<JwtPayload | null>(null)
   const pathname = usePathname();
 
-  const {} = useFetchById(session?.user.id)
+  const { loading: userLoading } = useFetchById(session?.user.id)
 
   useEffect(() => {
     let mounted = true
@@ -153,7 +153,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return null
   };
 
-  const value = useMemo(() => ({ session, loading, user, claims, signUpWithEmail, signInWithEmail, logout, isAuth }), [session, loading, user, claims])
+  const value = useMemo(() => ({ session, loading: loading || userLoading, user, claims, signUpWithEmail, signInWithEmail, logout, isAuth }), [session, loading, userLoading, user, claims])
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

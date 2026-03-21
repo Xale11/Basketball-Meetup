@@ -38,8 +38,7 @@ export function ImagePicker({
     try {
       const result = await ImagePickerExpo.launchImageLibraryAsync({
         mediaTypes: ImagePickerExpo.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [16, 9],
+        allowsEditing: false,
         quality: 0.8,
       });
 
@@ -66,8 +65,7 @@ export function ImagePicker({
     setLoading(true);
     try {
       const result = await ImagePickerExpo.launchCameraAsync({
-        allowsEditing: true,
-        aspect: [16, 9],
+        allowsEditing: false,
         quality: 0.8,
       });
 

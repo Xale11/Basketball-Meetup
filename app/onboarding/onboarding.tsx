@@ -19,7 +19,6 @@ import { useAuth } from '@/hooks/useAuth';
 import { OnboardingStatus, OnboardingUserForm } from '@/types/user';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { ImagePicker } from '@/components/ImagePicker';
-import { uploadImagesToStorage } from '@/api/utils.api';
 import useFetchUniversities from '@/hooks/universities/useFetchUniversities';
 import useFetchSocietiesByUniId from '@/hooks/societies/useFetchSocietiesByUniId';
 import useOnboardUser from '@/hooks/users/useOnboardUser';
@@ -95,26 +94,13 @@ export default function OnboardingScreen() {
       setSubmitting(true);
       setError('');
 
-      let photoUrl: string | undefined = undefined;
-
-      // Upload photo if selected
-      // if (photoUri && session?.user?.id) {
-      //   try {
-      //     const uploadedUrls = await uploadImagesToStorage([photoUri], 'profiles', session.user.id);
-      //     photoUrl = uploadedUrls[0];
-      //   } catch (uploadError) {
-      //     console.error('Failed to upload photo:', uploadError);
-      //     // Continue without photo if upload fails
-      //   }
-      // }
-
       await onboardUser({
         form: {
           ...form,
           id: form.id || session?.user?.id || '',
           societies: selectedSocieties,
         },
-        photoUrl
+        photoUri: photoUri ?? undefined,
       });
 
       router.replace('/(tabs)');

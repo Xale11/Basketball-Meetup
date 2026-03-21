@@ -4,10 +4,11 @@ import { OnboardingStatus, OnboardingUserForm, User } from "@/types/user";
 import { createUser } from "@/api/users.api";
 import { useAuth } from "@/hooks/useAuth";
 import { createSocietyMembership } from "@/api/societies.api";
+import { uploadToSupabaseBucket } from "@/api/supabase-storage.api";
 
 type OnboardUserArgs = {
   form: OnboardingUserForm;
-  photoUrl?: string;
+  photoUri?: string;
 };
 
 type UseOnboardUserReturn = {
@@ -25,7 +26,7 @@ export default function useOnboardUser(): UseOnboardUserReturn {
   const { session } = useAuth();
 
   const mutation = useMutation({
-    mutationFn: async ({ form, photoUrl }: OnboardUserArgs) => {
+    mutationFn: async ({ form, photoUri }: OnboardUserArgs) => {
       console.log("[useOnboardUser] start onboarding");
 
       const userId = form.id || session?.user?.id;
@@ -33,6 +34,18 @@ export default function useOnboardUser(): UseOnboardUserReturn {
       if (!userId) {
         console.error("[useOnboardUser] onboarding failed: missing userId");
         throw new Error("No user id available for onboarding");
+      }
+
+      let photoUrl: string | undefined = undefined;
+      if (photoUri) {
+        console.log("[useOnboardUser] uploading profile photo");
+        try {
+          photoUrl = await uploadToSupabaseBucket(photoUri, `profilePhotos/${userId}`, 'profile');
+          console.log("[useOnboardUser] photo upload success");
+        } catch (uploadError) {
+          console.error("[useOnboardUser] photo upload failed", uploadError);
+          throw new Error(JSON.stringify(uploadError));
+        }
       }
 
       const updates: Partial<User> = {
@@ -79,8 +92,8 @@ export default function useOnboardUser(): UseOnboardUserReturn {
   });
 
   const onboardUser = useCallback(
-    async ({ form, photoUrl }: OnboardUserArgs) => {
-      return mutation.mutateAsync({ form, photoUrl });
+    async ({ form, photoUri }: OnboardUserArgs) => {
+      return mutation.mutateAsync({ form, photoUri });
     },
     [mutation]
   );
