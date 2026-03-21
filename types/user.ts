@@ -10,7 +10,8 @@ export enum OnboardingStatus {
 export interface User {
   id: string;
   email: string;
-  name: string;
+  firstName: string;
+  lastName: string;
   bio?: string;
   over18: boolean;
   createdAt: string;
@@ -23,14 +24,16 @@ export interface User {
 
 export interface CreateUserForm {
   email: string;
-  name: string;
+  firstName: string;
+  lastName: string;
   createdAt: string;
   onboardingStatus: OnboardingStatus;
 }
 
 export interface OnboardingUserForm {
   id: string;
-  name: string;
+  firstName: string;
+  lastName: string;
   bio?: string;
   over18: boolean;
   photoUrl?: string;

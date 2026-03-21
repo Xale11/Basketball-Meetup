@@ -10,7 +10,7 @@ import { useAuth } from '@/hooks/useAuth';
 export default function HomeScreen() {
   const { user, loading, session } = useAuth();
 
-  console.log(session);
+  console.log(user);
 
   if (loading) {
     return <LoadingSpinner />;
@@ -21,7 +21,7 @@ export default function HomeScreen() {
       <View style={styles.header}>
         <View>
           <Text style={styles.greeting}>Welcome back,</Text>
-          <Text style={styles.userName}>{user?.name || 'Baller'}</Text>
+          <Text style={styles.userName}>{user?.firstName || 'Friend'}</Text>
         </View>
         <View style={styles.headerActions}>
           <TouchableOpacity style={styles.iconButton}>

@@ -20,6 +20,8 @@ import {
 } from '@tanstack/react-query';
 import { AuthProvider } from '@/providers/AuthProvider';
 
+const queryClient = new QueryClient();
+
 export default function RootLayout() {
   useFrameworkReady();
   const { user, loading, session } = useAuth();
@@ -46,8 +48,6 @@ export default function RootLayout() {
       isUserAuthenticated();
     }
   }, [user, loading, fontsLoaded]);
-
-  const queryClient = new QueryClient();
 
   if (!fontsLoaded) {
     return (

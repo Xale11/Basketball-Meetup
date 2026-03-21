@@ -50,7 +50,8 @@ export default function useOnboardUser(): UseOnboardUserReturn {
 
       const updates: Partial<User> = {
         id: session?.user?.id,
-        name: form.name?.trim(),
+        firstName: form.firstName?.trim(),
+        lastName: form.lastName?.trim(),
         bio: form.bio?.trim() || undefined,
         over18: form.over18,
         universityId: form.universityId || undefined,

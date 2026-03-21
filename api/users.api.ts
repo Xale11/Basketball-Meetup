@@ -25,6 +25,8 @@ export const createUser = async (user: Partial<User>): Promise<User> => {
             
             const insertObject = {
                 id: user.id,
+                firstName: user.firstName,
+                lastName: user.lastName,
                 bio: user.bio,
                 over18: user.over18,
                 photoUrl: user.photoUrl,

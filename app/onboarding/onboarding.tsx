@@ -36,7 +36,8 @@ export default function OnboardingScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState<OnboardingUserForm>({
     id: session?.user?.id ?? '',
-    name: user?.name ?? '',
+    firstName: user?.firstName ?? '',
+    lastName: user?.lastName ?? '',
     bio: user?.bio ?? '',
     over18: user?.over18 ?? false,
     photoUrl: user?.photoUrl ?? '',
@@ -54,8 +55,8 @@ export default function OnboardingScreen() {
     setError('');
 
     if (step === 1) {
-      if (!form.name.trim()) {
-        setError('Please tell us your name.');
+      if (!form.firstName.trim() || !form.lastName.trim()) {
+        setError('Please enter your first and last name.');
         return;
       }
     }
@@ -220,13 +221,23 @@ export default function OnboardingScreen() {
                     <UserIcon size={20} color="#666" style={styles.inputIcon} />
                     <TextInput
                       style={styles.input}
-                      placeholder="Your name"
-                      value={form.name}
+                      placeholder="First name"
+                      value={form.firstName}
                       onChangeText={(text) =>
-                        setForm((prev) => ({
-                          ...prev,
-                          name: text,
-                        }))
+                        setForm((prev) => ({ ...prev, firstName: text }))
+                      }
+                      autoCapitalize="words"
+                    />
+                  </View>
+
+                  <View style={styles.inputContainer}>
+                    <UserIcon size={20} color="#666" style={styles.inputIcon} />
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Last name"
+                      value={form.lastName}
+                      onChangeText={(text) =>
+                        setForm((prev) => ({ ...prev, lastName: text }))
                       }
                       autoCapitalize="words"
                     />

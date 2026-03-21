@@ -2,6 +2,8 @@ import { Society, SocietyMembershipStatusEnum, SocietyRoleIdEnum } from "@/types
 import { supabase } from "./supabase";
 import { SocietyMembership } from "@/types/societies";
 
+export type SocietyMembershipWithSociety = SocietyMembership & { societies: Society };
+
 export const getSocietiesByUniversityId = async (universityId: string): Promise<Society[]> => {
     try {
         const { data, error }: { data: Society[] | null; error: any } = await supabase
@@ -13,6 +15,19 @@ export const getSocietiesByUniversityId = async (universityId: string): Promise<
             throw new Error(JSON.stringify(error))
         }
         return data ?? []
+    } catch (error) {
+        throw new Error(JSON.stringify(error))
+    }
+}
+
+export const getSocietyMembershipsByUserId = async (userId: string): Promise<SocietyMembershipWithSociety[]> => {
+    try {
+        const { data, error } = await supabase
+            .from("societyMemberships")
+            .select("*, societies(*)")
+            .eq("userId", userId)
+        if (error) throw new Error(JSON.stringify(error))
+        return (data ?? []) as SocietyMembershipWithSociety[]
     } catch (error) {
         throw new Error(JSON.stringify(error))
     }

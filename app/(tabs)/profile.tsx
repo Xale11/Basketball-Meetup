@@ -1,12 +1,55 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Modal, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Settings, CreditCard as Edit, Trophy, Calendar, MapPin, Users, Star, ChevronRight, CreditCard, Bell, Shield } from 'lucide-react-native';
+import { Settings, CreditCard as Edit, Trophy, Calendar, MapPin, Users, Star, ChevronRight, CreditCard, Bell, Shield, X } from 'lucide-react-native';
 import { useAuth } from '@/hooks/useAuth';
-import { useEffect } from 'react';
-import { auth } from '@/api/firebase';
+import { useState, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { updateUser } from '@/api/users.api';
+import useFetchUserSocieties from '@/hooks/societies/useFetchUserSocieties';
 
 export default function ProfileScreen() {
-  const { user, logout } = useAuth();
+  const { user, session, logout } = useAuth();
+  const queryClient = useQueryClient();
+  const { memberships, isLoading: societiesLoading } = useFetchUserSocieties(user?.id);
+
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editForm, setEditForm] = useState({
+    firstName: '',
+    lastName: '',
+    bio: '',
+    course: '',
+  });
+
+  useEffect(() => {
+    if (user) {
+      setEditForm({
+        firstName: user.firstName ?? '',
+        lastName: user.lastName ?? '',
+        bio: user.bio ?? '',
+        course: user.course ?? '',
+      });
+    }
+  }, [user]);
+  const [saving, setSaving] = useState(false);
+
+  const handleSave = async () => {
+    if (!user?.id) return;
+    try {
+      setSaving(true);
+      await updateUser(user.id, {
+        firstName: editForm.firstName.trim(),
+        lastName: editForm.lastName.trim(),
+        bio: editForm.bio.trim() || undefined,
+        course: editForm.course.trim() || undefined,
+      });
+      await queryClient.invalidateQueries({ queryKey: ['userFetchById', user.id] });
+      setShowEditModal(false);
+    } catch (e) {
+      console.error('[ProfileScreen] save failed', e);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const stats = [
     { label: 'Events Joined', value: '12', icon: Calendar },
@@ -16,7 +59,7 @@ export default function ProfileScreen() {
   ];
 
   const menuItems = [
-    { label: 'Edit Profile', icon: Edit, onPress: () => {} },
+    { label: 'Edit Profile', icon: Edit, onPress: () => setShowEditModal(true) },
     { label: 'Payment Methods', icon: CreditCard, onPress: () => {} },
     { label: 'Notifications', icon: Bell, onPress: () => {} },
     { label: 'Privacy & Security', icon: Shield, onPress: () => {} },
@@ -36,17 +79,17 @@ export default function ProfileScreen() {
         <View style={styles.profileSection}>
           <View style={styles.profileHeader}>
             <Image 
-              source={{ uri: user?.avatar || 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=400' }}
+              source={{ uri: user?.photoUrl || 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=400' }}
               style={styles.avatar}
             />
             <View style={styles.profileInfo}>
-              <Text style={styles.userName}>{user?.name}</Text>
-              <Text style={styles.userEmail}>{user?.email}</Text>
+              <Text style={styles.userName}>{user?.firstName} {user?.lastName}</Text>
+              <Text style={styles.userEmail}>{session?.user?.email}</Text>
               <View style={styles.statusBadge}>
                 <Text style={styles.statusText}>Active Player</Text>
               </View>
             </View>
-            <TouchableOpacity style={styles.editButton}>
+            <TouchableOpacity style={styles.editButton} onPress={() => setShowEditModal(true)}>
               <Edit size={20} color="#FF6B35" />
             </TouchableOpacity>
           </View>
@@ -65,46 +108,27 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        <View style={styles.achievementsSection}>
-          <Text style={styles.sectionTitle}>Recent Achievements</Text>
-          <View style={styles.achievementsList}>
-            <View style={styles.achievementItem}>
-              <View style={styles.achievementIcon}>
-                <Trophy size={20} color="#FFD700" />
-              </View>
-              <View style={styles.achievementInfo}>
-                <Text style={styles.achievementTitle}>Tournament Winner</Text>
-                <Text style={styles.achievementDescription}>Won 3v3 tournament at Central Park</Text>
-              </View>
-            </View>
-            <View style={styles.achievementItem}>
-              <View style={styles.achievementIcon}>
-                <Users size={20} color="#FF6B35" />
-              </View>
-              <View style={styles.achievementInfo}>
-                <Text style={styles.achievementTitle}>Regular Player</Text>
-                <Text style={styles.achievementDescription}>Played 10 games this month</Text>
-              </View>
-            </View>
-          </View>
-        </View>
-
         <View style={styles.clubSection}>
-          <Text style={styles.sectionTitle}>Club Membership</Text>
-          <View style={styles.clubCard}>
-            <View style={styles.clubInfo}>
-              <View style={styles.clubLogo}>
-                <Text style={styles.clubInitial}>NYC</Text>
+          <Text style={styles.sectionTitle}>Society Memberships</Text>
+          {societiesLoading ? (
+            <Text style={styles.societyHelperText}>Loading societies…</Text>
+          ) : memberships.length === 0 ? (
+            <Text style={styles.societyHelperText}>You haven't joined any societies yet.</Text>
+          ) : (
+            memberships.map((m) => (
+              <View key={m.societyId} style={[styles.clubCard, styles.societyCard]}>
+                <View style={styles.clubInfo}>
+                  <View style={styles.clubLogo}>
+                    <Text style={styles.clubInitial}>{m.societies.name.charAt(0).toUpperCase()}</Text>
+                  </View>
+                  <View>
+                    <Text style={styles.clubName}>{m.societies.name}</Text>
+                    <Text style={styles.clubRole}>{m.roleId}</Text>
+                  </View>
+                </View>
               </View>
-              <View>
-                <Text style={styles.clubName}>NYC Ballers</Text>
-                <Text style={styles.clubRole}>Member since 2024</Text>
-              </View>
-            </View>
-            <TouchableOpacity style={styles.clubButton}>
-              <Text style={styles.clubButtonText}>View Club</Text>
-            </TouchableOpacity>
-          </View>
+            ))
+          )}
         </View>
 
         <View style={styles.menuSection}>
@@ -123,6 +147,56 @@ export default function ProfileScreen() {
           <Text style={styles.logoutText}>Log Out</Text>
         </TouchableOpacity>
       </ScrollView>
+
+      <Modal visible={showEditModal} transparent animationType="slide" onRequestClose={() => setShowEditModal(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Edit Profile</Text>
+              <TouchableOpacity onPress={() => setShowEditModal(false)}>
+                <X size={24} color="#1A1A1A" />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.fieldLabel}>First Name</Text>
+            <TextInput
+              style={styles.fieldInput}
+              value={editForm.firstName}
+              onChangeText={(t) => setEditForm((p) => ({ ...p, firstName: t }))}
+              autoCapitalize="words"
+            />
+
+            <Text style={styles.fieldLabel}>Last Name</Text>
+            <TextInput
+              style={styles.fieldInput}
+              value={editForm.lastName}
+              onChangeText={(t) => setEditForm((p) => ({ ...p, lastName: t }))}
+              autoCapitalize="words"
+            />
+
+            <Text style={styles.fieldLabel}>Bio</Text>
+            <TextInput
+              style={[styles.fieldInput, styles.fieldTextArea]}
+              value={editForm.bio}
+              onChangeText={(t) => setEditForm((p) => ({ ...p, bio: t }))}
+              multiline
+              numberOfLines={3}
+              textAlignVertical="top"
+            />
+
+            <Text style={styles.fieldLabel}>Course</Text>
+            <TextInput
+              style={styles.fieldInput}
+              value={editForm.course}
+              onChangeText={(t) => setEditForm((p) => ({ ...p, course: t }))}
+            />
+
+            <TouchableOpacity style={styles.saveButton} onPress={handleSave} disabled={saving}>
+              <Text style={styles.saveButtonText}>{saving ? 'Saving…' : 'Save Changes'}</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -388,5 +462,68 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#DC3545',
+  },
+  societyHelperText: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 8,
+  },
+  societyCard: {
+    marginBottom: 12,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 24,
+    paddingBottom: 40,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1A1A1A',
+  },
+  fieldLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#666',
+    marginBottom: 6,
+    marginTop: 12,
+  },
+  fieldInput: {
+    backgroundColor: '#F8F9FA',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E9ECEF',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 16,
+    color: '#1A1A1A',
+  },
+  fieldTextArea: {
+    minHeight: 80,
+  },
+  saveButton: {
+    backgroundColor: '#FF6B35',
+    borderRadius: 16,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginTop: 24,
+  },
+  saveButtonText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
 });

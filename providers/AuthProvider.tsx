@@ -26,7 +26,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [claims, setClaims] = useState<JwtPayload | null>(null)
   const pathname = usePathname();
 
-  const { loading: userLoading } = useFetchById(session?.user.id)
+  const { data: profileData, loading: userLoading } = useFetchById(session?.user.id)
+
+  useEffect(() => {
+    if (profileData) setUser(profileData);
+  }, [profileData])
 
   useEffect(() => {
     let mounted = true
