@@ -1,16 +1,17 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Modal, TextInput } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Modal, TextInput, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Settings, CreditCard as Edit, Trophy, Calendar, MapPin, Users, Star, ChevronRight, CreditCard, Bell, Shield, X } from 'lucide-react-native';
+import { Settings, CreditCard as Edit, Calendar, MapPin, Trophy, Star, ChevronRight, CreditCard, Bell, Shield, X, Camera, User } from 'lucide-react-native';
 import { useAuth } from '@/hooks/useAuth';
 import { useState, useEffect } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
-import { updateUser } from '@/api/users.api';
 import useFetchUserSocieties from '@/hooks/societies/useFetchUserSocieties';
+import useUpdateProfilePhoto from '@/hooks/users/useUpdateProfilePhoto';
+import useUpdateUser from '@/hooks/users/useUpdateUser';
 
 export default function ProfileScreen() {
   const { user, session, logout } = useAuth();
-  const queryClient = useQueryClient();
   const { memberships, isLoading: societiesLoading } = useFetchUserSocieties(user?.id);
+  const { photoUploading, handlePhotoPress } = useUpdateProfilePhoto(user?.id);
+  const { saving, updateProfile } = useUpdateUser(user?.id);
 
   const [showEditModal, setShowEditModal] = useState(false);
   const [editForm, setEditForm] = useState({
@@ -30,24 +31,18 @@ export default function ProfileScreen() {
       });
     }
   }, [user]);
-  const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
-    if (!user?.id) return;
     try {
-      setSaving(true);
-      await updateUser(user.id, {
+      await updateProfile({
         firstName: editForm.firstName.trim(),
         lastName: editForm.lastName.trim(),
         bio: editForm.bio.trim() || undefined,
         course: editForm.course.trim() || undefined,
       });
-      await queryClient.invalidateQueries({ queryKey: ['userFetchById', user.id] });
       setShowEditModal(false);
     } catch (e) {
-      console.error('[ProfileScreen] save failed', e);
-    } finally {
-      setSaving(false);
+      // error already logged in hook
     }
   };
 
@@ -78,10 +73,18 @@ export default function ProfileScreen() {
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.profileSection}>
           <View style={styles.profileHeader}>
-            <Image 
-              source={{ uri: user?.photoUrl || 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=400' }}
-              style={styles.avatar}
-            />
+            <TouchableOpacity style={styles.avatarContainer} onPress={() => handlePhotoPress(!!user?.photoUrl)} disabled={photoUploading}>
+              {user?.photoUrl
+                ? <Image source={{ uri: user.photoUrl }} style={styles.avatar} />
+                : <View style={styles.avatarPlaceholder}><User size={36} color="#9CA3AF" /></View>
+              }
+              <View style={styles.avatarBadge}>
+                {photoUploading
+                  ? <ActivityIndicator size="small" color="#FFFFFF" />
+                  : <Camera size={14} color="#FFFFFF" />
+                }
+              </View>
+            </TouchableOpacity>
             <View style={styles.profileInfo}>
               <Text style={styles.userName}>{user?.firstName} {user?.lastName}</Text>
               <Text style={styles.userEmail}>{session?.user?.email}</Text>
@@ -249,7 +252,6 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    marginRight: 16,
   },
   profileInfo: {
     flex: 1,
@@ -462,6 +464,31 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#DC3545',
+  },
+  avatarContainer: {
+    position: 'relative',
+    marginRight: 16,
+  },
+  avatarPlaceholder: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#F3F4F6',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarBadge: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: '#FF6B35',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
   },
   societyHelperText: {
     fontSize: 14,
