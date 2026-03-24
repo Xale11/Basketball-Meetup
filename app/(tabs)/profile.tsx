@@ -1,6 +1,6 @@
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Modal, TextInput, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Settings, CreditCard as Edit, Calendar, MapPin, Trophy, Star, ChevronRight, CreditCard, Bell, Shield, X, Camera, User } from 'lucide-react-native';
+import { Settings, Pencil as Edit, ChevronRight, CreditCard, Bell, Shield, X, Camera, User } from 'lucide-react-native';
 import { useAuth } from '@/hooks/useAuth';
 import { useState, useEffect } from 'react';
 import useFetchUserSocieties from '@/hooks/societies/useFetchUserSocieties';
@@ -45,13 +45,6 @@ export default function ProfileScreen() {
       // error already logged in hook
     }
   };
-
-  const stats = [
-    { label: 'Events Joined', value: '12', icon: Calendar },
-    { label: 'Courts Visited', value: '8', icon: MapPin },
-    { label: 'Games Played', value: '45', icon: Trophy },
-    { label: 'Rating', value: '4.8', icon: Star },
-  ];
 
   const menuItems = [
     { label: 'Edit Profile', icon: Edit, onPress: () => setShowEditModal(true) },
@@ -98,18 +91,6 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        <View style={styles.statsSection}>
-          <Text style={styles.sectionTitle}>Your Stats</Text>
-          <View style={styles.statsGrid}>
-            {stats.map((stat, index) => (
-              <View key={index} style={styles.statCard}>
-                <stat.icon size={24} color="#FF6B35" />
-                <Text style={styles.statValue}>{stat.value}</Text>
-                <Text style={styles.statLabel}>{stat.label}</Text>
-              </View>
-            ))}
-          </View>
-        </View>
 
         <View style={styles.clubSection}>
           <Text style={styles.sectionTitle}>Society Memberships</Text>
