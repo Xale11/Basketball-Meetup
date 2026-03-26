@@ -1,87 +1,144 @@
-export interface Event_V2 {
-  id: string;
-  
-  societyId?: string;
-  universityId?: string; // ✅ for discover queries
+export enum EventVisibility {
+  PUBLIC = "PUBLIC",
+  SOCIETY_ONLY = "SOCIETY_ONLY",
+  UNIVERSITY_ONLY = "UNIVERSITY_ONLY",
+  PRIVATE = "PRIVATE",
+}
 
-  name: string;
-  description?: string;
+export enum EventJoinPolicy {
+  OPEN = "OPEN",
+  APPROVAL_REQUIRED = "APPROVAL_REQUIRED",
+  INVITE_ONLY = "INVITE_ONLY",
+}
 
-  images?: string[];
+export enum EventHostType {
+  USER = "USER",
+  SOCIETY = "SOCIETY",
+  UNIVERSITY = "UNIVERSITY",
+}
 
-  startDate: string;
-  endDate: string;
+export enum EventBookingMode {
+  FREE = "FREE",
+  TICKETED = "TICKETED",
+}
 
-  location: {
-    address: string;
-    latitude: number;
-    longitude: number;
-    geohash: string;
-  };
+export enum EventOrganizerRole {
+  HOST = "HOST",
+  CO_HOST = "CO_HOST",
+  PARTNER = "PARTNER",
+}
 
-  visibility: "PUBLIC" | "SOCIETY_ONLY";
+export enum EventParticipantStatus {
+  GOING = "GOING",
+  PENDING = "PENDING",
+  WAITLISTED = "WAITLISTED",
+  CANCELLED = "CANCELLED",
+}
 
-  capacity?: number;
-  attendeeCount: number;
-
-  isCancelled: boolean;
-
-  createdByUserId: string;
-
-  createdAt: number;
-  updatedAt: number;
+export enum EventImageType {
+  BANNER = "BANNER",
+  GALLERY = "GALLERY",
 }
 
 export interface Event {
-  id: string;
-  images?: string[];
-  title: string;
-  description?: string;
-  courtId: string;
-  mainOrganiser: {
-	  type: 'club' | 'user',
-	  id: string
-  }
-  organiserUserIds: string[];
-  organiserClubIds: string[];
-  startDate: string;
-  endDate: string;
-  maxParticipants: number; //if zero, that means unlimited
-  currentParticipants: number;
-  pricing: Ticket[]; // list of tickets
-  ticketDeadline: 'upcoming' | 'live' 
-  participants: string[], // list of userIds
-  isCancelled: boolean;
-  createdAt: string;
-  acceptingParticipants: boolean
-  verifyParticipants: boolean
+  id: string
+  name: string
+  description: string | null
+
+  start_date: string
+  end_date: string
+
+  is_online: boolean
+
+  address: string | null
+  latitude: number | null
+  longitude: number | null
+  geohash: string | null
+
+  visibility: EventVisibility
+  join_policy: EventJoinPolicy
+
+  max_participants: number | null
+  is_cancelled: boolean
+
+  created_by_user_id: string
+  host_type: EventHostType
+
+  banner_image_url: string | null
+
+  booking_mode: EventBookingMode
+  price_from: number | null
+  currency: string | null
+
+  created_at: string
+  updated_at: string
 }
 
-export interface Ticket {
-  id: string;
-  eventId: string;
-  name: string;
-  description: string;
-  price: number;
-  maxQuantity: number;
-  quantitySold: number;
+export interface EventSociety {
+  event_id: string
+  society_id: string
+  role: EventOrganizerRole
+}
+
+export interface EventUniversity {
+  event_id: string
+  university_id: string
+  role: EventOrganizerRole
+}
+
+export interface EventParticipant {
+  event_id: string
+  user_id: string
+  status: EventParticipantStatus
+  joined_at: string
+}
+
+export interface EventImage {
+  id: string
+  event_id: string
+  image_url: string
+  image_type: EventImageType
+  sort_order: number
+  created_at: string
+}
+
+export interface EventTicket {
+  id: string
+  event_id: string
+  name: string
+  description: string | null
+  price_gbp: number
+  max_quantity: number | null
+  sales_start_date: string | null
+  sales_end_date: string | null
+  is_active: boolean
+  created_at: string
+  updated_at: string
 }
 
 export interface CreateEventForm {
-  title: string;
-  description: string;
-  courtId: string;
-  mainOrganiserType: 'club' | 'user',
-  mainOrganiserId: string
-  organiserUserIds: string[];
-  organiserClubIds: string[];
-  startDate: string;
-  endDate: string;
-  maxParticipants: number; //if zero, that means unlimited
-  pricing: Ticket[]; // list of tickets
-  ticketDeadline: 'upcoming' | 'live'
-  isCancelled: boolean;
-  createdAt: string;
-  acceptingParticipants: boolean
-  verifyParticipants: boolean
-}
+  name: string
+  description: string | null
+
+  start_date: string
+  end_date: string
+
+  is_online: boolean
+
+  address: string | null
+  latitude: number | null
+  longitude: number | null
+
+  visibility: EventVisibility
+  join_policy: EventJoinPolicy
+
+  max_participants: number | null
+
+  host_type: EventHostType
+
+  banner_image_url: string | null
+
+  booking_mode: EventBookingMode
+  price_from: number | null
+  currency: string | null
+}     
