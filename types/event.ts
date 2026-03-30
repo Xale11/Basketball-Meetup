@@ -107,7 +107,8 @@ export interface EventTicket {
   event_id: string
   name: string
   description: string | null
-  price_gbp: number
+  price: number
+  currency: string
   max_quantity: number | null
   sales_start_date: string | null
   sales_end_date: string | null

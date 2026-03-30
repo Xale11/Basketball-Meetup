@@ -1,3 +1,10 @@
+export enum SocietyStatusEnum {
+  ACTIVE = "ACTIVE",
+  DEACTIVATED = "DEACTIVATED",
+  SUSPENDED = "SUSPENDED",
+  ARCHIVED = "ARCHIVED"
+}
+
 export enum SocietyRoleIdEnum {
   OWNER = "OWNER",
   PRESIDENT = "PRESIDENT",
@@ -27,6 +34,7 @@ export interface Society {
   createdByUserId: string;
   createdAt: number;
   updatedAt: number;
+  status: SocietyStatusEnum
 }
 
 export interface SocietyMembership {
