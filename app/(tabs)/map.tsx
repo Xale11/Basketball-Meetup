@@ -94,7 +94,7 @@ export default function MapScreen() {
                 <View style={styles.infoRow}>
                   <Users size={20} color="#666" />
                   <Text style={styles.infoText}>
-                    {selectedCourt.checkedInUsers.length} players checked in
+                    {selectedCourt.checked_in_users.length} players checked in
                   </Text>
                 </View>
                 <View style={styles.infoRow}>
@@ -116,9 +116,9 @@ export default function MapScreen() {
 
               <View style={styles.playersSection}>
                 <Text style={styles.sectionTitle}>Players Currently Here</Text>
-                {selectedCourt.checkedInUsers.length > 0 ? (
+                {selectedCourt.checked_in_users.length > 0 ? (
                   <View style={styles.playersList}>
-                    {selectedCourt.checkedInUsers.map((userId: string, index: number) => (
+                    {selectedCourt.checked_in_users.map((userId: string, index: number) => (
                       <View key={index} style={styles.playerItem}>
                         <View style={styles.playerAvatar}>
                           <Text style={styles.playerInitial}>J</Text>

@@ -21,7 +21,7 @@ export default function HomeScreen() {
       <View style={styles.header}>
         <View>
           <Text style={styles.greeting}>Welcome back,</Text>
-          <Text style={styles.userName}>{user?.firstName || 'Friend'}</Text>
+          <Text style={styles.userName}>{user?.first_name || 'Friend'}</Text>
         </View>
         <View style={styles.headerActions}>
           <TouchableOpacity style={styles.iconButton}>

@@ -1,7 +1,6 @@
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { Calendar, Users, DollarSign, MapPin } from 'lucide-react-native';
+import { Calendar, Users, DollarSign } from 'lucide-react-native';
 import { Event } from '@/types/event';
-import { findCheapestTicket } from '@/utils/findCheapTicket';
 
 interface EventCardProps {
   event: Event;
@@ -13,11 +12,11 @@ export function EventCard({ event, onPress }: EventCardProps) {
   return (
     <TouchableOpacity style={styles.container} onPress={onPress}>
       <View style={styles.header}>
-        <Text style={styles.title}>{event.title}</Text>
+        <Text style={styles.title}>{event.name}</Text>
         <View style={styles.priceTag}>
           <DollarSign size={16} color="#FFFFFF" />
           <Text style={styles.price}>
-            {event.pricing.length === 0 ? 'Free' : `$${findCheapestTicket(event.pricing)?.price}`}
+            {event.booking_mode === 'FREE' ? 'Free' : `$${event.price_from ?? ''}`}
           </Text>
         </View>
       </View>
@@ -27,7 +26,7 @@ export function EventCard({ event, onPress }: EventCardProps) {
       <View style={styles.infoRow}>
         <Calendar size={16} color="#666" />
         <Text style={styles.infoText}>
-          {new Date(event.startDate).toLocaleDateString('en-GB', {
+          {new Date(event.start_date).toLocaleDateString('en-GB', {
             month: 'short',
             day: 'numeric',
             hour: '2-digit',
@@ -39,7 +38,7 @@ export function EventCard({ event, onPress }: EventCardProps) {
       <View style={styles.infoRow}>
         <Users size={16} color="#666" />
         <Text style={styles.infoText}>
-          {event.currentParticipants}/{event.maxParticipants} participants
+          {event.max_participants ?? '∞'} max participants
         </Text>
       </View>
 
@@ -47,10 +46,10 @@ export function EventCard({ event, onPress }: EventCardProps) {
         <View
           style={[
             styles.statusBadge,
-            { backgroundColor: getStatusColor(event.status) },
+            { backgroundColor: event.is_cancelled ? '#DC3545' : '#FF6B35' },
           ]}
         >
-          <Text style={styles.statusText}>{event.status.toUpperCase()}</Text>
+          <Text style={styles.statusText}>{event.is_cancelled ? 'CANCELLED' : 'UPCOMING'}</Text>
         </View>
         <TouchableOpacity style={styles.joinButton}>
           <Text style={styles.joinButtonText}>Join Event</Text>
@@ -60,20 +59,6 @@ export function EventCard({ event, onPress }: EventCardProps) {
   );
 }
 
-const getStatusColor = (status: string) => {
-  switch (status) {
-    case 'upcoming':
-      return '#FF6B35';
-    case 'live':
-      return '#28A745';
-    case 'completed':
-      return '#6C757D';
-    case 'cancelled':
-      return '#DC3545';
-    default:
-      return '#FF6B35';
-  }
-};
 
 const styles = StyleSheet.create({
   container: {

@@ -27,12 +27,12 @@ export const createCourt = async (court: CreateCourtForm): Promise<Court> => {
         geohash: court.geohash,
       },
       tags: court.tags,
-      createdBy: court.createdBy,
-      openingHours: court.openingHours,
+      created_by: court.created_by,
+      opening_hours: court.opening_hours,
       images: imageUrls, // sets the firebase donwload urls
-      checkedInUsers: [],
+      checked_in_users: [],
       followers: [],
-      createdAt: new Date().toISOString(),
+      created_at: new Date().toISOString(),
       verified: false,
     };
 

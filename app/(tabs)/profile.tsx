@@ -15,8 +15,8 @@ export default function ProfileScreen() {
 
   const [showEditModal, setShowEditModal] = useState(false);
   const [editForm, setEditForm] = useState({
-    firstName: '',
-    lastName: '',
+    first_name: '',
+    last_name: '',
     bio: '',
     course: '',
   });
@@ -24,8 +24,8 @@ export default function ProfileScreen() {
   useEffect(() => {
     if (user) {
       setEditForm({
-        firstName: user.firstName ?? '',
-        lastName: user.lastName ?? '',
+        first_name: user.first_name ?? '',
+        last_name: user.last_name ?? '',
         bio: user.bio ?? '',
         course: user.course ?? '',
       });
@@ -35,8 +35,8 @@ export default function ProfileScreen() {
   const handleSave = async () => {
     try {
       await updateProfile({
-        firstName: editForm.firstName.trim(),
-        lastName: editForm.lastName.trim(),
+        first_name: editForm.first_name.trim(),
+        last_name: editForm.last_name.trim(),
         bio: editForm.bio.trim() || undefined,
         course: editForm.course.trim() || undefined,
       });
@@ -66,9 +66,9 @@ export default function ProfileScreen() {
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.profileSection}>
           <View style={styles.profileHeader}>
-            <TouchableOpacity style={styles.avatarContainer} onPress={() => handlePhotoPress(!!user?.photoUrl)} disabled={photoUploading}>
-              {user?.photoUrl
-                ? <Image source={{ uri: user.photoUrl }} style={styles.avatar} />
+            <TouchableOpacity style={styles.avatarContainer} onPress={() => handlePhotoPress(!!user?.photo_url)} disabled={photoUploading}>
+              {user?.photo_url
+                ? <Image source={{ uri: user.photo_url }} style={styles.avatar} />
                 : <View style={styles.avatarPlaceholder}><User size={36} color="#9CA3AF" /></View>
               }
               <View style={styles.avatarBadge}>
@@ -79,7 +79,7 @@ export default function ProfileScreen() {
               </View>
             </TouchableOpacity>
             <View style={styles.profileInfo}>
-              <Text style={styles.userName}>{user?.firstName} {user?.lastName}</Text>
+              <Text style={styles.userName}>{user?.first_name} {user?.last_name}</Text>
               <Text style={styles.userEmail}>{session?.user?.email}</Text>
               <View style={styles.statusBadge}>
                 <Text style={styles.statusText}>Active Player</Text>
@@ -100,14 +100,14 @@ export default function ProfileScreen() {
             <Text style={styles.societyHelperText}>You haven't joined any societies yet.</Text>
           ) : (
             memberships.map((m) => (
-              <View key={m.societyId} style={[styles.clubCard, styles.societyCard]}>
+              <View key={m.society_id} style={[styles.clubCard, styles.societyCard]}>
                 <View style={styles.clubInfo}>
                   <View style={styles.clubLogo}>
                     <Text style={styles.clubInitial}>{m.societies.name.charAt(0).toUpperCase()}</Text>
                   </View>
                   <View>
                     <Text style={styles.clubName}>{m.societies.name}</Text>
-                    <Text style={styles.clubRole}>{m.roleId}</Text>
+                    <Text style={styles.clubRole}>{m.role_id}</Text>
                   </View>
                 </View>
               </View>
@@ -145,16 +145,16 @@ export default function ProfileScreen() {
             <Text style={styles.fieldLabel}>First Name</Text>
             <TextInput
               style={styles.fieldInput}
-              value={editForm.firstName}
-              onChangeText={(t) => setEditForm((p) => ({ ...p, firstName: t }))}
+              value={editForm.first_name}
+              onChangeText={(t) => setEditForm((p) => ({ ...p, first_name: t }))}
               autoCapitalize="words"
             />
 
             <Text style={styles.fieldLabel}>Last Name</Text>
             <TextInput
               style={styles.fieldInput}
-              value={editForm.lastName}
-              onChangeText={(t) => setEditForm((p) => ({ ...p, lastName: t }))}
+              value={editForm.last_name}
+              onChangeText={(t) => setEditForm((p) => ({ ...p, last_name: t }))}
               autoCapitalize="words"
             />
 

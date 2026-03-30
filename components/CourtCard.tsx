@@ -28,7 +28,7 @@ export function CourtCard({ court, onPress }: CourtCardProps) {
           </View>
           <View style={styles.stat}>
             <Users size={16} color="#FF6B35" />
-            <Text style={styles.statText}>{court.checkedInUsers.length}</Text>
+            <Text style={styles.statText}>{court.checked_in_users.length}</Text>
           </View>
         </View>
         <View style={styles.tagsRow}>
