@@ -20,23 +20,22 @@ export interface SocietyRole {
 
 export interface Society {
   id: string;
-  universityId: string;
+  university_id: string;
   name: string;
   description: string;
   logo?: string;
-  createdByUserId: string;
-  createdAt: number;
-  updatedAt: number;
+  created_by_user_id: string;
+  created_at: number;
+  updated_at: number;
 }
 
 export interface SocietyMembership {
+  society_id: string;
+  user_id: string;
 
-  societyId: string;
-  userId: string;
-
-  roleId: SocietyRoleIdEnum;
+  role_id: SocietyRoleIdEnum;
   status: SocietyMembershipStatusEnum;
 
-  joinedAt: number;
-  updatedAt: number;
+  joined_at: number;
+  updated_at: number;
 }

@@ -1,10 +1,10 @@
 export interface CourtVisit {
-  courtId: string;
+  court_id: string;
   date: string; // ISO string
-  checkedIn: boolean;
+  checked_in: boolean;
 }
-  
-  
+
+
 export interface Court {
   id: string;
   name: string;
@@ -17,61 +17,61 @@ export interface Court {
   };
   images?: string[];
   tags: string[]; // amenities - extensive list of options
-  checkedInUsers: string[];
+  checked_in_users: string[];
   followers: string[];
-  createdBy: string;
-  createdAt: string;
+  created_by: string;
+  created_at: string;
   rating?: number;
   reviews?: Review[];
-  openingHours: OpeningHours;
+  opening_hours: OpeningHours;
   verified: boolean;
 }
-  
+
 export interface OpeningHours {
-  alwaysOpen: boolean;
+  always_open: boolean;
   monday: {
-    alwaysOpen: boolean;
-    openTime: string;
-    closeTime: string;
+    always_open: boolean;
+    open_time: string;
+    close_time: string;
   };
   tuesday: {
-    alwaysOpen: boolean;
-    openTime: string;
-    closeTime: string;
+    always_open: boolean;
+    open_time: string;
+    close_time: string;
   };
   wednesday: {
-    alwaysOpen: boolean;
-    openTime: string;
-    closeTime: string;
+    always_open: boolean;
+    open_time: string;
+    close_time: string;
   };
   thursday: {
-    alwaysOpen: boolean;
-    openTime: string;
-    closeTime: string;
+    always_open: boolean;
+    open_time: string;
+    close_time: string;
   };
   friday: {
-    alwaysOpen: boolean;
-    openTime: string;
-    closeTime: string;
+    always_open: boolean;
+    open_time: string;
+    close_time: string;
   };
   saturday: {
-    alwaysOpen: boolean;
-    openTime: string;
-    closeTime: string;
+    always_open: boolean;
+    open_time: string;
+    close_time: string;
   };
   sunday: {
-    alwaysOpen: boolean;
-    openTime: string;
-    closeTime: string;
+    always_open: boolean;
+    open_time: string;
+    close_time: string;
   };
 }
-  
+
 export interface Review {
   id: string;
-  userId: string;
+  user_id: string;
   rating: number;
   comment: string;
-  createdAt: Date;
+  created_at: Date;
 }
 
 export interface CreateCourtForm {
@@ -83,6 +83,6 @@ export interface CreateCourtForm {
   geohash: string;
   images: string[]; // Array of local image URIs
   tags: string[]; // amenities - extensive list of options
-  createdBy: string;
-  openingHours: OpeningHours;
+  created_by: string;
+  opening_hours: OpeningHours;
 }

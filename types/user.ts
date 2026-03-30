@@ -10,34 +10,34 @@ export enum OnboardingStatus {
 export interface User {
   id: string;
   email: string;
-  firstName: string;
-  lastName: string;
+  first_name: string;
+  last_name: string;
   bio?: string;
-  over18: boolean;
-  createdAt: string;
-  lastActive?: string;
-  onboardingStatus: OnboardingStatus;
-  photoUrl?: string;
-  universityId?: string;
+  over_18: boolean;
+  created_at: string;
+  last_active?: string;
+  onboarding_status: OnboardingStatus;
+  photo_url?: string;
+  university_id?: string;
   course?: string;
 }
 
 export interface CreateUserForm {
   email: string;
-  firstName: string;
-  lastName: string;
-  createdAt: string;
-  onboardingStatus: OnboardingStatus;
+  first_name: string;
+  last_name: string;
+  created_at: string;
+  onboarding_status: OnboardingStatus;
 }
 
 export interface OnboardingUserForm {
   id: string;
-  firstName: string;
-  lastName: string;
+  first_name: string;
+  last_name: string;
   bio?: string;
-  over18: boolean;
-  photoUrl?: string;
-  universityId?: string;
+  over_18: boolean;
+  photo_url?: string;
+  university_id?: string;
   course?: string;
   societies?: string[];
 }
@@ -46,16 +46,16 @@ export interface OnboardingUserForm {
 export interface Badge {
   id: string;
   name: string;
-  iconUrl: string;
-  awardedAt: string;
+  icon_url: string;
+  awarded_at: string;
   description?: string;
 }
 
 export interface UserStats {
-  gamesPlayed: number;
+  games_played: number;
   wins: number;
   losses: number;
-  avgPointsPerGame?: number;
+  avg_points_per_game?: number;
   assists?: number;
   rebounds?: number;
   // add more as needed
