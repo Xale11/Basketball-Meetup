@@ -13,7 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState } from 'react';
 import { Search, Filter, Plus, MapPin } from 'lucide-react-native';
 import { EventCard } from '@/components/EventCard';
-import { mockEvents } from '@/utils/mockData';
+import { LoadingSpinner } from '@/components/LoadingSpinner';
 import {
   CreateEventForm,
   EventBookingMode,
@@ -21,6 +21,11 @@ import {
   EventJoinPolicy,
   EventVisibility,
 } from '@/types/event';
+import { useCreateEvent } from '@/hooks/events/useCreateEvent';
+import { useFetchEvents } from '@/hooks/events/useFetchEvents';
+import { useFetchMyEvents } from '@/hooks/events/useFetchMyEvents';
+import { useFetchUserSocieties } from '@/hooks/societies/useFetchUserSocieties';
+import { useAuth } from '@/hooks/useAuth';
 import {
   GooglePlaceDetail,
   GooglePlacesAutocomplete,
@@ -60,6 +65,8 @@ const INITIAL_FORM: CreateEventForm = {
   join_policy: EventJoinPolicy.OPEN,
   max_participants: null,
   host_type: EventHostType.USER,
+  society_id: null,
+  university_id: null,
   banner_image_url: null,
   booking_mode: EventBookingMode.FREE,
   price_from: null,
@@ -70,6 +77,30 @@ export default function EventsScreen() {
   const [showCreateEvent, setShowCreateEvent] = useState(false);
   const [selectedTab, setSelectedTab] = useState('upcoming');
   const [form, setForm] = useState<CreateEventForm>(INITIAL_FORM);
+
+  const { user } = useAuth();
+  const { events, loading: eventsLoading } = useFetchEvents();
+  const { events: myEvents } = useFetchMyEvents(user?.id);
+  const { createEvent } = useCreateEvent();
+  const { memberships } = useFetchUserSocieties(user?.id);
+
+  const needsSociety =
+    form.host_type === EventHostType.SOCIETY ||
+    form.visibility === EventVisibility.SOCIETY_ONLY;
+
+  const now = new Date().toISOString();
+  const upcomingEvents = events.filter((e) => e.end_date >= now);
+  const pastEvents = events.filter((e) => e.end_date < now);
+
+  const handleCreate = () => {
+    createEvent(form, {
+      onSuccess: () => {
+        setShowCreateEvent(false);
+        setForm(INITIAL_FORM);
+      },
+      onError: (err) => Alert.alert('Error', err.message),
+    });
+  };
 
   const tabs = [
     { key: 'upcoming', label: 'Upcoming' },
@@ -141,9 +172,50 @@ export default function EventsScreen() {
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {mockEvents.map((event) => (
-          <EventCard key={event.id} event={event} onPress={() => {}} />
-        ))}
+        {eventsLoading ? (
+          <LoadingSpinner />
+        ) : (() => {
+          const visibleEvents =
+            selectedTab === 'upcoming' ? upcomingEvents
+            : selectedTab === 'my-events' ? myEvents
+            : pastEvents;
+
+          if (visibleEvents.length === 0) {
+            const emptyConfig = {
+              upcoming: {
+                emoji: '✨',
+                title: "Nothing on the schedule yet!",
+                subtitle: "Be the first to get something going — hit that + button and make it happen.",
+              },
+              'my-events': {
+                emoji: '🎉',
+                title: "You haven't created any events yet!",
+                subtitle: "The fun starts with you. Create your first event and bring people together.",
+              },
+              past: {
+                emoji: '📸',
+                title: "No memories made here… yet!",
+                subtitle: "Go create something epic and it'll live here forever.",
+              },
+            }[selectedTab] ?? {
+              emoji: '✨',
+              title: "Nothing here yet!",
+              subtitle: "Check back soon.",
+            };
+
+            return (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyEmoji}>{emptyConfig.emoji}</Text>
+                <Text style={styles.emptyTitle}>{emptyConfig.title}</Text>
+                <Text style={styles.emptySubtitle}>{emptyConfig.subtitle}</Text>
+              </View>
+            );
+          }
+
+          return visibleEvents.map((event) => (
+            <EventCard key={event.id} event={event} onPress={() => {}} />
+          ));
+        })()}
       </ScrollView>
 
       <Modal
@@ -280,7 +352,17 @@ export default function EventsScreen() {
                   <TouchableOpacity
                     key={opt.value}
                     style={[styles.pill, form.visibility === opt.value && styles.pillActive]}
-                    onPress={() => setForm((p) => ({ ...p, visibility: opt.value }))}
+                    onPress={() => {
+                      const newNeedsSociety =
+                        form.host_type === EventHostType.SOCIETY ||
+                        opt.value === EventVisibility.SOCIETY_ONLY;
+                      setForm((p) => ({
+                        ...p,
+                        visibility: opt.value,
+                        university_id: user?.university_id ?? null,
+                        society_id: newNeedsSociety ? (memberships[0]?.society_id ?? null) : null,
+                      }));
+                    }}
                   >
                     <Text
                       style={[
@@ -328,7 +410,17 @@ export default function EventsScreen() {
                   <TouchableOpacity
                     key={opt.value}
                     style={[styles.pill, form.host_type === opt.value && styles.pillActive]}
-                    onPress={() => setForm((p) => ({ ...p, host_type: opt.value }))}
+                    onPress={() => {
+                      const newNeedsSociety =
+                        opt.value === EventHostType.SOCIETY ||
+                        form.visibility === EventVisibility.SOCIETY_ONLY;
+                      setForm((p) => ({
+                        ...p,
+                        host_type: opt.value,
+                        university_id: user?.university_id ?? null,
+                        society_id: newNeedsSociety ? (memberships[0]?.society_id ?? null) : null,
+                      }));
+                    }}
                   >
                     <Text
                       style={[
@@ -341,6 +433,38 @@ export default function EventsScreen() {
                   </TouchableOpacity>
                 ))}
               </View>
+
+              {needsSociety && memberships.length > 1 && (
+                <View style={[styles.inputGroup, { marginTop: 16, marginBottom: 0 }]}>
+                  <Text style={styles.formLabel}>Which society?</Text>
+                  <View style={styles.pillRow}>
+                    {memberships.map((m) => (
+                      <TouchableOpacity
+                        key={m.society_id}
+                        style={[styles.pill, form.society_id === m.society_id && styles.pillActive]}
+                        onPress={() => setForm((p) => ({ ...p, society_id: m.society_id }))}
+                      >
+                        <Text style={[styles.pillText, form.society_id === m.society_id && styles.pillTextActive]}>
+                          {m.societies.name}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+              )}
+
+              {needsSociety && memberships.length === 1 && (
+                <View style={[styles.autoPopulatedTag, { marginTop: 14 }]}>
+                  <Text style={styles.autoPopulatedLabel}>Society</Text>
+                  <Text style={styles.autoPopulatedValue}>{memberships[0].societies.name}</Text>
+                </View>
+              )}
+
+              {needsSociety && memberships.length === 0 && (
+                <Text style={[styles.formSubtitle, { marginTop: 12 }]}>
+                  You're not a member of any society yet.
+                </Text>
+              )}
             </View>
 
             {/* Capacity */}
@@ -435,7 +559,7 @@ export default function EventsScreen() {
           </ScrollView>
 
           <View style={styles.modalFooter}>
-            <TouchableOpacity style={styles.createEventButton} onPress={() => console.log('[CreateEvent] form:', JSON.stringify(form, null, 2))}>
+            <TouchableOpacity style={styles.createEventButton} onPress={handleCreate}>
               <Text style={styles.createEventButtonText}>Create Event</Text>
             </TouchableOpacity>
           </View>
@@ -692,5 +816,48 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: '#FFFFFF',
+  },
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 64,
+    paddingHorizontal: 32,
+  },
+  emptyEmoji: {
+    fontSize: 56,
+    marginBottom: 16,
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1A1A1A',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  emptySubtitle: {
+    fontSize: 14,
+    color: '#888',
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  autoPopulatedTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#FFF3EF',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    alignSelf: 'flex-start',
+  },
+  autoPopulatedLabel: {
+    fontSize: 12,
+    color: '#FF6B35',
+    fontWeight: '600',
+  },
+  autoPopulatedValue: {
+    fontSize: 13,
+    color: '#1A1A1A',
+    fontWeight: '500',
   },
 });

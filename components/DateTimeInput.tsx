@@ -1,4 +1,5 @@
 import {
+  Modal,
   Platform,
   StyleSheet,
   Text,
@@ -121,30 +122,48 @@ const DateTimeInput = ({
           placeholderTextColor="#999"
         />
       </TouchableOpacity>
-      {showPicker &&
-        (Platform.OS === 'android' ? (
-          <DateTimePicker
-            value={pickerMode === 'date' 
-              ? (dateTime || new Date())
-              : (selectedDate || dateTime || new Date())}
-            mode={pickerMode}
-            display="default"
-            onChange={(e, selectedValue) => {
-              if (pickerMode === 'date') {
-                handleDatePickerChange(e, selectedValue);
-              } else {
-                handleTimePickerChange(e, selectedValue);
-              }
-            }}
-          />
-        ) : (
-          <DateTimePicker
-            value={dateTime || new Date()}
-            mode="datetime"
-            display="spinner"
-            onChange={handleTimePickerChange}
-          />
-        ))}
+      {showPicker && Platform.OS === 'android' && (
+        <DateTimePicker
+          value={pickerMode === 'date'
+            ? (dateTime || new Date())
+            : (selectedDate || dateTime || new Date())}
+          mode={pickerMode}
+          display="default"
+          onChange={(e, selectedValue) => {
+            if (pickerMode === 'date') {
+              handleDatePickerChange(e, selectedValue);
+            } else {
+              handleTimePickerChange(e, selectedValue);
+            }
+          }}
+        />
+      )}
+
+      <Modal
+        visible={showPicker && Platform.OS === 'ios'}
+        transparent
+        animationType="slide"
+      >
+        <View style={styles.iosModalOverlay}>
+          <View style={styles.iosPickerContainer}>
+            <View style={styles.iosPickerHeader}>
+              <TouchableOpacity onPress={() => setShowPicker(false)}>
+                <Text style={styles.iosPickerCancel}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => setShowPicker(false)}>
+                <Text style={styles.iosPickerDone}>Done</Text>
+              </TouchableOpacity>
+            </View>
+            <DateTimePicker
+              value={dateTime || new Date()}
+              mode="datetime"
+              display="spinner"
+              onChange={handleTimePickerChange}
+              style={styles.iosPicker}
+            />
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -169,5 +188,39 @@ const styles = StyleSheet.create({
     color: '#1A1A1A',
     borderWidth: 1,
     borderColor: '#E9ECEF',
+  },
+  iosModalOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0,0,0,0.4)',
+  },
+  iosPickerContainer: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    paddingBottom: 24,
+  },
+  iosPickerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  iosPickerCancel: {
+    fontSize: 16,
+    color: '#888',
+    fontWeight: '500',
+  },
+  iosPickerDone: {
+    fontSize: 16,
+    color: '#FF6B35',
+    fontWeight: '600',
+  },
+  iosPicker: {
+    width: '100%',
+    alignSelf: 'center',
   },
 });
