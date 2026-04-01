@@ -16,15 +16,44 @@ import { auth } from '@/api/firebase';
 import {
   QueryClient,
   QueryClientProvider,
-  useQueryClient,
 } from '@tanstack/react-query';
 import { AuthProvider } from '@/providers/AuthProvider';
 
 const queryClient = new QueryClient();
 
+function AppNavigator({ fontsLoaded }: { fontsLoaded: boolean }) {
+  const { user, loading, session } = useAuth();
+
+  useEffect(() => {
+    if (!loading && fontsLoaded) {
+      if (session) {
+        console.log(auth.currentUser);
+        router.push('/(tabs)');
+      } else {
+        console.log('User is not authenticated');
+        router.replace('/auth/login');
+      }
+    }
+  }, [user, loading, fontsLoaded]);
+
+  if (!fontsLoaded || loading) {
+    return <LoadingSpinner />;
+  }
+
+  return (
+    <>
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="auth" />
+        <Stack.Screen name="+not-found" />
+      </Stack>
+      <StatusBar style="dark" />
+    </>
+  );
+}
+
 export default function RootLayout() {
   useFrameworkReady();
-  const { user, loading, session } = useAuth();
 
   const [fontsLoaded] = useFonts({
     'Inter-Regular': Inter_400Regular,
@@ -33,46 +62,11 @@ export default function RootLayout() {
     'Inter-Bold': Inter_700Bold,
   });
 
-  useEffect(() => {
-    if (!loading && fontsLoaded) {
-      const isUserAuthenticated = async () => {
-        const isAuth = session
-        if (isAuth) {
-          console.log(auth.currentUser);
-          router.push('/(tabs)');
-        } else {
-          console.log('User is not authenticated');
-          router.replace('/auth/login');
-        }
-      };
-      isUserAuthenticated();
-    }
-  }, [user, loading, fontsLoaded]);
-
-  if (!fontsLoaded) {
-    return (
-      <>
-        <QueryClientProvider client={queryClient}>
-          <AuthProvider>
-            <LoadingSpinner />
-          </AuthProvider>
-        </QueryClientProvider>
-      </>
-    );
-  }
-
   return (
-    <>
-      <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <Stack screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="(tabs)" />
-            <Stack.Screen name="auth" />
-            <Stack.Screen name="+not-found" />
-          </Stack>
-          <StatusBar style="dark" />
-        </AuthProvider>
-      </QueryClientProvider>
-    </>
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <AppNavigator fontsLoaded={!!fontsLoaded} />
+      </AuthProvider>
+    </QueryClientProvider>
   );
 }
