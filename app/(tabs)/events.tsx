@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState } from 'react';
 import { Search, Filter, Plus, MapPin } from 'lucide-react-native';
 import { EventCard } from '@/components/EventCard';
+import { ImagePicker } from '@/components/ImagePicker';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import {
   CreateEventForm,
@@ -68,6 +69,8 @@ const INITIAL_FORM: CreateEventForm = {
   society_id: null,
   university_id: null,
   banner_image_url: null,
+  banner_image_uri: null,
+  gallery_image_uris: [],
   booking_mode: EventBookingMode.FREE,
   price_from: null,
   currency: null,
@@ -77,6 +80,8 @@ export default function EventsScreen() {
   const [showCreateEvent, setShowCreateEvent] = useState(false);
   const [selectedTab, setSelectedTab] = useState('upcoming');
   const [form, setForm] = useState<CreateEventForm>(INITIAL_FORM);
+  const [dateError, setDateError] = useState<string | null>(null);
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   const { user } = useAuth();
   const { events, loading: eventsLoading } = useFetchEvents();
@@ -92,11 +97,32 @@ export default function EventsScreen() {
   const upcomingEvents = events.filter((e) => e.end_date >= now);
   const pastEvents = events.filter((e) => e.end_date < now);
 
+  const validateForm = (): boolean => {
+    const errors: Record<string, string> = {};
+
+    if (!form.name.trim()) errors.name = 'Event name is required.';
+    if (!form.start_date) errors.start_date = 'Start date is required.';
+    if (!form.end_date) errors.end_date = 'End date is required.';
+    if (form.start_date && form.end_date && form.end_date <= form.start_date) {
+      errors.end_date = 'End date must be after the start date.';
+    }
+    if (!form.is_online && !form.address) errors.address = 'Address is required for in-person events.';
+    if (needsSociety && memberships.length > 0 && !form.society_id) errors.society_id = 'Please select a society.';
+    if (form.booking_mode === EventBookingMode.TICKETED && !form.price_from) {
+      errors.price_from = 'A starting price is required for ticketed events.';
+    }
+
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   const handleCreate = () => {
+    if (!validateForm()) return;
     createEvent(form, {
       onSuccess: () => {
         setShowCreateEvent(false);
         setForm(INITIAL_FORM);
+        setFormErrors({});
       },
       onError: (err) => Alert.alert('Error', err.message),
     });
@@ -130,6 +156,8 @@ export default function EventsScreen() {
   const handleClose = () => {
     setShowCreateEvent(false);
     setForm(INITIAL_FORM);
+    setDateError(null);
+    setFormErrors({});
   };
 
   return (
@@ -244,12 +272,16 @@ export default function EventsScreen() {
               <View style={styles.inputGroup}>
                 <Text style={styles.formLabel}>Event Name *</Text>
                 <TextInput
-                  style={styles.input}
+                  style={[styles.input, formErrors.name ? styles.inputError : null]}
                   value={form.name}
-                  onChangeText={(val) => setForm((p) => ({ ...p, name: val }))}
+                  onChangeText={(val) => {
+                    setForm((p) => ({ ...p, name: val }));
+                    if (val.trim()) setFormErrors((e) => ({ ...e, name: undefined as any }));
+                  }}
                   placeholder="What's the event called?"
                   placeholderTextColor="#999"
                 />
+                {formErrors.name && <Text style={styles.fieldError}>{formErrors.name}</Text>}
               </View>
 
               <View style={[styles.inputGroup, styles.noMarginBottom]}>
@@ -277,7 +309,16 @@ export default function EventsScreen() {
                   label="Start"
                   defaultValue="Select start"
                   onChange={(val) => {
-                    setForm((p) => ({ ...p, start_date: val }));
+                    setForm((p) => {
+                      const newEnd = p.end_date && p.end_date <= val ? '' : p.end_date;
+                      if (p.end_date && p.end_date <= val) {
+                        setDateError('End date must be after the start date.');
+                      } else {
+                        setDateError(null);
+                      }
+                      return { ...p, start_date: val, end_date: newEnd };
+                    });
+                    setFormErrors((e) => ({ ...e, start_date: undefined as any }));
                     return true;
                   }}
                 />
@@ -286,11 +327,22 @@ export default function EventsScreen() {
                   label="End"
                   defaultValue="Select end"
                   onChange={(val) => {
+                    if (form.start_date && val <= form.start_date) {
+                      setDateError('End date must be after the start date.');
+                      return false;
+                    }
+                    setDateError(null);
                     setForm((p) => ({ ...p, end_date: val }));
+                    setFormErrors((e) => ({ ...e, end_date: undefined as any }));
                     return true;
                   }}
                 />
               </View>
+              {(dateError || formErrors.start_date || formErrors.end_date) && (
+                <Text style={styles.dateError}>
+                  {dateError || formErrors.start_date || formErrors.end_date}
+                </Text>
+              )}
             </View>
 
             {/* Location */}
@@ -318,7 +370,7 @@ export default function EventsScreen() {
               {!form.is_online && (
                 <View style={[styles.inputGroup, styles.noMarginBottom]}>
                   <Text style={styles.formLabel}>Address *</Text>
-                  <View style={styles.addressInputWrapper}>
+                  <View style={[styles.addressInputWrapper, formErrors.address ? styles.inputError : null]}>
                     <MapPin size={18} color="#666" />
                     <GooglePlacesAutocomplete
                       placeholder="Search for a venue or address"
@@ -330,7 +382,10 @@ export default function EventsScreen() {
                           process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY,
                         language: 'en',
                       }}
-                      onPress={(_, details) => addLocationToForm(details)}
+                      onPress={(_, details) => {
+                        addLocationToForm(details);
+                        setFormErrors((e) => ({ ...e, address: undefined as any }));
+                      }}
                       enablePoweredByContainer={false}
                       styles={{
                         textInput: styles.googleInput,
@@ -339,6 +394,7 @@ export default function EventsScreen() {
                       }}
                     />
                   </View>
+                  {formErrors.address && <Text style={styles.fieldError}>{formErrors.address}</Text>}
                 </View>
               )}
             </View>
@@ -442,7 +498,10 @@ export default function EventsScreen() {
                       <TouchableOpacity
                         key={m.society_id}
                         style={[styles.pill, form.society_id === m.society_id && styles.pillActive]}
-                        onPress={() => setForm((p) => ({ ...p, society_id: m.society_id }))}
+                        onPress={() => {
+                          setForm((p) => ({ ...p, society_id: m.society_id }));
+                          setFormErrors((e) => ({ ...e, society_id: undefined as any }));
+                        }}
                       >
                         <Text style={[styles.pillText, form.society_id === m.society_id && styles.pillTextActive]}>
                           {m.societies.name}
@@ -450,6 +509,7 @@ export default function EventsScreen() {
                       </TouchableOpacity>
                     ))}
                   </View>
+                  {formErrors.society_id && <Text style={styles.fieldError}>{formErrors.society_id}</Text>}
                 </View>
               )}
 
@@ -485,6 +545,58 @@ export default function EventsScreen() {
                   placeholderTextColor="#999"
                   keyboardType="number-pad"
                 />
+              </View>
+            </View>
+
+            {/* Images */}
+            <View style={styles.formSection}>
+              <Text style={styles.formTitle}>Images</Text>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.formLabel}>Banner Image</Text>
+                <ImagePicker
+                  placeholder="Add Banner Image"
+                  selectedImage={form.banner_image_uri ?? undefined}
+                  onImageSelected={(uri) => setForm((p) => ({ ...p, banner_image_uri: uri }))}
+                  onImageRemoved={() => setForm((p) => ({ ...p, banner_image_uri: null }))}
+                />
+              </View>
+
+              <View style={styles.noMarginBottom}>
+                <Text style={styles.formLabel}>Gallery Photos</Text>
+                <Text style={styles.formSubtitle}>Add extra photos for the event.</Text>
+                <View style={styles.galleryGrid}>
+                  {form.gallery_image_uris.map((uri, index) => (
+                    <ImagePicker
+                      key={index}
+                      selectedImage={uri}
+                      onImageSelected={(newUri) =>
+                        setForm((p) => {
+                          const updated = [...p.gallery_image_uris];
+                          updated[index] = newUri;
+                          return { ...p, gallery_image_uris: updated };
+                        })
+                      }
+                      onImageRemoved={() =>
+                        setForm((p) => ({
+                          ...p,
+                          gallery_image_uris: p.gallery_image_uris.filter((_, i) => i !== index),
+                        }))
+                      }
+                    />
+                  ))}
+                  {form.gallery_image_uris.length < 6 && (
+                    <ImagePicker
+                      placeholder="Add Photo"
+                      onImageSelected={(uri) =>
+                        setForm((p) => ({
+                          ...p,
+                          gallery_image_uris: [...p.gallery_image_uris, uri],
+                        }))
+                      }
+                    />
+                  )}
+                </View>
               </View>
             </View>
 
@@ -541,18 +653,20 @@ export default function EventsScreen() {
                 <View style={[styles.inputGroup, { marginTop: 16 }]}>
                   <Text style={styles.formLabel}>Starting Price *</Text>
                   <TextInput
-                    style={styles.input}
+                    style={[styles.input, formErrors.price_from ? styles.inputError : null]}
                     value={form.price_from?.toString() ?? ''}
-                    onChangeText={(val) =>
+                    onChangeText={(val) => {
                       setForm((p) => ({
                         ...p,
                         price_from: val ? parseFloat(val) || null : null,
-                      }))
-                    }
+                      }));
+                      if (val) setFormErrors((e) => ({ ...e, price_from: undefined as any }));
+                    }}
                     placeholder="0.00"
                     placeholderTextColor="#999"
                     keyboardType="decimal-pad"
                   />
+                  {formErrors.price_from && <Text style={styles.fieldError}>{formErrors.price_from}</Text>}
                 </View>
               )}
             </View>
@@ -859,5 +973,23 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#1A1A1A',
     fontWeight: '500',
+  },
+  dateError: {
+    fontSize: 13,
+    color: '#DC3545',
+    marginTop: 10,
+    fontWeight: '500',
+  },
+  inputError: {
+    borderColor: '#DC3545',
+  },
+  fieldError: {
+    fontSize: 12,
+    color: '#DC3545',
+    marginTop: 6,
+    fontWeight: '500',
+  },
+  galleryGrid: {
+    gap: 12,
   },
 });

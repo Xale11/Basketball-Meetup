@@ -37,7 +37,7 @@ export function ImagePicker({
     setLoading(true);
     try {
       const result = await ImagePickerExpo.launchImageLibraryAsync({
-        mediaTypes: ImagePickerExpo.MediaTypeOptions.Images,
+        mediaTypes: ['images'],
         allowsEditing: false,
         quality: 0.8,
       });
