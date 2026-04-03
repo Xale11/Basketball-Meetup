@@ -23,10 +23,12 @@ const DateTimeInput = ({
 }: DateTimeInputProps) => {
   const [showPicker, setShowPicker] = useState(false);
   const [dateTime, setDateTime] = useState<Date>();
+  const [tempDate, setTempDate] = useState<Date>(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [pickerMode, setPickerMode] = useState<'date' | 'time'>('date');
 
   const openPicker = () => {
+    setTempDate(dateTime || new Date());
     setSelectedDate(null);
     setPickerMode('date');
     setShowPicker(true);
@@ -79,15 +81,10 @@ const DateTimeInput = ({
         setPickerMode('date');
       }
     } else {
-      // iOS handles datetime in one picker
-      if (event.type === 'set' && selectedTime) {
-        const dateTimeString = selectedTime.toISOString();
-        if (onChange(dateTimeString)) {
-          setDateTime(selectedTime);
-        }
+      // iOS: just track the scrolled value, don't close yet
+      if (selectedTime) {
+        setTempDate(selectedTime);
       }
-      // Close picker for both 'set' and 'dismissed' events on iOS
-      setShowPicker(false);
     }
   };
 
@@ -150,7 +147,13 @@ const DateTimeInput = ({
               <TouchableOpacity onPress={() => setShowPicker(false)}>
                 <Text style={styles.iosPickerCancel}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity onPress={() => setShowPicker(false)}>
+              <TouchableOpacity onPress={() => {
+                const dateTimeString = tempDate.toISOString();
+                if (onChange(dateTimeString)) {
+                  setDateTime(tempDate);
+                }
+                setShowPicker(false);
+              }}>
                 <Text style={styles.iosPickerDone}>Done</Text>
               </TouchableOpacity>
             </View>
