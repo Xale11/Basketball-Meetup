@@ -2,7 +2,7 @@ import { Event, CreateEventForm, EventImageType } from '@/types/event'
 import { supabase } from './supabase'
 import { uploadToSupabaseBucket } from './supabase-storage.api'
 
-const EVENT_IMAGES_BUCKET = 'events'
+const EVENT_IMAGES_BUCKET = 'event_images'
 
 export const createEvent = async (
   form: CreateEventForm,
