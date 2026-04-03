@@ -1,23 +1,24 @@
 import { supabase } from './supabase';
 
-const BUCKET = 'images';
+const DEFAULT_bucket = 'images';
 
 export const uploadToSupabaseBucket = async (
   uri: string,
   folder: string,
-  fileName: string
+  fileName: string,
+  bucket: string = DEFAULT_bucket,
 ): Promise<string> => {
   const ext = uri.split('.').pop()?.split('?')[0]?.toLowerCase() || 'jpg';
   const mimeType = ext === 'jpg' ? 'image/jpeg' : `image/${ext}`;
   const filePath = `${folder}/${fileName}.${ext}`;
-  console.log(`[uploadToSupabaseBucket] uploading ${filePath}`);
+  console.log(`[uploadToSupabaseBucket] uploading ${filePath} to bucket: ${bucket}`);
 
-  const formData = new FormData();
-  formData.append('file', { uri, name: `${fileName}.${ext}`, type: mimeType } as any);
+  const response = await fetch(uri);
+  const blob = await response.blob();
 
   const { error } = await supabase.storage
-    .from(BUCKET)
-    .upload(filePath, formData, {
+    .from(bucket)
+    .upload(filePath, blob, {
       contentType: mimeType,
       upsert: true,
     });
@@ -27,7 +28,7 @@ export const uploadToSupabaseBucket = async (
     throw new Error(`Failed to upload image: ${error.message}`);
   }
 
-  const { data } = supabase.storage.from(BUCKET).getPublicUrl(filePath);
+  const { data } = supabase.storage.from(bucket).getPublicUrl(filePath);
   console.log(`[uploadToSupabaseBucket] success`);
 
   return data.publicUrl;

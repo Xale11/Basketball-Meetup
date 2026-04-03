@@ -141,6 +141,8 @@ export interface CreateEventForm {
   university_id: string | null
 
   banner_image_url: string | null
+  banner_image_uri: string | null
+  gallery_image_uris: string[]
 
   booking_mode: EventBookingMode
   price_from: number | null
