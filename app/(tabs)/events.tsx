@@ -17,6 +17,7 @@ import { ImagePicker } from '@/components/ImagePicker';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import {
   CreateEventForm,
+  Event,
   EventBookingMode,
   EventHostType,
   EventJoinPolicy,
@@ -25,8 +26,12 @@ import {
 import { useCreateEvent } from '@/hooks/events/useCreateEvent';
 import { useFetchEvents } from '@/hooks/events/useFetchEvents';
 import { useFetchMyEvents } from '@/hooks/events/useFetchMyEvents';
+import { useUpdateEvent } from '@/hooks/events/useUpdateEvent';
 import { useFetchUserSocieties } from '@/hooks/societies/useFetchUserSocieties';
+import { useFetchUniversityMembership } from '@/hooks/universities/useFetchUniversityMembership';
 import { useAuth } from '@/hooks/useAuth';
+import { SocietyRoleIdEnum } from '@/types/societies';
+import { UniversityRole } from '@/types/universities';
 import {
   GooglePlaceDetail,
   GooglePlacesAutocomplete,
@@ -78,6 +83,7 @@ const INITIAL_FORM: CreateEventForm = {
 
 export default function EventsScreen() {
   const [showCreateEvent, setShowCreateEvent] = useState(false);
+  const [editingEvent, setEditingEvent] = useState<Event | null>(null);
   const [selectedTab, setSelectedTab] = useState('upcoming');
   const [form, setForm] = useState<CreateEventForm>(INITIAL_FORM);
   const [dateError, setDateError] = useState<string | null>(null);
@@ -87,7 +93,16 @@ export default function EventsScreen() {
   const { events, loading: eventsLoading } = useFetchEvents();
   const { events: myEvents } = useFetchMyEvents(user?.id);
   const { createEvent } = useCreateEvent();
+  const { updateEvent } = useUpdateEvent();
   const { memberships } = useFetchUserSocieties(user?.id);
+  const { membership: uniMembership } = useFetchUniversityMembership(user?.id);
+
+  const privilegedSocietyIds = new Set(
+    memberships
+      .filter((m) => [SocietyRoleIdEnum.EXEC, SocietyRoleIdEnum.PRESIDENT, SocietyRoleIdEnum.OWNER].includes(m.role_id))
+      .map((m) => m.society_id)
+  );
+  const isUniAdmin = uniMembership?.role === UniversityRole.ADMIN;
 
   const needsSociety =
     form.host_type === EventHostType.SOCIETY ||
@@ -116,11 +131,52 @@ export default function EventsScreen() {
     return Object.keys(errors).length === 0;
   };
 
+  const openEdit = (event: Event) => {
+    setEditingEvent(event);
+    setForm({
+      name: event.name,
+      description: event.description,
+      start_date: event.start_date,
+      end_date: event.end_date,
+      is_online: event.is_online,
+      address: event.address,
+      latitude: event.latitude,
+      longitude: event.longitude,
+      visibility: event.visibility,
+      join_policy: event.join_policy,
+      max_participants: event.max_participants,
+      host_type: event.host_type,
+      society_id: event.society_id,
+      university_id: event.university_id,
+      banner_image_url: event.banner_image_url,
+      banner_image_uri: null,
+      gallery_image_uris: [],
+      booking_mode: event.booking_mode,
+      price_from: event.price_from,
+      currency: event.currency,
+    });
+    setShowCreateEvent(true);
+  };
+
   const handleCreate = () => {
     if (!validateForm()) return;
     createEvent(form, {
       onSuccess: () => {
         setShowCreateEvent(false);
+        setForm(INITIAL_FORM);
+        setFormErrors({});
+      },
+      onError: (err) => Alert.alert('Error', err.message),
+    });
+  };
+
+  const handleUpdate = () => {
+    if (!editingEvent) return;
+    if (!validateForm()) return;
+    updateEvent(editingEvent.id, form, {
+      onSuccess: () => {
+        setShowCreateEvent(false);
+        setEditingEvent(null);
         setForm(INITIAL_FORM);
         setFormErrors({});
       },
@@ -155,6 +211,7 @@ export default function EventsScreen() {
 
   const handleClose = () => {
     setShowCreateEvent(false);
+    setEditingEvent(null);
     setForm(INITIAL_FORM);
     setDateError(null);
     setFormErrors({});
@@ -241,7 +298,15 @@ export default function EventsScreen() {
           }
 
           return visibleEvents.map((event) => (
-            <EventCard key={event.id} event={event} onPress={() => {}} />
+            <EventCard
+              key={event.id}
+              event={event}
+              onPress={selectedTab === 'my-events' && (
+                event.created_by_user_id === user?.id ||
+                (event.host_type === EventHostType.SOCIETY && event.society_id != null && privilegedSocietyIds.has(event.society_id)) ||
+                (event.host_type === EventHostType.UNIVERSITY && isUniAdmin)
+              ) ? () => openEdit(event) : () => {}}
+            />
           ));
         })()}
       </ScrollView>
@@ -254,7 +319,7 @@ export default function EventsScreen() {
       >
         <SafeAreaView style={styles.modalContainer}>
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Create Event</Text>
+            <Text style={styles.modalTitle}>{editingEvent ? 'Edit Event' : 'Create Event'}</Text>
             <TouchableOpacity onPress={handleClose}>
               <Text style={styles.closeButton}>Cancel</Text>
             </TouchableOpacity>
@@ -304,10 +369,11 @@ export default function EventsScreen() {
             {/* Date & Time */}
             <View style={styles.formSection}>
               <Text style={styles.formTitle}>Date & Time</Text>
-              <View style={styles.dateTimeRow}>
+              <View style={styles.dateTimeRow} key={editingEvent?.id ?? 'new'}>
                 <DateTimeInput
                   label="Start"
                   defaultValue="Select start"
+                  initialValue={form.start_date || undefined}
                   onChange={(val) => {
                     setForm((p) => {
                       const newEnd = p.end_date && p.end_date <= val ? '' : p.end_date;
@@ -326,6 +392,7 @@ export default function EventsScreen() {
                 <DateTimeInput
                   label="End"
                   defaultValue="Select end"
+                  initialValue={form.end_date || undefined}
                   onChange={(val) => {
                     if (form.start_date && val <= form.start_date) {
                       setDateError('End date must be after the start date.');
@@ -556,7 +623,7 @@ export default function EventsScreen() {
                 <Text style={styles.formLabel}>Banner Image</Text>
                 <ImagePicker
                   placeholder="Add Banner Image"
-                  selectedImage={form.banner_image_uri ?? undefined}
+                  selectedImage={form.banner_image_uri ?? form.banner_image_url ?? undefined}
                   onImageSelected={(uri) => setForm((p) => ({ ...p, banner_image_uri: uri }))}
                   onImageRemoved={() => setForm((p) => ({ ...p, banner_image_uri: null }))}
                 />
@@ -673,8 +740,8 @@ export default function EventsScreen() {
           </ScrollView>
 
           <View style={styles.modalFooter}>
-            <TouchableOpacity style={styles.createEventButton} onPress={handleCreate}>
-              <Text style={styles.createEventButtonText}>Create Event</Text>
+            <TouchableOpacity style={styles.createEventButton} onPress={editingEvent ? handleUpdate : handleCreate}>
+              <Text style={styles.createEventButtonText}>{editingEvent ? 'Save Changes' : 'Create Event'}</Text>
             </TouchableOpacity>
           </View>
         </SafeAreaView>

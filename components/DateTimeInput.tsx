@@ -14,16 +14,22 @@ interface DateTimeInputProps {
   onChange: (time: string) => boolean;
   label: string;
   defaultValue: string;
+  initialValue?: string;
 }
 
 const DateTimeInput = ({
   onChange,
   label,
   defaultValue,
+  initialValue,
 }: DateTimeInputProps) => {
   const [showPicker, setShowPicker] = useState(false);
-  const [dateTime, setDateTime] = useState<Date>();
-  const [tempDate, setTempDate] = useState<Date>(new Date());
+  const [dateTime, setDateTime] = useState<Date | undefined>(
+    initialValue ? new Date(initialValue) : undefined
+  );
+  const [tempDate, setTempDate] = useState<Date>(
+    initialValue ? new Date(initialValue) : new Date()
+  );
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [pickerMode, setPickerMode] = useState<'date' | 'time'>('date');
 

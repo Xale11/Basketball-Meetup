@@ -1,5 +1,5 @@
 import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
-import { Calendar, Users, DollarSign } from 'lucide-react-native';
+import { Calendar, Users, DollarSign, MapPin, Wifi } from 'lucide-react-native';
 import { Event, EventHostType } from '@/types/event';
 
 interface EventCardProps {
@@ -54,6 +54,20 @@ export function EventCard({ event, onPress }: EventCardProps) {
           <Text style={styles.infoText}>
             {event.max_participants ?? '∞'} max participants
           </Text>
+        </View>
+
+        <View style={styles.infoRow}>
+          {event.is_online ? (
+            <>
+              <Wifi size={16} color="#1D6FA4" />
+              <Text style={[styles.infoText, styles.onlineText]}>Online event</Text>
+            </>
+          ) : (
+            <>
+              <MapPin size={16} color="#666" />
+              <Text style={styles.infoText} numberOfLines={1}>{event.address ?? 'Location TBC'}</Text>
+            </>
+          )}
         </View>
 
         <View style={styles.footer}>
@@ -160,6 +174,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
     marginLeft: 8,
+    flex: 1,
+  },
+  onlineText: {
+    color: '#1D6FA4',
+    fontWeight: '500',
   },
   footer: {
     flexDirection: 'row',
