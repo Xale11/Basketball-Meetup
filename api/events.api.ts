@@ -167,18 +167,41 @@ export const updateEvent = async (
   }
 }
 
-export const fetchEvents = async (): Promise<Event[]> => {
+export const fetchEvents = async (
+  universityId?: string | null,
+  societyIds?: string[],
+): Promise<Event[]> => {
   try {
+    const now = new Date().toISOString()
+
+    // Always include PUBLIC events
+    const visibilityFilter = ['PUBLIC']
+
+    // Include UNIVERSITY_ONLY if the user belongs to that university
+    if (universityId) visibilityFilter.push('UNIVERSITY_ONLY')
+
+    // Include SOCIETY_ONLY if the user is in at least one society
+    if (societyIds && societyIds.length > 0) visibilityFilter.push('SOCIETY_ONLY')
+
     const { data, error } = await supabase
       .from('events')
       .select('*')
       .eq('is_cancelled', false)
-      .gte('end_date', new Date().toISOString())
+      .gte('end_date', now)
+      .in('visibility', visibilityFilter)
       .order('start_date', { ascending: true })
 
     if (error) throw new Error(JSON.stringify(error))
 
-    return (data ?? []) as Event[]
+    // Post-filter: UNIVERSITY_ONLY must match the user's university,
+    // SOCIETY_ONLY must be hosted by one of the user's societies
+    const memberSocietySet = new Set(societyIds ?? [])
+
+    return (data ?? []).filter((e: Event) => {
+      if (e.visibility === 'UNIVERSITY_ONLY') return e.university_id === universityId
+      if (e.visibility === 'SOCIETY_ONLY') return e.society_id != null && memberSocietySet.has(e.society_id)
+      return true
+    }) as Event[]
   } catch (error: any) {
     throw new Error(error.message)
   }

@@ -90,11 +90,12 @@ export default function EventsScreen() {
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   const { user } = useAuth();
-  const { events, loading: eventsLoading } = useFetchEvents();
+  const { memberships } = useFetchUserSocieties(user?.id);
+  const societyIds = memberships.map((m) => m.society_id);
+  const { events, loading: eventsLoading } = useFetchEvents(user?.university_id, societyIds);
   const { events: myEvents } = useFetchMyEvents(user?.id);
   const { createEvent } = useCreateEvent();
   const { updateEvent } = useUpdateEvent();
-  const { memberships } = useFetchUserSocieties(user?.id);
   const { membership: uniMembership } = useFetchUniversityMembership(user?.id);
 
   const privilegedSocietyIds = new Set(

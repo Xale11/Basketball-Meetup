@@ -2,12 +2,12 @@ import { useQuery } from '@tanstack/react-query'
 import { fetchEvents } from '@/api/events.api'
 import { Event } from '@/types/event'
 
-export const useFetchEvents = () => {
+export const useFetchEvents = (universityId?: string | null, societyIds?: string[]) => {
   const query = useQuery<Event[], Error>({
-    queryKey: ['events'],
+    queryKey: ['events', universityId, societyIds],
     staleTime: 1000 * 60 * 5,
     refetchOnWindowFocus: false,
-    queryFn: fetchEvents,
+    queryFn: () => fetchEvents(universityId, societyIds),
   })
 
   return {
