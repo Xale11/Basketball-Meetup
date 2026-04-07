@@ -158,7 +158,7 @@ const DateTimeInput = ({
               </TouchableOpacity>
             </View>
             <DateTimePicker
-              value={dateTime || new Date()}
+              value={tempDate}
               mode="datetime"
               display="spinner"
               onChange={handleTimePickerChange}
