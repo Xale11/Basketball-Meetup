@@ -6,6 +6,7 @@ export type TabVisibility = {
   events: boolean;
   clubs: boolean;
   addCourt: boolean;
+  create: boolean;
   profile: boolean;
 };
 
@@ -16,18 +17,21 @@ const TAB_CONFIG: Record<AppVariant, TabVisibility> = {
     events: true,
     clubs: true,
     addCourt: true,
+    create: false,
     profile: true,
   },
-  'activCampus': {
+  activCampus: {
     home: true,
     map: true,
-    events: true,
-    clubs: false,
+    events: false,
+    clubs: true,
     addCourt: false,
+    create: true,
     profile: true,
   },
 };
 
-const variant = (process.env.EXPO_PUBLIC_APP_VARIANT ?? 'basketball') as AppVariant;
+const variant = (process.env.EXPO_PUBLIC_APP_VARIANT ?? 'activCampus') as AppVariant;
 
+export const appVariant: AppVariant = variant;
 export const tabs: TabVisibility = TAB_CONFIG[variant];

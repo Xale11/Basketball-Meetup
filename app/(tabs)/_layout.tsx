@@ -1,6 +1,7 @@
 import { Tabs } from 'expo-router';
+import { View } from 'react-native';
 import { Chrome as Home, Map, Calendar, User, Plus, Users } from 'lucide-react-native';
-import { tabs } from '@/constants/appVariant';
+import { tabs, appVariant } from '@/constants/appVariant';
 
 export default function TabLayout() {
   return (
@@ -45,6 +46,31 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="create"
+        options={{
+          title: '',
+          href: tabs.create ? undefined : null,
+          tabBarIcon: () => (
+            <View style={{
+              backgroundColor: '#FF6B35',
+              borderRadius: 32,
+              width: 52,
+              height: 52,
+              justifyContent: 'center',
+              alignItems: 'center',
+              marginBottom: 8,
+              shadowColor: '#FF6B35',
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.4,
+              shadowRadius: 8,
+              elevation: 8,
+            }}>
+              <Plus size={26} color="#FFFFFF" />
+            </View>
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="events"
         options={{
           title: 'Events',
@@ -57,7 +83,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="clubs"
         options={{
-          title: 'Clubs',
+          title: appVariant === 'activCampus' ? 'Societies' : 'Clubs',
           href: tabs.clubs ? undefined : null,
           tabBarIcon: ({ size, color }) => (
             <Users size={size} color={color} />
