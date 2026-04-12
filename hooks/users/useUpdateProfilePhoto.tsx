@@ -15,7 +15,7 @@ export default function useUpdateProfilePhoto(userId: string | undefined) {
       setPhotoUploading(true);
       console.log('[useUpdateProfilePhoto] uploading photo');
       const photoUrl = await uploadToSupabaseBucket(uri, `profilePhotos/${userId}`, 'profile');
-      await updateUser(userId, { photoUrl });
+      await updateUser(userId, { photo_url: photoUrl });
       await queryClient.invalidateQueries({ queryKey: ['userFetchById', userId] });
       console.log('[useUpdateProfilePhoto] photo updated');
     } catch (e) {
@@ -31,7 +31,7 @@ export default function useUpdateProfilePhoto(userId: string | undefined) {
     try {
       setPhotoUploading(true);
       console.log('[useUpdateProfilePhoto] removing photo');
-      await updateUser(userId, { photoUrl: null as any });
+      await updateUser(userId, { photo_url: null as any });
       await queryClient.invalidateQueries({ queryKey: ['userFetchById', userId] });
       console.log('[useUpdateProfilePhoto] photo removed');
     } catch (e) {

@@ -28,7 +28,7 @@ export default function OnboardingScreen() {
   const { onboardUser, loading: onboardingLoading } = useOnboardUser();
   
   const [step, setStep] = useState(1);
-  const [photoUri, setPhotoUri] = useState<string | null>(user?.photoUrl ?? null);
+  const [photoUri, setPhotoUri] = useState<string | null>(user?.photo_url ?? null);
   const [selectedSocieties, setSelectedSocieties] = useState<string[]>([]);
   const [societySearch, setSocietySearch] = useState('');
   const [showUniversityPicker, setShowUniversityPicker] = useState(false);
@@ -36,18 +36,18 @@ export default function OnboardingScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState<OnboardingUserForm>({
     id: session?.user?.id ?? '',
-    firstName: user?.firstName ?? '',
-    lastName: user?.lastName ?? '',
+    first_name: user?.first_name ?? '',
+    last_name: user?.last_name ?? '',
     bio: user?.bio ?? '',
-    over18: user?.over18 ?? false,
-    photoUrl: user?.photoUrl ?? '',
-    universityId: user?.universityId ?? '',
+    over_18: user?.over_18 ?? false,
+    photo_url: user?.photo_url ?? '',
+    university_id: user?.university_id ?? '',
     course: user?.course ?? '',
     societies: [],
   });
 
   const { universities, isLoading: universitiesLoading, isError: universitiesError, fetchUniversities } = useFetchUniversities();
-  const { societies, isLoading: societiesLoading, isError: societiesError, fetchSocieties } = useFetchSocietiesByUniId(form.universityId ?? '');
+  const { societies, isLoading: societiesLoading, isError: societiesError, fetchSocieties } = useFetchSocietiesByUniId(form.university_id ?? '');
 
   const isLastStep = step === 4;
 
@@ -55,7 +55,7 @@ export default function OnboardingScreen() {
     setError('');
 
     if (step === 1) {
-      if (!form.firstName.trim() || !form.lastName.trim()) {
+      if (!form.first_name.trim() || !form.last_name.trim()) {
         setError('Please enter your first and last name.');
         return;
       }
@@ -63,7 +63,7 @@ export default function OnboardingScreen() {
 
     if (step === 3) {
       // University is optional. If the user picked one, it must be non-empty.
-      if (form.universityId != null && form.universityId !== '' && !form.universityId.trim()) {
+      if (form.university_id != null && form.university_id !== '' && !form.university_id.trim()) {
         setError('Please select a University');
         return;
       }
@@ -117,17 +117,17 @@ export default function OnboardingScreen() {
     fetchUniversities();
   }
 
-  const handleUniversitySelect = (universityId: string) => {
+  const handleUniversitySelect = (university_id: string) => {
     setForm(prev => ({
       ...prev,
-      universityId,
+      university_id: university_id,
     }));
     setSelectedSocieties([]);
     setSocietySearch('');
     setShowUniversityPicker(false);
   }
 
-  const selectedUniversity = universities.find(u => u.id === form.universityId);
+  const selectedUniversity = universities.find(u => u.id === form.university_id);
   const selectedSocietiesNames = societies
     .filter(s => selectedSocieties.includes(s.id))
     .map(s => s.name);
@@ -163,10 +163,10 @@ export default function OnboardingScreen() {
   }, [selectedSocieties]);
 
   useEffect(() => {
-    if (step === 4 && form.universityId) {
+    if (step === 4 && form.university_id) {
       fetchSocieties();
     }
-  }, [step, form.universityId]);
+  }, [step, form.university_id]);
 
   if (loading || submitting || onboardingLoading) {
     return <LoadingSpinner />;
@@ -222,9 +222,9 @@ export default function OnboardingScreen() {
                     <TextInput
                       style={styles.input}
                       placeholder="First name"
-                      value={form.firstName}
+                      value={form.first_name}
                       onChangeText={(text) =>
-                        setForm((prev) => ({ ...prev, firstName: text }))
+                        setForm((prev) => ({ ...prev, first_name: text }))
                       }
                       autoCapitalize="words"
                     />
@@ -235,9 +235,9 @@ export default function OnboardingScreen() {
                     <TextInput
                       style={styles.input}
                       placeholder="Last name"
-                      value={form.lastName}
+                      value={form.last_name}
                       onChangeText={(text) =>
-                        setForm((prev) => ({ ...prev, lastName: text }))
+                        setForm((prev) => ({ ...prev, last_name: text }))
                       }
                       autoCapitalize="words"
                     />
@@ -251,14 +251,14 @@ export default function OnboardingScreen() {
                       </Text>
                     </View>
                     <Switch
-                      value={form.over18}
+                      value={form.over_18}
                       onValueChange={(value) =>
                         setForm((prev) => ({
                           ...prev,
-                          over18: value,
+                          over_18: value,
                         }))
                       }
-                      thumbColor={form.over18 ? '#FFFFFF' : '#FFFFFF'}
+                      thumbColor={form.over_18 ? '#FFFFFF' : '#FFFFFF'}
                       trackColor={{ false: '#E9ECEF', true: '#FF6B35' }}
                     />
                   </View>
@@ -458,7 +458,7 @@ export default function OnboardingScreen() {
                 <TouchableOpacity
                   style={[
                     styles.modalItem,
-                    form.universityId === item.id && styles.modalItemSelected,
+                    form.university_id === item.id && styles.modalItemSelected,
                   ]}
                   onPress={() => {
                     handleUniversitySelect(item.id);
@@ -467,12 +467,12 @@ export default function OnboardingScreen() {
                   <Text
                     style={[
                       styles.modalItemText,
-                      form.universityId === item.id && styles.modalItemTextSelected,
+                      form.university_id === item.id && styles.modalItemTextSelected,
                     ]}
                   >
                     {item.name}
                   </Text>
-                  {form.universityId === item.id && (
+                  {form.university_id === item.id && (
                     <CheckCircle2 size={20} color="#FF6B35" />
                   )}
                 </TouchableOpacity>

@@ -33,11 +33,7 @@ export const useFetchById = (id: string | undefined | null) => {
         ...query,
         // Explicit state properties for easier access
         // Include fetchStatus === 'fetching' to ensure retry states show loading
-        loading: query.isPending ||
-            query.isLoading ||
-            query.isFetching ||
-            query.isRefetching ||
-            query.fetchStatus === 'fetching',
+        loading: !!id && (query.isPending || query.isFetching),
         error: query.error,
         isSuccess: query.isSuccess,
         isError: query.isError,

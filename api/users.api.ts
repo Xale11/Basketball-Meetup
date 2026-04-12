@@ -25,14 +25,14 @@ export const createUser = async (user: Partial<User>): Promise<User> => {
             
             const insertObject = {
                 id: user.id,
-                firstName: user.firstName,
-                lastName: user.lastName,
+                first_name: user.first_name,
+                last_name: user.last_name,
                 bio: user.bio,
-                over18: user.over18,
-                photoUrl: user.photoUrl,
-                universityId: user.universityId,
+                over_18: user.over_18,
+                photo_url: user.photo_url,
+                university_id: user.university_id,
                 course: user.course,
-                onboardingStatus: user.onboardingStatus,
+                onboarding_status: user.onboarding_status,
             }
         
             const { data, error }: { data: User | null; error: any } = await supabase

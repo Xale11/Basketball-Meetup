@@ -13,14 +13,25 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState } from 'react';
 import { Search, Filter, Plus, MapPin } from 'lucide-react-native';
 import { EventCard } from '@/components/EventCard';
-import { mockEvents } from '@/utils/mockData';
+import { ImagePicker } from '@/components/ImagePicker';
+import { LoadingSpinner } from '@/components/LoadingSpinner';
 import {
   CreateEventForm,
+  Event,
   EventBookingMode,
   EventHostType,
   EventJoinPolicy,
   EventVisibility,
 } from '@/types/event';
+import { useCreateEvent } from '@/hooks/events/useCreateEvent';
+import { useFetchEvents } from '@/hooks/events/useFetchEvents';
+import { useFetchMyEvents } from '@/hooks/events/useFetchMyEvents';
+import { useUpdateEvent } from '@/hooks/events/useUpdateEvent';
+import { useFetchUserSocieties } from '@/hooks/societies/useFetchUserSocieties';
+import { useFetchUniversityMembership } from '@/hooks/universities/useFetchUniversityMembership';
+import { useAuth } from '@/hooks/useAuth';
+import { SocietyRoleIdEnum } from '@/types/societies';
+import { UniversityRole } from '@/types/universities';
 import {
   GooglePlaceDetail,
   GooglePlacesAutocomplete,
@@ -60,7 +71,11 @@ const INITIAL_FORM: CreateEventForm = {
   join_policy: EventJoinPolicy.OPEN,
   max_participants: null,
   host_type: EventHostType.USER,
+  society_id: null,
+  university_id: null,
   banner_image_url: null,
+  banner_image_uri: null,
+  gallery_image_uris: [],
   booking_mode: EventBookingMode.FREE,
   price_from: null,
   currency: null,
@@ -68,8 +83,107 @@ const INITIAL_FORM: CreateEventForm = {
 
 export default function EventsScreen() {
   const [showCreateEvent, setShowCreateEvent] = useState(false);
+  const [editingEvent, setEditingEvent] = useState<Event | null>(null);
   const [selectedTab, setSelectedTab] = useState('upcoming');
   const [form, setForm] = useState<CreateEventForm>(INITIAL_FORM);
+  const [dateError, setDateError] = useState<string | null>(null);
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+
+  const { user } = useAuth();
+  const { memberships } = useFetchUserSocieties(user?.id);
+  const societyIds = memberships.map((m) => m.society_id);
+  const { events, loading: eventsLoading } = useFetchEvents(user?.university_id, societyIds);
+  const { events: myEvents } = useFetchMyEvents(user?.id);
+  const { createEvent } = useCreateEvent();
+  const { updateEvent } = useUpdateEvent();
+  const { membership: uniMembership } = useFetchUniversityMembership(user?.id);
+
+  const privilegedSocietyIds = new Set(
+    memberships
+      .filter((m) => [SocietyRoleIdEnum.EXEC, SocietyRoleIdEnum.PRESIDENT, SocietyRoleIdEnum.OWNER].includes(m.role_id))
+      .map((m) => m.society_id)
+  );
+  const isUniAdmin = uniMembership?.role === UniversityRole.ADMIN;
+
+  const needsSociety =
+    form.host_type === EventHostType.SOCIETY ||
+    form.visibility === EventVisibility.SOCIETY_ONLY;
+
+  const now = new Date().toISOString();
+  const upcomingEvents = events.filter((e) => e.end_date >= now);
+  const pastEvents = events.filter((e) => e.end_date < now);
+
+  const validateForm = (): boolean => {
+    const errors: Record<string, string> = {};
+
+    if (!form.name.trim()) errors.name = 'Event name is required.';
+    if (!form.start_date) errors.start_date = 'Start date is required.';
+    if (!form.end_date) errors.end_date = 'End date is required.';
+    if (form.start_date && form.end_date && form.end_date <= form.start_date) {
+      errors.end_date = 'End date must be after the start date.';
+    }
+    if (!form.is_online && !form.address) errors.address = 'Address is required for in-person events.';
+    if (needsSociety && memberships.length > 0 && !form.society_id) errors.society_id = 'Please select a society.';
+    if (form.booking_mode === EventBookingMode.TICKETED && !form.price_from) {
+      errors.price_from = 'A starting price is required for ticketed events.';
+    }
+
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const openEdit = (event: Event) => {
+    setEditingEvent(event);
+    setForm({
+      name: event.name,
+      description: event.description,
+      start_date: event.start_date,
+      end_date: event.end_date,
+      is_online: event.is_online,
+      address: event.address,
+      latitude: event.latitude,
+      longitude: event.longitude,
+      visibility: event.visibility,
+      join_policy: event.join_policy,
+      max_participants: event.max_participants,
+      host_type: event.host_type,
+      society_id: event.society_id,
+      university_id: event.university_id,
+      banner_image_url: event.banner_image_url,
+      banner_image_uri: null,
+      gallery_image_uris: [],
+      booking_mode: event.booking_mode,
+      price_from: event.price_from,
+      currency: event.currency,
+    });
+    setShowCreateEvent(true);
+  };
+
+  const handleCreate = () => {
+    if (!validateForm()) return;
+    createEvent(form, {
+      onSuccess: () => {
+        setShowCreateEvent(false);
+        setForm(INITIAL_FORM);
+        setFormErrors({});
+      },
+      onError: (err) => Alert.alert('Error', err.message),
+    });
+  };
+
+  const handleUpdate = () => {
+    if (!editingEvent) return;
+    if (!validateForm()) return;
+    updateEvent(editingEvent.id, form, {
+      onSuccess: () => {
+        setShowCreateEvent(false);
+        setEditingEvent(null);
+        setForm(INITIAL_FORM);
+        setFormErrors({});
+      },
+      onError: (err) => Alert.alert('Error', err.message),
+    });
+  };
 
   const tabs = [
     { key: 'upcoming', label: 'Upcoming' },
@@ -98,7 +212,10 @@ export default function EventsScreen() {
 
   const handleClose = () => {
     setShowCreateEvent(false);
+    setEditingEvent(null);
     setForm(INITIAL_FORM);
+    setDateError(null);
+    setFormErrors({});
   };
 
   return (
@@ -141,9 +258,58 @@ export default function EventsScreen() {
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {mockEvents.map((event) => (
-          <EventCard key={event.id} event={event} onPress={() => {}} />
-        ))}
+        {eventsLoading ? (
+          <LoadingSpinner />
+        ) : (() => {
+          const visibleEvents =
+            selectedTab === 'upcoming' ? upcomingEvents
+            : selectedTab === 'my-events' ? myEvents
+            : pastEvents;
+
+          if (visibleEvents.length === 0) {
+            const emptyConfig = {
+              upcoming: {
+                emoji: '✨',
+                title: "Nothing on the schedule yet!",
+                subtitle: "Be the first to get something going — hit that + button and make it happen.",
+              },
+              'my-events': {
+                emoji: '🎉',
+                title: "You haven't created any events yet!",
+                subtitle: "The fun starts with you. Create your first event and bring people together.",
+              },
+              past: {
+                emoji: '📸',
+                title: "No memories made here… yet!",
+                subtitle: "Go create something epic and it'll live here forever.",
+              },
+            }[selectedTab] ?? {
+              emoji: '✨',
+              title: "Nothing here yet!",
+              subtitle: "Check back soon.",
+            };
+
+            return (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyEmoji}>{emptyConfig.emoji}</Text>
+                <Text style={styles.emptyTitle}>{emptyConfig.title}</Text>
+                <Text style={styles.emptySubtitle}>{emptyConfig.subtitle}</Text>
+              </View>
+            );
+          }
+
+          return visibleEvents.map((event) => (
+            <EventCard
+              key={event.id}
+              event={event}
+              onPress={selectedTab === 'my-events' && (
+                event.created_by_user_id === user?.id ||
+                (event.host_type === EventHostType.SOCIETY && event.society_id != null && privilegedSocietyIds.has(event.society_id)) ||
+                (event.host_type === EventHostType.UNIVERSITY && isUniAdmin)
+              ) ? () => openEdit(event) : () => {}}
+            />
+          ));
+        })()}
       </ScrollView>
 
       <Modal
@@ -154,7 +320,7 @@ export default function EventsScreen() {
       >
         <SafeAreaView style={styles.modalContainer}>
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Create Event</Text>
+            <Text style={styles.modalTitle}>{editingEvent ? 'Edit Event' : 'Create Event'}</Text>
             <TouchableOpacity onPress={handleClose}>
               <Text style={styles.closeButton}>Cancel</Text>
             </TouchableOpacity>
@@ -172,12 +338,16 @@ export default function EventsScreen() {
               <View style={styles.inputGroup}>
                 <Text style={styles.formLabel}>Event Name *</Text>
                 <TextInput
-                  style={styles.input}
+                  style={[styles.input, formErrors.name ? styles.inputError : null]}
                   value={form.name}
-                  onChangeText={(val) => setForm((p) => ({ ...p, name: val }))}
+                  onChangeText={(val) => {
+                    setForm((p) => ({ ...p, name: val }));
+                    if (val.trim()) setFormErrors((e) => ({ ...e, name: undefined as any }));
+                  }}
                   placeholder="What's the event called?"
                   placeholderTextColor="#999"
                 />
+                {formErrors.name && <Text style={styles.fieldError}>{formErrors.name}</Text>}
               </View>
 
               <View style={[styles.inputGroup, styles.noMarginBottom]}>
@@ -200,12 +370,22 @@ export default function EventsScreen() {
             {/* Date & Time */}
             <View style={styles.formSection}>
               <Text style={styles.formTitle}>Date & Time</Text>
-              <View style={styles.dateTimeRow}>
+              <View style={styles.dateTimeRow} key={editingEvent?.id ?? 'new'}>
                 <DateTimeInput
                   label="Start"
                   defaultValue="Select start"
+                  initialValue={form.start_date || undefined}
                   onChange={(val) => {
-                    setForm((p) => ({ ...p, start_date: val }));
+                    setForm((p) => {
+                      const newEnd = p.end_date && p.end_date <= val ? '' : p.end_date;
+                      if (p.end_date && p.end_date <= val) {
+                        setDateError('End date must be after the start date.');
+                      } else {
+                        setDateError(null);
+                      }
+                      return { ...p, start_date: val, end_date: newEnd };
+                    });
+                    setFormErrors((e) => ({ ...e, start_date: undefined as any }));
                     return true;
                   }}
                 />
@@ -213,12 +393,24 @@ export default function EventsScreen() {
                 <DateTimeInput
                   label="End"
                   defaultValue="Select end"
+                  initialValue={form.end_date || undefined}
                   onChange={(val) => {
+                    if (form.start_date && val <= form.start_date) {
+                      setDateError('End date must be after the start date.');
+                      return false;
+                    }
+                    setDateError(null);
                     setForm((p) => ({ ...p, end_date: val }));
+                    setFormErrors((e) => ({ ...e, end_date: undefined as any }));
                     return true;
                   }}
                 />
               </View>
+              {(dateError || formErrors.start_date || formErrors.end_date) && (
+                <Text style={styles.dateError}>
+                  {dateError || formErrors.start_date || formErrors.end_date}
+                </Text>
+              )}
             </View>
 
             {/* Location */}
@@ -246,7 +438,7 @@ export default function EventsScreen() {
               {!form.is_online && (
                 <View style={[styles.inputGroup, styles.noMarginBottom]}>
                   <Text style={styles.formLabel}>Address *</Text>
-                  <View style={styles.addressInputWrapper}>
+                  <View style={[styles.addressInputWrapper, formErrors.address ? styles.inputError : null]}>
                     <MapPin size={18} color="#666" />
                     <GooglePlacesAutocomplete
                       placeholder="Search for a venue or address"
@@ -258,7 +450,10 @@ export default function EventsScreen() {
                           process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY,
                         language: 'en',
                       }}
-                      onPress={(_, details) => addLocationToForm(details)}
+                      onPress={(_, details) => {
+                        addLocationToForm(details);
+                        setFormErrors((e) => ({ ...e, address: undefined as any }));
+                      }}
                       enablePoweredByContainer={false}
                       styles={{
                         textInput: styles.googleInput,
@@ -267,6 +462,7 @@ export default function EventsScreen() {
                       }}
                     />
                   </View>
+                  {formErrors.address && <Text style={styles.fieldError}>{formErrors.address}</Text>}
                 </View>
               )}
             </View>
@@ -280,7 +476,17 @@ export default function EventsScreen() {
                   <TouchableOpacity
                     key={opt.value}
                     style={[styles.pill, form.visibility === opt.value && styles.pillActive]}
-                    onPress={() => setForm((p) => ({ ...p, visibility: opt.value }))}
+                    onPress={() => {
+                      const newNeedsSociety =
+                        form.host_type === EventHostType.SOCIETY ||
+                        opt.value === EventVisibility.SOCIETY_ONLY;
+                      setForm((p) => ({
+                        ...p,
+                        visibility: opt.value,
+                        university_id: user?.university_id ?? null,
+                        society_id: newNeedsSociety ? (memberships[0]?.society_id ?? null) : null,
+                      }));
+                    }}
                   >
                     <Text
                       style={[
@@ -328,7 +534,17 @@ export default function EventsScreen() {
                   <TouchableOpacity
                     key={opt.value}
                     style={[styles.pill, form.host_type === opt.value && styles.pillActive]}
-                    onPress={() => setForm((p) => ({ ...p, host_type: opt.value }))}
+                    onPress={() => {
+                      const newNeedsSociety =
+                        opt.value === EventHostType.SOCIETY ||
+                        form.visibility === EventVisibility.SOCIETY_ONLY;
+                      setForm((p) => ({
+                        ...p,
+                        host_type: opt.value,
+                        university_id: user?.university_id ?? null,
+                        society_id: newNeedsSociety ? (memberships[0]?.society_id ?? null) : null,
+                      }));
+                    }}
                   >
                     <Text
                       style={[
@@ -341,6 +557,42 @@ export default function EventsScreen() {
                   </TouchableOpacity>
                 ))}
               </View>
+
+              {needsSociety && memberships.length > 1 && (
+                <View style={[styles.inputGroup, { marginTop: 16, marginBottom: 0 }]}>
+                  <Text style={styles.formLabel}>Which society?</Text>
+                  <View style={styles.pillRow}>
+                    {memberships.map((m) => (
+                      <TouchableOpacity
+                        key={m.society_id}
+                        style={[styles.pill, form.society_id === m.society_id && styles.pillActive]}
+                        onPress={() => {
+                          setForm((p) => ({ ...p, society_id: m.society_id }));
+                          setFormErrors((e) => ({ ...e, society_id: undefined as any }));
+                        }}
+                      >
+                        <Text style={[styles.pillText, form.society_id === m.society_id && styles.pillTextActive]}>
+                          {m.societies.name}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                  {formErrors.society_id && <Text style={styles.fieldError}>{formErrors.society_id}</Text>}
+                </View>
+              )}
+
+              {needsSociety && memberships.length === 1 && (
+                <View style={[styles.autoPopulatedTag, { marginTop: 14 }]}>
+                  <Text style={styles.autoPopulatedLabel}>Society</Text>
+                  <Text style={styles.autoPopulatedValue}>{memberships[0].societies.name}</Text>
+                </View>
+              )}
+
+              {needsSociety && memberships.length === 0 && (
+                <Text style={[styles.formSubtitle, { marginTop: 12 }]}>
+                  You're not a member of any society yet.
+                </Text>
+              )}
             </View>
 
             {/* Capacity */}
@@ -361,6 +613,58 @@ export default function EventsScreen() {
                   placeholderTextColor="#999"
                   keyboardType="number-pad"
                 />
+              </View>
+            </View>
+
+            {/* Images */}
+            <View style={styles.formSection}>
+              <Text style={styles.formTitle}>Images</Text>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.formLabel}>Banner Image</Text>
+                <ImagePicker
+                  placeholder="Add Banner Image"
+                  selectedImage={form.banner_image_uri ?? form.banner_image_url ?? undefined}
+                  onImageSelected={(uri) => setForm((p) => ({ ...p, banner_image_uri: uri }))}
+                  onImageRemoved={() => setForm((p) => ({ ...p, banner_image_uri: null }))}
+                />
+              </View>
+
+              <View style={styles.noMarginBottom}>
+                <Text style={styles.formLabel}>Gallery Photos</Text>
+                <Text style={styles.formSubtitle}>Add extra photos for the event.</Text>
+                <View style={styles.galleryGrid}>
+                  {form.gallery_image_uris.map((uri, index) => (
+                    <ImagePicker
+                      key={index}
+                      selectedImage={uri}
+                      onImageSelected={(newUri) =>
+                        setForm((p) => {
+                          const updated = [...p.gallery_image_uris];
+                          updated[index] = newUri;
+                          return { ...p, gallery_image_uris: updated };
+                        })
+                      }
+                      onImageRemoved={() =>
+                        setForm((p) => ({
+                          ...p,
+                          gallery_image_uris: p.gallery_image_uris.filter((_, i) => i !== index),
+                        }))
+                      }
+                    />
+                  ))}
+                  {form.gallery_image_uris.length < 6 && (
+                    <ImagePicker
+                      placeholder="Add Photo"
+                      onImageSelected={(uri) =>
+                        setForm((p) => ({
+                          ...p,
+                          gallery_image_uris: [...p.gallery_image_uris, uri],
+                        }))
+                      }
+                    />
+                  )}
+                </View>
               </View>
             </View>
 
@@ -417,26 +721,28 @@ export default function EventsScreen() {
                 <View style={[styles.inputGroup, { marginTop: 16 }]}>
                   <Text style={styles.formLabel}>Starting Price *</Text>
                   <TextInput
-                    style={styles.input}
+                    style={[styles.input, formErrors.price_from ? styles.inputError : null]}
                     value={form.price_from?.toString() ?? ''}
-                    onChangeText={(val) =>
+                    onChangeText={(val) => {
                       setForm((p) => ({
                         ...p,
                         price_from: val ? parseFloat(val) || null : null,
-                      }))
-                    }
+                      }));
+                      if (val) setFormErrors((e) => ({ ...e, price_from: undefined as any }));
+                    }}
                     placeholder="0.00"
                     placeholderTextColor="#999"
                     keyboardType="decimal-pad"
                   />
+                  {formErrors.price_from && <Text style={styles.fieldError}>{formErrors.price_from}</Text>}
                 </View>
               )}
             </View>
           </ScrollView>
 
           <View style={styles.modalFooter}>
-            <TouchableOpacity style={styles.createEventButton} onPress={() => console.log('[CreateEvent] form:', JSON.stringify(form, null, 2))}>
-              <Text style={styles.createEventButtonText}>Create Event</Text>
+            <TouchableOpacity style={styles.createEventButton} onPress={editingEvent ? handleUpdate : handleCreate}>
+              <Text style={styles.createEventButtonText}>{editingEvent ? 'Save Changes' : 'Create Event'}</Text>
             </TouchableOpacity>
           </View>
         </SafeAreaView>
@@ -692,5 +998,66 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: '#FFFFFF',
+  },
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 64,
+    paddingHorizontal: 32,
+  },
+  emptyEmoji: {
+    fontSize: 56,
+    marginBottom: 16,
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1A1A1A',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  emptySubtitle: {
+    fontSize: 14,
+    color: '#888',
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  autoPopulatedTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#FFF3EF',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    alignSelf: 'flex-start',
+  },
+  autoPopulatedLabel: {
+    fontSize: 12,
+    color: '#FF6B35',
+    fontWeight: '600',
+  },
+  autoPopulatedValue: {
+    fontSize: 13,
+    color: '#1A1A1A',
+    fontWeight: '500',
+  },
+  dateError: {
+    fontSize: 13,
+    color: '#DC3545',
+    marginTop: 10,
+    fontWeight: '500',
+  },
+  inputError: {
+    borderColor: '#DC3545',
+  },
+  fieldError: {
+    fontSize: 12,
+    color: '#DC3545',
+    marginTop: 6,
+    fontWeight: '500',
+  },
+  galleryGrid: {
+    gap: 12,
   },
 });

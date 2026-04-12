@@ -1,6 +1,6 @@
 import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
 import { Users, MapPin, DollarSign, Crown, Calendar, Settings } from 'lucide-react-native';
-import { Club } from '@/types';
+import { Club } from '@/types/club';
 
 interface ClubCardProps {
   club: Club;
@@ -49,7 +49,7 @@ export function ClubCard({ club, onPress, showJoinButton = false, isMember = fal
         </View>
         <View style={styles.stat}>
           <Calendar size={16} color="#666" />
-          <Text style={styles.statText}>{club.trainingSchedule.length} sessions/week</Text>
+          <Text style={styles.statText}>{club.training_schedule.length} sessions/week</Text>
         </View>
       </View>
 
@@ -71,7 +71,7 @@ export function ClubCard({ club, onPress, showJoinButton = false, isMember = fal
       <View style={styles.courtsSection}>
         <MapPin size={16} color="#666" />
         <Text style={styles.courtsText}>
-          {club.courtIds.length} training {club.courtIds.length === 1 ? 'location' : 'locations'}
+          {club.court_ids.length} training {club.court_ids.length === 1 ? 'location' : 'locations'}
         </Text>
       </View>
 

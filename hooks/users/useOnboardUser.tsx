@@ -50,14 +50,14 @@ export default function useOnboardUser(): UseOnboardUserReturn {
 
       const updates: Partial<User> = {
         id: session?.user?.id,
-        firstName: form.firstName?.trim(),
-        lastName: form.lastName?.trim(),
+        first_name: form.first_name?.trim(),
+        last_name: form.last_name?.trim(),
         bio: form.bio?.trim() || undefined,
-        over18: form.over18,
-        universityId: form.universityId || undefined,
+        over_18: form.over_18,
+        university_id: form.university_id || undefined,
         course: form.course?.trim() || undefined,
-        photoUrl: photoUrl || form.photoUrl || undefined,
-        onboardingStatus: OnboardingStatus.COMPLETED,
+        photo_url: photoUrl || form.photo_url || undefined,
+        onboarding_status: OnboardingStatus.COMPLETED,
       };
 
       console.log(`[useOnboardUser] creating user for userId=${userId}`);

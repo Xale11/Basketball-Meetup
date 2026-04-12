@@ -63,6 +63,8 @@ export interface Event {
 
   created_by_user_id: string
   host_type: EventHostType
+  society_id: string | null
+  university_id: string | null
 
   banner_image_url: string | null
 
@@ -136,8 +138,12 @@ export interface CreateEventForm {
   max_participants: number | null
 
   host_type: EventHostType
+  society_id: string | null
+  university_id: string | null
 
   banner_image_url: string | null
+  banner_image_uri: string | null
+  gallery_image_uris: string[]
 
   booking_mode: EventBookingMode
   price_from: number | null

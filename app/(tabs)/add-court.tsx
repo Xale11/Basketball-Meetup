@@ -38,17 +38,17 @@ export default function AddCourtScreen() {
     description: '',
     images: [],
     tags: [],
-    openingHours: {
-      alwaysOpen: false,
-      monday: { alwaysOpen: false, openTime: '', closeTime: '23:59' },
-      tuesday: { alwaysOpen: false, openTime: '', closeTime: '23:59' },
-      wednesday: { alwaysOpen: false, openTime: '', closeTime: '23:59' },
-      thursday: { alwaysOpen: false, openTime: '', closeTime: '23:59' },
-      friday: { alwaysOpen: false, openTime: '', closeTime: '23:59' },
-      saturday: { alwaysOpen: false, openTime: '', closeTime: '23:59' },
-      sunday: { alwaysOpen: false, openTime: '', closeTime: '23:59' },
+    opening_hours: {
+      always_open: false,
+      monday: { always_open: false, open_time: '', close_time: '23:59' },
+      tuesday: { always_open: false, open_time: '', close_time: '23:59' },
+      wednesday: { always_open: false, open_time: '', close_time: '23:59' },
+      thursday: { always_open: false, open_time: '', close_time: '23:59' },
+      friday: { always_open: false, open_time: '', close_time: '23:59' },
+      saturday: { always_open: false, open_time: '', close_time: '23:59' },
+      sunday: { always_open: false, open_time: '', close_time: '23:59' },
     },
-    createdBy: '',
+    created_by: '',
   });
 
   const [newTag, setNewTag] = useState('');
@@ -95,23 +95,23 @@ export default function AddCourtScreen() {
   };
 
   const updateDayHours = (
-    day: keyof Omit<OpeningHours, 'alwaysOpen'>,
-    field: 'alwaysOpen' | 'openTime' | 'closeTime',
+    day: keyof Omit<OpeningHours, 'always_open'>,
+    field: 'always_open' | 'open_time' | 'close_time',
     value: boolean | string
   ) => {
     if (
-      (field === 'openTime' && value > form.openingHours[day].closeTime) ||
-      (field === 'closeTime' && value < form.openingHours[day].openTime)
+      (field === 'open_time' && value > form.opening_hours[day].close_time) ||
+      (field === 'close_time' && value < form.opening_hours[day].open_time)
     ) {
       Alert.alert('Error', 'Open time must be before close time');
       return false;
     } else {
       setForm((prev) => ({
         ...prev,
-        openingHours: {
-          ...prev.openingHours,
+        opening_hours: {
+          ...prev.opening_hours,
           [day]: {
-            ...prev.openingHours[day],
+            ...prev.opening_hours[day],
             [field]: value,
           },
         },
@@ -123,16 +123,16 @@ export default function AddCourtScreen() {
   const updateGlobalAlwaysOpen = (value: boolean) => {
     setForm((prev) => ({
       ...prev,
-      openingHours: {
-        ...prev.openingHours,
-        alwaysOpen: value,
-        monday: { ...prev.openingHours.monday, alwaysOpen: value },
-        tuesday: { ...prev.openingHours.tuesday, alwaysOpen: value },
-        wednesday: { ...prev.openingHours.wednesday, alwaysOpen: value },
-        thursday: { ...prev.openingHours.thursday, alwaysOpen: value },
-        friday: { ...prev.openingHours.friday, alwaysOpen: value },
-        saturday: { ...prev.openingHours.saturday, alwaysOpen: value },
-        sunday: { ...prev.openingHours.sunday, alwaysOpen: value },
+      opening_hours: {
+        ...prev.opening_hours,
+        always_open: value,
+        monday: { ...prev.opening_hours.monday, always_open: value },
+        tuesday: { ...prev.opening_hours.tuesday, always_open: value },
+        wednesday: { ...prev.opening_hours.wednesday, always_open: value },
+        thursday: { ...prev.opening_hours.thursday, always_open: value },
+        friday: { ...prev.opening_hours.friday, always_open: value },
+        saturday: { ...prev.opening_hours.saturday, always_open: value },
+        sunday: { ...prev.opening_hours.sunday, always_open: value },
       },
     }));
   };
@@ -184,8 +184,8 @@ export default function AddCourtScreen() {
     }
 
     // Validate opening hours structure for each day
-    if (form.openingHours && !form.openingHours.alwaysOpen) {
-      const days: (keyof Omit<OpeningHours, 'alwaysOpen'>)[] = [
+    if (form.opening_hours && !form.opening_hours.always_open) {
+      const days: (keyof Omit<OpeningHours, 'always_open'>)[] = [
         'monday',
         'tuesday',
         'wednesday',
@@ -195,12 +195,12 @@ export default function AddCourtScreen() {
         'sunday',
       ];
       for (const day of days) {
-        const dayHours = form.openingHours[day];
+        const dayHours = form.opening_hours[day];
         if (!dayHours) {
           Alert.alert('Error', `Opening hours not specified for ${day}.`);
           return false;
         }
-        if (!dayHours.openTime.trim() || !dayHours.closeTime.trim()) {
+        if (!dayHours.open_time.trim() || !dayHours.close_time.trim()) {
           Alert.alert(
             'Error',
             `Please enter both opening and closing times for ${
@@ -211,7 +211,7 @@ export default function AddCourtScreen() {
         }
         // Ensures close time is not before the opening time
         // We'll stringify and compare as "HH:mm"
-        if (dayHours.openTime.trim() >= dayHours.closeTime.trim()) {
+        if (dayHours.open_time.trim() >= dayHours.close_time.trim()) {
           Alert.alert(
             'Error',
             `For ${
@@ -426,14 +426,14 @@ export default function AddCourtScreen() {
               </Text>
             </View>
             <Switch
-              value={form.openingHours.alwaysOpen}
+              value={form.opening_hours.always_open}
               onValueChange={updateGlobalAlwaysOpen}
               trackColor={{ false: '#E9ECEF', true: '#FF6B35' }}
-              thumbColor={form.openingHours.alwaysOpen ? '#FFFFFF' : '#FFFFFF'}
+              thumbColor={form.opening_hours.always_open ? '#FFFFFF' : '#FFFFFF'}
             />
           </View>
 
-          {!form.openingHours.alwaysOpen && (
+          {!form.opening_hours.always_open && (
             <>
               {[
                 { key: 'monday', label: 'Monday' },
@@ -452,21 +452,21 @@ export default function AddCourtScreen() {
                       <Switch
                         trackColor={{ false: '#E9ECEF', true: '#FF6B35' }}
                         thumbColor={
-                          form.openingHours[
-                            key as keyof Omit<OpeningHours, 'alwaysOpen'>
-                          ].alwaysOpen
+                          form.opening_hours[
+                            key as keyof Omit<OpeningHours, 'always_open'>
+                          ].always_open
                             ? '#FFFFFF'
                             : '#FFFFFF'
                         }
                         value={
-                          form.openingHours[
-                            key as keyof Omit<OpeningHours, 'alwaysOpen'>
-                          ].alwaysOpen
+                          form.opening_hours[
+                            key as keyof Omit<OpeningHours, 'always_open'>
+                          ].always_open
                         }
                         onValueChange={(value) => {
                           updateDayHours(
-                            key as keyof Omit<OpeningHours, 'alwaysOpen'>,
-                            'alwaysOpen',
+                            key as keyof Omit<OpeningHours, 'always_open'>,
+                            'always_open',
                             value
                           );
                         }}
@@ -474,21 +474,21 @@ export default function AddCourtScreen() {
                     </View>
                   </View>
 
-                  {!form.openingHours[
-                    key as keyof Omit<OpeningHours, 'alwaysOpen'>
-                  ].alwaysOpen && (
+                  {!form.opening_hours[
+                    key as keyof Omit<OpeningHours, 'always_open'>
+                  ].always_open && (
                     <View style={styles.timeInputsContainer}>
                       <TimeInput
                         defaultValue={
-                          form.openingHours[
-                            key as keyof Omit<OpeningHours, 'alwaysOpen'>
-                          ].openTime
+                          form.opening_hours[
+                            key as keyof Omit<OpeningHours, 'always_open'>
+                          ].open_time
                         }
                         label="Open Time"
                         onChange={(time: string) =>
                           updateDayHours(
-                            key as keyof Omit<OpeningHours, 'alwaysOpen'>,
-                            'openTime',
+                            key as keyof Omit<OpeningHours, 'always_open'>,
+                            'open_time',
                             time
                           )
                         }
@@ -497,15 +497,15 @@ export default function AddCourtScreen() {
                       <View style={styles.timeInputGroup}>
                         <TimeInput
                           defaultValue={
-                            form.openingHours[
-                              key as keyof Omit<OpeningHours, 'alwaysOpen'>
-                            ].closeTime
+                            form.opening_hours[
+                              key as keyof Omit<OpeningHours, 'always_open'>
+                            ].close_time
                           }
                           label="Close Time"
                           onChange={(time: string) =>
                             updateDayHours(
-                              key as keyof Omit<OpeningHours, 'alwaysOpen'>,
-                              'closeTime',
+                              key as keyof Omit<OpeningHours, 'always_open'>,
+                              'close_time',
                               time
                             )
                           }

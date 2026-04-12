@@ -5,31 +5,31 @@ export interface Club {
   name: string;
   description: string;
   logo?: string;
-  adminId: string;
+  admin_id: string;
   members: string[];
-  trainingSchedule: TrainingSession[];
-  courtIds: string[];
+  training_schedule: TrainingSession[];
+  court_ids: string[];
   fees: {
     monthly: number;
     session: number;
   };
-  createdAt: Date;
+  created_at: Date;
 }
 
 export interface TrainingSession {
   id: string;
   title: string;
-  courtId: string;
-  startTime: Date;
-  endTime: Date;
-  maxParticipants: number;
-  currentParticipants: number;
+  court_id: string;
+  start_time: Date;
+  end_time: Date;
+  max_participants: number;
+  current_participants: number;
   price: number;
-  recurringDays: string[];
+  recurring_days: string[];
 }
 
 export interface UserClubAssociation {
-  clubId: string;
+  club_id: string;
   roles: ClubRole[];
-  joinedAt: string;
+  joined_at: string;
 }

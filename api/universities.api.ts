@@ -1,5 +1,19 @@
-import { University } from "@/types/universities"
+import { University, UniversityMembership } from "@/types/universities"
 import { supabase } from "./supabase"
+
+export const getUniversityMembershipByUserId = async (userId: string): Promise<UniversityMembership | null> => {
+    try {
+        const { data, error } = await supabase
+            .from("university_memberships")
+            .select("*")
+            .eq("user_id", userId)
+            .maybeSingle()
+        if (error) throw new Error(error.message)
+        return data as UniversityMembership | null
+    } catch (error) {
+        throw new Error(JSON.stringify(error))
+    }
+}
 
 export const getUniversities = async (): Promise<University[]> => {
     try {

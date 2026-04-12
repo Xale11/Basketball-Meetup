@@ -147,18 +147,18 @@ export default function ClubManageScreen() {
             </View>
 
             <View style={styles.sessionsList}>
-              {club.trainingSchedule.map((session) => (
+              {club.training_schedule.map((session) => (
                 <View key={session.id} style={styles.sessionCard}>
                   <View style={styles.sessionHeader}>
                     <Text style={styles.sessionTitle}>{session.title}</Text>
                     <Text style={styles.sessionPrice}>${session.price}</Text>
                   </View>
                   <Text style={styles.sessionTime}>
-                    {session.recurringDays.join(', ')} • {session.startTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    {session.recurring_days.join(', ')} • {session.start_time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </Text>
                   <View style={styles.sessionStats}>
                     <Text style={styles.sessionStat}>
-                      {session.currentParticipants}/{session.maxParticipants} players
+                      {session.current_participants}/{session.max_participants} players
                     </Text>
                   </View>
                 </View>

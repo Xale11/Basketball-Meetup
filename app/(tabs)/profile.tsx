@@ -1,22 +1,48 @@
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Modal, TextInput, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Settings, Pencil as Edit, ChevronRight, CreditCard, Bell, Shield, X, Camera, User } from 'lucide-react-native';
+import { Settings, Pencil as Edit, ChevronRight, CreditCard, Bell, Shield, X, Camera, User, MapPin, Clock } from 'lucide-react-native';
 import { useAuth } from '@/hooks/useAuth';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import useFetchUserSocieties from '@/hooks/societies/useFetchUserSocieties';
 import useUpdateProfilePhoto from '@/hooks/users/useUpdateProfilePhoto';
 import useUpdateUser from '@/hooks/users/useUpdateUser';
+import { useFetchMyEvents } from '@/hooks/events/useFetchMyEvents';
+import { useFetchParticipantEvents } from '@/hooks/events/useFetchParticipantEvents';
+import { appVariant } from '@/constants/appVariant';
+import { Event } from '@/types/event';
+
+type ActivityTab = 'upcoming' | 'created' | 'past';
 
 export default function ProfileScreen() {
   const { user, session, logout } = useAuth();
   const { memberships, isLoading: societiesLoading } = useFetchUserSocieties(user?.id);
   const { photoUploading, handlePhotoPress } = useUpdateProfilePhoto(user?.id);
   const { saving, updateProfile } = useUpdateUser(user?.id);
+  const { events: myEvents, loading: myEventsLoading } = useFetchMyEvents(user?.id);
+  const { events: participantEvents, loading: participantEventsLoading } = useFetchParticipantEvents(user?.id);
 
   const [showEditModal, setShowEditModal] = useState(false);
+  const [activityTab, setActivityTab] = useState<ActivityTab>('upcoming');
+
+  const now = new Date();
+  const upcomingEvents = useMemo(
+    () => participantEvents.filter((e) => new Date(e.start_date) > now),
+    [participantEvents],
+  );
+  const createdEvents = useMemo(
+    () => myEvents.filter((e) => new Date(e.start_date) > now),
+    [myEvents],
+  );
+  const pastEvents = useMemo(
+    () => participantEvents.filter((e) => new Date(e.end_date) < now),
+    [participantEvents],
+  );
+
+  const activitiesLoading = activityTab === 'created' ? myEventsLoading : participantEventsLoading;
+  const activeEvents: Event[] = activityTab === 'upcoming' ? upcomingEvents : activityTab === 'created' ? createdEvents : pastEvents;
   const [editForm, setEditForm] = useState({
-    firstName: '',
-    lastName: '',
+    first_name: '',
+    last_name: '',
     bio: '',
     course: '',
   });
@@ -24,8 +50,8 @@ export default function ProfileScreen() {
   useEffect(() => {
     if (user) {
       setEditForm({
-        firstName: user.firstName ?? '',
-        lastName: user.lastName ?? '',
+        first_name: user.first_name ?? '',
+        last_name: user.last_name ?? '',
         bio: user.bio ?? '',
         course: user.course ?? '',
       });
@@ -35,8 +61,8 @@ export default function ProfileScreen() {
   const handleSave = async () => {
     try {
       await updateProfile({
-        firstName: editForm.firstName.trim(),
-        lastName: editForm.lastName.trim(),
+        first_name: editForm.first_name.trim(),
+        last_name: editForm.last_name.trim(),
         bio: editForm.bio.trim() || undefined,
         course: editForm.course.trim() || undefined,
       });
@@ -66,9 +92,9 @@ export default function ProfileScreen() {
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.profileSection}>
           <View style={styles.profileHeader}>
-            <TouchableOpacity style={styles.avatarContainer} onPress={() => handlePhotoPress(!!user?.photoUrl)} disabled={photoUploading}>
-              {user?.photoUrl
-                ? <Image source={{ uri: user.photoUrl }} style={styles.avatar} />
+            <TouchableOpacity style={styles.avatarContainer} onPress={() => handlePhotoPress(!!user?.photo_url)} disabled={photoUploading}>
+              {user?.photo_url
+                ? <Image source={{ uri: user.photo_url }} style={styles.avatar} />
                 : <View style={styles.avatarPlaceholder}><User size={36} color="#9CA3AF" /></View>
               }
               <View style={styles.avatarBadge}>
@@ -79,7 +105,7 @@ export default function ProfileScreen() {
               </View>
             </TouchableOpacity>
             <View style={styles.profileInfo}>
-              <Text style={styles.userName}>{user?.firstName} {user?.lastName}</Text>
+              <Text style={styles.userName}>{user?.first_name} {user?.last_name}</Text>
               <Text style={styles.userEmail}>{session?.user?.email}</Text>
               <View style={styles.statusBadge}>
                 <Text style={styles.statusText}>Active Player</Text>
@@ -92,6 +118,68 @@ export default function ProfileScreen() {
         </View>
 
 
+        {appVariant === 'activCampus' && (
+          <View style={styles.clubSection}>
+            <Text style={styles.sectionTitle}>My Activity</Text>
+            <View style={styles.activityTabRow}>
+              {(['upcoming', 'created', 'past'] as ActivityTab[]).map((t) => (
+                <TouchableOpacity
+                  key={t}
+                  style={[styles.activityTabChip, activityTab === t && styles.activityTabChipActive]}
+                  onPress={() => setActivityTab(t)}
+                >
+                  <Text style={[styles.activityTabText, activityTab === t && styles.activityTabTextActive]}>
+                    {t.charAt(0).toUpperCase() + t.slice(1)}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            {activitiesLoading ? (
+              <Text style={styles.societyHelperText}>Loading…</Text>
+            ) : activeEvents.length === 0 ? (
+              <Text style={styles.societyHelperText}>Nothing here yet.</Text>
+            ) : (
+              activeEvents.map((e) => {
+                const startDate = new Date(e.start_date);
+                const isToday = startDate.toDateString() === new Date().toDateString();
+                const timeLabel = isToday
+                  ? `Today · ${startDate.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`
+                  : `${startDate.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })} · ${startDate.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`;
+                const isHosting = activityTab === 'created';
+                const isPast = activityTab === 'past';
+                return (
+                  <View key={e.id} style={styles.activityItem}>
+                    <View style={styles.activityItemInfo}>
+                      <Text style={styles.activityItemTitle}>{e.name}</Text>
+                      <View style={styles.activityItemMeta}>
+                        <Clock size={12} color="#888" />
+                        <Text style={styles.activityItemMetaText}>{timeLabel}</Text>
+                        {e.address && (
+                          <>
+                            <MapPin size={12} color="#888" />
+                            <Text style={styles.activityItemMetaText}>{e.address}</Text>
+                          </>
+                        )}
+                      </View>
+                    </View>
+                    <View style={[styles.activityStatusBadge,
+                      isHosting && styles.activityStatusHosting,
+                      isPast && styles.activityStatusCompleted,
+                    ]}>
+                      <Text style={[styles.activityStatusText,
+                        isHosting && styles.activityStatusTextHosting,
+                        isPast && styles.activityStatusTextCompleted,
+                      ]}>
+                        {isHosting ? 'Hosting' : isPast ? 'Attended' : 'Going'}
+                      </Text>
+                    </View>
+                  </View>
+                );
+              })
+            )}
+          </View>
+        )}
+
         <View style={styles.clubSection}>
           <Text style={styles.sectionTitle}>Society Memberships</Text>
           {societiesLoading ? (
@@ -100,14 +188,14 @@ export default function ProfileScreen() {
             <Text style={styles.societyHelperText}>You haven't joined any societies yet.</Text>
           ) : (
             memberships.map((m) => (
-              <View key={m.societyId} style={[styles.clubCard, styles.societyCard]}>
+              <View key={m.society_id} style={[styles.clubCard, styles.societyCard]}>
                 <View style={styles.clubInfo}>
                   <View style={styles.clubLogo}>
                     <Text style={styles.clubInitial}>{m.societies.name.charAt(0).toUpperCase()}</Text>
                   </View>
                   <View>
                     <Text style={styles.clubName}>{m.societies.name}</Text>
-                    <Text style={styles.clubRole}>{m.roleId}</Text>
+                    <Text style={styles.clubRole}>{m.role_id}</Text>
                   </View>
                 </View>
               </View>
@@ -145,16 +233,16 @@ export default function ProfileScreen() {
             <Text style={styles.fieldLabel}>First Name</Text>
             <TextInput
               style={styles.fieldInput}
-              value={editForm.firstName}
-              onChangeText={(t) => setEditForm((p) => ({ ...p, firstName: t }))}
+              value={editForm.first_name}
+              onChangeText={(t) => setEditForm((p) => ({ ...p, first_name: t }))}
               autoCapitalize="words"
             />
 
             <Text style={styles.fieldLabel}>Last Name</Text>
             <TextInput
               style={styles.fieldInput}
-              value={editForm.lastName}
-              onChangeText={(t) => setEditForm((p) => ({ ...p, lastName: t }))}
+              value={editForm.last_name}
+              onChangeText={(t) => setEditForm((p) => ({ ...p, last_name: t }))}
               autoCapitalize="words"
             />
 
@@ -533,5 +621,84 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
     color: '#FFFFFF',
+  },
+  activityTabRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 16,
+  },
+  activityTabChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 7,
+    borderRadius: 16,
+    backgroundColor: '#F0F0F0',
+  },
+  activityTabChipActive: {
+    backgroundColor: '#FF6B35',
+  },
+  activityTabText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#666',
+  },
+  activityTabTextActive: {
+    color: '#FFFFFF',
+  },
+  activityItem: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  activityItemInfo: {
+    flex: 1,
+  },
+  activityItemTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#1A1A1A',
+    marginBottom: 5,
+  },
+  activityItemMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    flexWrap: 'wrap',
+  },
+  activityItemMetaText: {
+    fontSize: 12,
+    color: '#888',
+    marginRight: 6,
+  },
+  activityStatusBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 10,
+    backgroundColor: '#E8F5E8',
+    marginLeft: 8,
+  },
+  activityStatusHosting: {
+    backgroundColor: '#FFF4E8',
+  },
+  activityStatusCompleted: {
+    backgroundColor: '#F0F0F0',
+  },
+  activityStatusText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#28A745',
+  },
+  activityStatusTextHosting: {
+    color: '#FF9F40',
+  },
+  activityStatusTextCompleted: {
+    color: '#888',
   },
 });

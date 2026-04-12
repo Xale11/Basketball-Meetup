@@ -17,4 +17,5 @@ const useFetchUserSocieties = (userId: string | undefined | null) => {
     };
 };
 
+export { useFetchUserSocieties };
 export default useFetchUserSocieties;
