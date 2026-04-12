@@ -1,160 +1,191 @@
-import { View, Text, StyleSheet, TouchableOpacity, Modal, ScrollView, ViewStyle, TextStyle } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ViewStyle } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useEffect, useState } from 'react';
-import { Search, Filter, MapPin, Navigation, Users, Clock, Maximize2, Minimize2 } from 'lucide-react-native';
-import { CourtCard } from '@/components/CourtCard';
-import { mockCourts } from '@/utils/mockData';
+import { useState, useMemo } from 'react';
+import { Search, Filter, Clock, MapPin, Users, Maximize2, Minimize2 } from 'lucide-react-native';
 import { useAuth } from '@/hooks/useAuth';
-import { auth } from '@/api/firebase';
+import { useFetchEvents } from '@/hooks/events/useFetchEvents';
+import useFetchUserSocieties from '@/hooks/societies/useFetchUserSocieties';
+import { LoadingSpinner } from '@/components/LoadingSpinner';
 import InteractiveMap from '@/components/InteractiveMap';
+import { Event, EventBookingMode } from '@/types/event';
+
+type TimeFilter = 'Now' | 'Today' | 'This Week';
+type CostFilter = 'All' | 'Free' | 'Paid';
 
 export default function MapScreen() {
-  const {  } = useAuth();
-  
-  const [showCourtDetails, setShowCourtDetails] = useState(false);
-  const [selectedCourt, setSelectedCourt] = useState(mockCourts[0]);
-  const [isCheckedIn, setIsCheckedIn] = useState(false);
+  const { user } = useAuth();
+  const { memberships } = useFetchUserSocieties(user?.id);
+  const societyIds = useMemo(() => memberships.map((m) => m.society_id), [memberships]);
+  const { events, loading } = useFetchEvents(user?.university_id, societyIds);
+
+  const [timeFilter, setTimeFilter] = useState<TimeFilter>('Today');
+  const [costFilter, setCostFilter] = useState<CostFilter>('All');
   const [showFullScreen, setShowFullScreen] = useState(false);
 
-  const handleCourtPress = (court: any) => {
-    setSelectedCourt(court);
-    setShowCourtDetails(true);
-  };
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const endOfToday = new Date(startOfToday.getTime() + 24 * 60 * 60 * 1000);
+  const endOfWeek = new Date(startOfToday.getTime() + 7 * 24 * 60 * 60 * 1000);
 
-  const handleCheckIn = () => {
-    setIsCheckedIn(!isCheckedIn);
-  };
+  const isHappeningNow = (e: Event) =>
+    new Date(e.start_date) <= now && new Date(e.end_date) >= now;
 
-  // Dynamic styles based on state
+  const filteredEvents = useMemo(() => {
+    return events.filter((e) => {
+      const start = new Date(e.start_date);
+      const matchesTime =
+        timeFilter === 'Now'
+          ? isHappeningNow(e)
+          : timeFilter === 'Today'
+          ? start >= startOfToday && start < endOfToday
+          : start >= startOfToday && start < endOfWeek;
+      const matchesCost =
+        costFilter === 'All' ||
+        (costFilter === 'Free' && e.booking_mode === EventBookingMode.FREE) ||
+        (costFilter === 'Paid' && e.booking_mode === EventBookingMode.TICKETED);
+      return matchesTime && matchesCost;
+    });
+  }, [events, timeFilter, costFilter]);
+
   const mapContainerStyle: ViewStyle = {
     height: showFullScreen ? 700 : 300,
-    backgroundColor: '#E9ECEF',
     position: 'relative',
   };
 
-  
-
   return (
     <SafeAreaView style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.title}>Events Map</Text>
+        <View style={styles.headerActions}>
+          <TouchableOpacity style={styles.iconButton}>
+            <Search size={24} color="#1A1A1A" />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.iconButton}>
+            <Filter size={24} color="#1A1A1A" />
+          </TouchableOpacity>
+        </View>
+      </View>
+
       <ScrollView showsVerticalScrollIndicator={false}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Basketball Courts</Text>
-          <View style={styles.headerActions}>
-            <TouchableOpacity style={styles.iconButton}>
-              <Search size={24} color="#1A1A1A" />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.iconButton}>
-              <Filter size={24} color="#1A1A1A" />
-            </TouchableOpacity>
-          </View>
-        </View>
-
         <View style={mapContainerStyle}>
-          {/* Map placeholder */}
-          <InteractiveMap />
-
+          <InteractiveMap events={filteredEvents} />
           <View style={styles.fullScreenButton}>
-            <TouchableOpacity onPress={() => setShowFullScreen(prev => !prev)} style={styles.locationButton}>
-              {!showFullScreen ? <Maximize2 size={20} color="#FFFFFF" /> : <Minimize2 size={20} color="#FFFFFF" />}
+            <TouchableOpacity onPress={() => setShowFullScreen((p) => !p)} style={styles.expandButton}>
+              {showFullScreen ? <Minimize2 size={20} color="#FFFFFF" /> : <Maximize2 size={20} color="#FFFFFF" />}
             </TouchableOpacity>
           </View>
         </View>
 
-        <View style={styles.courtsList}>
-          <Text style={styles.courtsListTitle}>Courts Near You</Text>
-          {mockCourts.map((court) => (
-            <CourtCard 
-              key={court.id} 
-              court={court} 
-              onPress={() => handleCourtPress(court)} 
-            />
+        {/* Filters */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.filterRow}
+          contentContainerStyle={styles.filterRowContent}
+        >
+          {(['Now', 'Today', 'This Week'] as TimeFilter[]).map((f) => (
+            <TouchableOpacity
+              key={f}
+              style={[styles.filterChip, timeFilter === f && styles.filterChipActive]}
+              onPress={() => setTimeFilter(f)}
+            >
+              <Text style={[styles.filterChipText, timeFilter === f && styles.filterChipTextActive]}>{f}</Text>
+            </TouchableOpacity>
           ))}
+          <View style={styles.filterDivider} />
+          {(['All', 'Free', 'Paid'] as CostFilter[]).map((f) => (
+            <TouchableOpacity
+              key={f}
+              style={[styles.filterChip, costFilter === f && styles.filterChipActive]}
+              onPress={() => setCostFilter(f)}
+            >
+              <Text style={[styles.filterChipText, costFilter === f && styles.filterChipTextActive]}>{f}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+
+        {/* Event list */}
+        <View style={styles.listSection}>
+          <View style={styles.listHeader}>
+            <Text style={styles.listTitle}>
+              {timeFilter === 'Now' ? 'Happening Now' : timeFilter === 'Today' ? 'Today' : 'This Week'}
+            </Text>
+            <Text style={styles.resultCount}>{filteredEvents.length} events</Text>
+          </View>
+
+          {loading ? (
+            <View style={styles.loadingContainer}><LoadingSpinner /></View>
+          ) : filteredEvents.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyTitle}>No events found</Text>
+              <Text style={styles.emptySubtitle}>Try adjusting your filters</Text>
+            </View>
+          ) : (
+            filteredEvents.map((event) => (
+              <MapEventCard key={event.id} event={event} />
+            ))
+          )}
         </View>
 
-        <Modal
-          visible={showCourtDetails}
-          animationType="slide"
-          presentationStyle="pageSheet"
-          onRequestClose={() => setShowCourtDetails(false)}
-        >
-          <SafeAreaView style={styles.modalContainer}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>{selectedCourt.name}</Text>
-              <TouchableOpacity onPress={() => setShowCourtDetails(false)}>
-                <Text style={styles.closeButton}>Close</Text>
-              </TouchableOpacity>
-            </View>
-            
-            <ScrollView style={styles.modalContent}>
-              <View style={styles.courtInfo}>
-                <View style={styles.infoRow}>
-                  <MapPin size={20} color="#666" />
-                  <Text style={styles.infoText}>{selectedCourt.location.address}</Text>
-                </View>
-                <View style={styles.infoRow}>
-                  <Users size={20} color="#666" />
-                  <Text style={styles.infoText}>
-                    {selectedCourt.checked_in_users.length} players checked in
-                  </Text>
-                </View>
-                <View style={styles.infoRow}>
-                  <Clock size={20} color="#666" />
-                  <Text style={styles.infoText}>Open 24/7</Text>
-                </View>
-              </View>
-
-              <View style={styles.tagsSection}>
-                <Text style={styles.sectionTitle}>Tags</Text>
-                <View style={styles.tagsGrid}>
-                  {selectedCourt.tags.map((tag: string, index: number) => (
-                    <View key={index} style={styles.tagChip}>
-                      <Text style={styles.tagText}>{tag}</Text>
-                    </View>
-                  ))}
-                </View>
-              </View>
-
-              <View style={styles.playersSection}>
-                <Text style={styles.sectionTitle}>Players Currently Here</Text>
-                {selectedCourt.checked_in_users.length > 0 ? (
-                  <View style={styles.playersList}>
-                    {selectedCourt.checked_in_users.map((userId: string, index: number) => (
-                      <View key={index} style={styles.playerItem}>
-                        <View style={styles.playerAvatar}>
-                          <Text style={styles.playerInitial}>J</Text>
-                        </View>
-                        <Text style={styles.playerName}>Player {index + 1}</Text>
-                      </View>
-                    ))}
-                  </View>
-                ) : (
-                  <Text style={styles.emptyText}>No players checked in</Text>
-                )}
-              </View>
-            </ScrollView>
-
-            <View style={styles.modalFooter}>
-              <TouchableOpacity 
-                style={[styles.checkInButton, isCheckedIn && styles.checkedInButton]}
-                onPress={handleCheckIn}
-              >
-                <Text style={[styles.checkInText, isCheckedIn && styles.checkedInText]}>
-                  {isCheckedIn ? 'Check Out' : 'Check In'}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </SafeAreaView>
-        </Modal>
+        <View style={{ height: 32 }} />
       </ScrollView>
     </SafeAreaView>
   );
 }
 
+function MapEventCard({ event }: { event: Event }) {
+  const isFree = event.booking_mode === EventBookingMode.FREE;
+  const startDate = new Date(event.start_date);
+  const now = new Date();
+  const isToday = startDate.toDateString() === now.toDateString();
+  const timeLabel = isToday
+    ? `Today · ${startDate.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`
+    : `${startDate.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })} · ${startDate.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`;
+
+  return (
+    <View style={card.container}>
+      <View style={card.top}>
+        <View style={card.titleRow}>
+          <Text style={card.title} numberOfLines={2}>{event.name}</Text>
+          <View style={[card.badge, isFree ? card.badgeFree : card.badgePaid]}>
+            <Text style={[card.badgeText, isFree ? card.badgeTextFree : card.badgeTextPaid]}>
+              {isFree ? 'Free' : `£${event.price_from ?? ''}`}
+            </Text>
+          </View>
+        </View>
+        <View style={card.meta}>
+          <Clock size={13} color="#888" />
+          <Text style={card.metaText}>{timeLabel}</Text>
+        </View>
+        {event.address && (
+          <View style={card.meta}>
+            <MapPin size={13} color="#888" />
+            <Text style={card.metaText} numberOfLines={1}>{event.address}</Text>
+          </View>
+        )}
+      </View>
+      <View style={card.bottom}>
+        {event.max_participants != null ? (
+          <View style={card.attendees}>
+            <Users size={14} color="#666" />
+            <Text style={card.attendeesText}>Up to {event.max_participants}</Text>
+          </View>
+        ) : (
+          <View style={card.attendees}>
+            <Users size={14} color="#666" />
+            <Text style={card.attendeesText}>Open</Text>
+          </View>
+        )}
+        <TouchableOpacity style={card.joinButton}>
+          <Text style={card.joinText}>{isFree ? 'Join Free' : `Join · £${event.price_from ?? ''}`}</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F8F9FA',
-  },
+  container: { flex: 1, backgroundColor: '#F8F9FA' },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -165,50 +196,14 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#F0F0F0',
   },
-  title: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#1A1A1A',
-  },
-  headerActions: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  iconButton: {
-    padding: 8,
-    borderRadius: 12,
-    backgroundColor: '#F8F9FA',
-  },
-  mapPlaceholder: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  mapPlaceholderText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1A1A1A',
-    marginTop: 12,
-  },
-  mapPlaceholderSubtext: {
-    fontSize: 14,
-    color: '#666',
-    marginTop: 4,
-  },
-  mapOverlay: {
-    position: 'absolute',
-    bottom: 16,
-    right: 16,
-  },
-  fullScreenButton: {
-    position: 'absolute',
-    top: 16,
-    right: 16,
-  },
-  locationButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+  title: { fontSize: 24, fontWeight: '700', color: '#1A1A1A' },
+  headerActions: { flexDirection: 'row', gap: 12 },
+  iconButton: { padding: 8, borderRadius: 12, backgroundColor: '#F8F9FA' },
+  fullScreenButton: { position: 'absolute', top: 16, right: 16 },
+  expandButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: '#FF6B35',
     justifyContent: 'center',
     alignItems: 'center',
@@ -218,142 +213,56 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 4,
   },
-  courtsList: {
-    flex: 1,
-    padding: 20,
-  },
-  courtsListTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#1A1A1A',
-    marginBottom: 16,
-  },
-  modalContainer: {
-    flex: 1,
+  filterRow: { backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#F0F0F0', flexGrow: 0 },
+  filterRowContent: { paddingHorizontal: 16, paddingVertical: 12, gap: 8, alignItems: 'center' },
+  filterChip: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 16, backgroundColor: '#F0F0F0' },
+  filterChipActive: { backgroundColor: '#FF6B35' },
+  filterChipText: { fontSize: 13, fontWeight: '600', color: '#555' },
+  filterChipTextActive: { color: '#FFFFFF' },
+  filterDivider: { width: 1, height: 20, backgroundColor: '#E0E0E0', marginHorizontal: 4 },
+  listSection: { paddingHorizontal: 20, paddingTop: 20 },
+  listHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  listTitle: { fontSize: 20, fontWeight: '600', color: '#1A1A1A' },
+  resultCount: { fontSize: 13, color: '#888' },
+  loadingContainer: { paddingTop: 40, alignItems: 'center' },
+  emptyState: { alignItems: 'center', paddingVertical: 40 },
+  emptyTitle: { fontSize: 16, fontWeight: '600', color: '#1A1A1A' },
+  emptySubtitle: { fontSize: 14, color: '#888', marginTop: 4 },
+});
+
+const card = StyleSheet.create({
+  container: {
     backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.07,
+    shadowRadius: 8,
+    elevation: 2,
   },
-  modalHeader: {
+  top: { marginBottom: 12 },
+  titleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8, marginBottom: 8 },
+  title: { fontSize: 16, fontWeight: '600', color: '#1A1A1A', flex: 1 },
+  badge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10, flexShrink: 0 },
+  badgeFree: { backgroundColor: '#F0FDF4' },
+  badgePaid: { backgroundColor: '#FFF7ED' },
+  badgeText: { fontSize: 12, fontWeight: '600' },
+  badgeTextFree: { color: '#16A34A' },
+  badgeTextPaid: { color: '#EA6C00' },
+  meta: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 4 },
+  metaText: { fontSize: 13, color: '#666', flex: 1 },
+  bottom: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#1A1A1A',
-  },
-  closeButton: {
-    fontSize: 16,
-    color: '#FF6B35',
-    fontWeight: '600',
-  },
-  modalContent: {
-    flex: 1,
-    paddingHorizontal: 20,
-  },
-  courtInfo: {
-    paddingVertical: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
-  },
-  infoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  infoText: {
-    fontSize: 16,
-    color: '#1A1A1A',
-    marginLeft: 12,
-  },
-  tagsSection: {
-    paddingVertical: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
-  },
-  tagsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginTop: 12,
-  },
-  tagChip: {
-    backgroundColor: '#F8F9FA',
-    borderRadius: 16,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    marginRight: 8,
-    marginBottom: 8,
-  },
-  tagText: {
-    fontSize: 14,
-    color: '#1A1A1A',
-    fontWeight: '500',
-  },
-  playersSection: {
-    paddingVertical: 20,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1A1A1A',
-    marginBottom: 12,
-  },
-  playersList: {
-    gap: 12,
-  },
-  playerItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  playerAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#FF6B35',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  playerInitial: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#FFFFFF',
-  },
-  playerName: {
-    fontSize: 16,
-    color: '#1A1A1A',
-  },
-  emptyText: {
-    fontSize: 14,
-    color: '#666',
-    textAlign: 'center',
-    marginTop: 20,
-  },
-  modalFooter: {
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingTop: 12,
     borderTopWidth: 1,
     borderTopColor: '#F0F0F0',
   },
-  checkInButton: {
-    backgroundColor: '#FF6B35',
-    borderRadius: 12,
-    paddingVertical: 16,
-    alignItems: 'center',
-  },
-  checkedInButton: {
-    backgroundColor: '#28A745',
-  },
-  checkInText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#FFFFFF',
-  },
-  checkedInText: {
-    color: '#FFFFFF',
-  },
+  attendees: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  attendeesText: { fontSize: 13, color: '#666' },
+  joinButton: { backgroundColor: '#FF6B35', borderRadius: 20, paddingHorizontal: 18, paddingVertical: 8 },
+  joinText: { fontSize: 14, fontWeight: '600', color: '#FFFFFF' },
 });
