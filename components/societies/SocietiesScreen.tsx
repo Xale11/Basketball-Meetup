@@ -1,9 +1,13 @@
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useState } from 'react';
-import { Search, Filter, Plus, Users, Crown, ChevronRight } from 'lucide-react-native';
+import { useState, useMemo, useEffect } from 'react';
+import { Search, Filter, Plus, Users, Crown, ChevronRight, Clock, MapPin, Calendar } from 'lucide-react-native';
 import { useAuth } from '@/hooks/useAuth';
 import useFetchUserSocieties from '@/hooks/societies/useFetchUserSocieties';
+import { useFetchEvents } from '@/hooks/events/useFetchEvents';
+import useFetchUniversities from '@/hooks/universities/useFetchUniversities';
+import { LoadingSpinner } from '@/components/LoadingSpinner';
+import { Event, EventBookingMode, EventHostType } from '@/types/event';
 
 // Placeholder until backend query is wired up
 const MOCK_DISCOVER_SOCIETIES = [
@@ -29,14 +33,36 @@ const CATEGORY_TEXT: Record<string, string> = {
 
 export default function SocietiesScreen() {
   const { user } = useAuth();
-  const { memberships, isLoading } = useFetchUserSocieties(user?.id);
+  const { memberships, isLoading: societiesLoading } = useFetchUserSocieties(user?.id);
 
-  const [selectedTab, setSelectedTab] = useState<'discover' | 'my-societies' | 'managed'>('discover');
+  const societyIds = useMemo(() => memberships.map((m) => m.society_id), [memberships]);
+  const { events, loading: eventsLoading } = useFetchEvents(user?.university_id, societyIds);
+
+  const { universities, fetchUniversities } = useFetchUniversities();
+  useEffect(() => { fetchUniversities(); }, []);
+  const universityNameMap = useMemo(
+    () => new Map(universities.map((u) => [u.id, u.name])),
+    [universities],
+  );
+
+  const [selectedTab, setSelectedTab] = useState<'events' | 'discover' | 'my-societies' | 'managed'>('events');
+  const [selectedSocietyFilter, setSelectedSocietyFilter] = useState<string | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [societyName, setSocietyName] = useState('');
   const [societyDescription, setSocietyDescription] = useState('');
 
+  const societyNameMap = useMemo(
+    () => new Map(memberships.map((m) => [m.society_id, m.societies.name])),
+    [memberships],
+  );
+
+  const filteredEvents = useMemo(() => {
+    if (!selectedSocietyFilter) return events;
+    return events.filter((e) => e.society_id === selectedSocietyFilter);
+  }, [events, selectedSocietyFilter]);
+
   const tabs = [
+    { key: 'events' as const, label: 'Society Events' },
     { key: 'discover' as const, label: 'Discover' },
     { key: 'my-societies' as const, label: 'My Societies' },
     { key: 'managed' as const, label: 'Managed' },
@@ -64,7 +90,7 @@ export default function SocietiesScreen() {
         </View>
       </View>
 
-      <View style={styles.tabContainer}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabScroll} contentContainerStyle={styles.tabContainer}>
         {tabs.map((tab) => (
           <TouchableOpacity
             key={tab.key}
@@ -74,9 +100,80 @@ export default function SocietiesScreen() {
             <Text style={[styles.tabText, selectedTab === tab.key && styles.activeTabText]}>{tab.label}</Text>
           </TouchableOpacity>
         ))}
-      </View>
+      </ScrollView>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+
+        {/* Society Events */}
+        {selectedTab === 'events' && (
+          <View>
+            {societiesLoading ? (
+              <View style={styles.loadingContainer}><LoadingSpinner /></View>
+            ) : memberships.length === 0 ? (
+              <View style={styles.emptyState}>
+                <Calendar size={48} color="#CCC" />
+                <Text style={styles.emptyTitle}>No societies, no events</Text>
+                <Text style={styles.emptyDescription}>Join a society to start seeing their events here</Text>
+                <TouchableOpacity style={styles.discoverButton} onPress={() => setSelectedTab('discover')}>
+                  <Text style={styles.discoverButtonText}>Find a Society</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <>
+                {/* Society filter chips */}
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  style={styles.filterRow}
+                  contentContainerStyle={styles.filterRowContent}
+                >
+                  <TouchableOpacity
+                    style={[styles.filterChip, selectedSocietyFilter === null && styles.filterChipActive]}
+                    onPress={() => setSelectedSocietyFilter(null)}
+                  >
+                    <Text style={[styles.filterChipText, selectedSocietyFilter === null && styles.filterChipTextActive]}>All</Text>
+                  </TouchableOpacity>
+                  {memberships.map((m) => (
+                    <TouchableOpacity
+                      key={m.society_id}
+                      style={[styles.filterChip, selectedSocietyFilter === m.society_id && styles.filterChipActive]}
+                      onPress={() => setSelectedSocietyFilter(m.society_id)}
+                    >
+                      <Text style={[styles.filterChipText, selectedSocietyFilter === m.society_id && styles.filterChipTextActive]}>
+                        {m.societies.name}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+
+                <View style={styles.eventsSection}>
+                  <View style={styles.sectionHeaderRow}>
+                    <Text style={styles.sectionTitle}>Upcoming Events</Text>
+                    <Text style={styles.resultCount}>{filteredEvents.length} events</Text>
+                  </View>
+
+                  {eventsLoading ? (
+                    <View style={styles.loadingContainer}><LoadingSpinner /></View>
+                  ) : filteredEvents.length === 0 ? (
+                    <View style={styles.emptyState}>
+                      <Calendar size={40} color="#CCC" />
+                      <Text style={styles.emptyTitle}>No upcoming events</Text>
+                      <Text style={styles.emptyDescription}>
+                        {selectedSocietyFilter
+                          ? `${societyNameMap.get(selectedSocietyFilter) ?? 'This society'} hasn't posted any events yet`
+                          : 'None of your societies have posted events yet'}
+                      </Text>
+                    </View>
+                  ) : (
+                    filteredEvents.map((event) => (
+                      <SocietyEventCard key={event.id} event={event} societyNameMap={societyNameMap} universityNameMap={universityNameMap} />
+                    ))
+                  )}
+                </View>
+              </>
+            )}
+          </View>
+        )}
 
         {/* Discover */}
         {selectedTab === 'discover' && (
@@ -114,7 +211,7 @@ export default function SocietiesScreen() {
         {selectedTab === 'my-societies' && (
           <View>
             <Text style={styles.sectionTitle}>Your Societies</Text>
-            {isLoading ? (
+            {societiesLoading ? (
               <Text style={styles.helperText}>Loading…</Text>
             ) : memberships.length === 0 ? (
               <View style={styles.emptyState}>
@@ -204,6 +301,94 @@ export default function SocietiesScreen() {
   );
 }
 
+type HostTag = { label: string; type: 'user' | 'society' | 'university' };
+
+function getHostTag(
+  event: Event,
+  societyNameMap: Map<string, string>,
+  universityNameMap: Map<string, string>,
+): HostTag {
+  if (event.host_type === EventHostType.SOCIETY && event.society_id) {
+    const name = societyNameMap.get(event.society_id) ?? event.society_id;
+    return { label: `Hosted by ${name}`, type: 'society' };
+  }
+  if (event.host_type === EventHostType.UNIVERSITY && event.university_id) {
+    const name = universityNameMap.get(event.university_id) ?? event.university_id;
+    return { label: `Hosted by ${name}`, type: 'university' };
+  }
+  return { label: 'Student Hosted', type: 'user' };
+}
+
+const hostBadgeColors: Record<'user' | 'society' | 'university', { bg: { backgroundColor: string }; text: { color: string } }> = {
+  user:       { bg: { backgroundColor: '#F0FDF4' }, text: { color: '#16A34A' } },
+  society:    { bg: { backgroundColor: '#EEF2FF' }, text: { color: '#4A6CF7' } },
+  university: { bg: { backgroundColor: '#FFF7ED' }, text: { color: '#EA6C00' } },
+};
+
+function SocietyEventCard({
+  event,
+  societyNameMap,
+  universityNameMap,
+}: {
+  event: Event;
+  societyNameMap: Map<string, string>;
+  universityNameMap: Map<string, string>;
+}) {
+  const isFree = event.booking_mode === EventBookingMode.FREE;
+  const hostTag = getHostTag(event, societyNameMap, universityNameMap);
+  const startDate = new Date(event.start_date);
+  const now = new Date();
+  const isToday =
+    startDate.getDate() === now.getDate() &&
+    startDate.getMonth() === now.getMonth() &&
+    startDate.getFullYear() === now.getFullYear();
+
+  const timeLabel = isToday
+    ? `Today · ${startDate.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`
+    : `${startDate.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })} · ${startDate.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`;
+
+  return (
+    <View style={cardStyles.card}>
+      <View style={cardStyles.cardTop}>
+        <View style={cardStyles.titleRow}>
+          <Text style={cardStyles.cardTitle} numberOfLines={2}>{event.name}</Text>
+          <View style={[cardStyles.hostBadge, hostBadgeColors[hostTag.type].bg]}>
+            <Text style={[cardStyles.hostBadgeText, hostBadgeColors[hostTag.type].text]}>{hostTag.label}</Text>
+          </View>
+        </View>
+        <View style={cardStyles.metaCol}>
+          <View style={cardStyles.metaItem}>
+            <Clock size={13} color="#888" />
+            <Text style={cardStyles.metaText}>{timeLabel}</Text>
+          </View>
+          {event.address && (
+            <View style={cardStyles.metaItem}>
+              <MapPin size={13} color="#888" />
+              <Text style={cardStyles.metaText} numberOfLines={1}>{event.address}</Text>
+            </View>
+          )}
+        </View>
+      </View>
+      <View style={cardStyles.cardBottom}>
+        {event.max_participants != null ? (
+          <View style={cardStyles.attendeesRow}>
+            <Users size={14} color="#666" />
+            <Text style={cardStyles.attendeesText}>Up to {event.max_participants}</Text>
+          </View>
+        ) : (
+          <View style={cardStyles.attendeesRow}>
+            <Users size={14} color="#666" />
+            <Text style={cardStyles.attendeesText}>Open</Text>
+          </View>
+        )}
+        <TouchableOpacity style={cardStyles.joinButton}>
+          <Text style={cardStyles.joinButtonText}>{isFree ? 'Join Free' : `Join · £${event.price_from ?? ''}`}</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F8F9FA' },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 16, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#F0F0F0' },
@@ -211,12 +396,23 @@ const styles = StyleSheet.create({
   headerActions: { flexDirection: 'row', gap: 12 },
   iconButton: { padding: 8, borderRadius: 12, backgroundColor: '#F8F9FA' },
   addButton: { padding: 8, borderRadius: 12, backgroundColor: '#FF6B35' },
-  tabContainer: { flexDirection: 'row', backgroundColor: '#FFFFFF', paddingHorizontal: 20, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#F0F0F0' },
-  tab: { paddingHorizontal: 16, paddingVertical: 8, marginRight: 12, borderRadius: 20 },
+  tabScroll: { backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#F0F0F0', flexGrow: 0 },
+  tabContainer: { paddingHorizontal: 20, paddingVertical: 12, gap: 8 },
+  tab: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20 },
   activeTab: { backgroundColor: '#FF6B35' },
   tabText: { fontSize: 14, fontWeight: '600', color: '#666' },
   activeTabText: { color: '#FFFFFF' },
   content: { flex: 1, paddingHorizontal: 20, paddingTop: 20 },
+  filterRow: { marginHorizontal: -20, backgroundColor: '#F8F9FA' },
+  filterRowContent: { paddingHorizontal: 20, paddingVertical: 12, gap: 8 },
+  filterChip: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 16, backgroundColor: '#EEEEEE' },
+  filterChipActive: { backgroundColor: '#FF6B35' },
+  filterChipText: { fontSize: 13, fontWeight: '600', color: '#555' },
+  filterChipTextActive: { color: '#FFFFFF' },
+  eventsSection: { marginTop: 4 },
+  sectionHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, marginTop: 16 },
+  resultCount: { fontSize: 13, color: '#888' },
+  loadingContainer: { paddingTop: 60, alignItems: 'center' },
   sectionTitle: { fontSize: 20, fontWeight: '600', color: '#1A1A1A', marginBottom: 16 },
   societyCard: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, marginBottom: 12, flexDirection: 'row', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.07, shadowRadius: 8, elevation: 2 },
   societyCardLeft: { flex: 1, flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
@@ -253,4 +449,49 @@ const styles = StyleSheet.create({
   modalFooter: { paddingHorizontal: 20, paddingVertical: 16, borderTopWidth: 1, borderTopColor: '#F0F0F0' },
   submitButton: { backgroundColor: '#FF6B35', borderRadius: 16, paddingVertical: 16, alignItems: 'center' },
   submitButtonText: { fontSize: 16, fontWeight: '600', color: '#FFFFFF' },
+});
+
+const cardStyles = StyleSheet.create({
+  card: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.07,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  cardTop: { marginBottom: 12 },
+  titleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: 8,
+    marginBottom: 8,
+  },
+  cardTitle: { fontSize: 16, fontWeight: '600', color: '#1A1A1A', flex: 1 },
+  hostBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10, flexShrink: 0 },
+  hostBadgeText: { fontSize: 12, fontWeight: '600' },
+  metaCol: { gap: 4 },
+  metaItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  metaText: { fontSize: 13, color: '#666', flex: 1 },
+  cardBottom: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#F0F0F0',
+  },
+  attendeesRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  attendeesText: { fontSize: 13, color: '#666' },
+  joinButton: {
+    backgroundColor: '#FF6B35',
+    borderRadius: 20,
+    paddingHorizontal: 18,
+    paddingVertical: 8,
+  },
+  joinButtonText: { fontSize: 14, fontWeight: '600', color: '#FFFFFF' },
 });
