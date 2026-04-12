@@ -275,3 +275,29 @@ export const fetchEventsByUserId = async (userId: string): Promise<Event[]> => {
     throw new Error(error.message)
   }
 }
+
+export const fetchParticipantEvents = async (userId: string): Promise<Event[]> => {
+  try {
+    if (!userId) throw new Error('No userId provided to fetchParticipantEvents')
+
+    const { data: participations, error: pError } = await supabase
+      .from('event_participants')
+      .select('event_id')
+      .eq('user_id', userId)
+    if (pError) throw new Error(JSON.stringify(pError))
+
+    const eventIds = (participations ?? []).map((p: { event_id: string }) => p.event_id)
+    if (eventIds.length === 0) return []
+
+    const { data, error } = await supabase
+      .from('events')
+      .select('*')
+      .in('id', eventIds)
+      .order('start_date', { ascending: true })
+    if (error) throw new Error(JSON.stringify(error))
+
+    return (data ?? []) as Event[]
+  } catch (error: any) {
+    throw new Error(error.message)
+  }
+}

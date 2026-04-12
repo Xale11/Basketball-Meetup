@@ -2,36 +2,44 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Modal, Tex
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Settings, Pencil as Edit, ChevronRight, CreditCard, Bell, Shield, X, Camera, User, MapPin, Clock } from 'lucide-react-native';
 import { useAuth } from '@/hooks/useAuth';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import useFetchUserSocieties from '@/hooks/societies/useFetchUserSocieties';
 import useUpdateProfilePhoto from '@/hooks/users/useUpdateProfilePhoto';
 import useUpdateUser from '@/hooks/users/useUpdateUser';
+import { useFetchMyEvents } from '@/hooks/events/useFetchMyEvents';
+import { useFetchParticipantEvents } from '@/hooks/events/useFetchParticipantEvents';
 import { appVariant } from '@/constants/appVariant';
+import { Event } from '@/types/event';
 
 type ActivityTab = 'upcoming' | 'created' | 'past';
-
-const MOCK_MY_ACTIVITIES = {
-  upcoming: [
-    { id: '1', title: '5-a-side Football', time: 'Today · 5:30 PM', location: 'Sports Centre', status: 'joined' },
-    { id: '2', title: 'Study Group — Calculus', time: 'Tomorrow · 3:00 PM', location: 'Library 4B', status: 'joined' },
-  ],
-  created: [
-    { id: '3', title: 'Campus Social Run', time: 'Today · 5:30 PM', location: 'Main Quad', status: 'hosting' },
-  ],
-  past: [
-    { id: '4', title: 'Board Games Night', time: 'Last Friday · 7:00 PM', location: 'SU Common Room', status: 'completed' },
-    { id: '5', title: 'Basketball Pickup', time: 'Last Monday · 6:00 PM', location: 'Sports Hall B', status: 'completed' },
-  ],
-};
 
 export default function ProfileScreen() {
   const { user, session, logout } = useAuth();
   const { memberships, isLoading: societiesLoading } = useFetchUserSocieties(user?.id);
   const { photoUploading, handlePhotoPress } = useUpdateProfilePhoto(user?.id);
   const { saving, updateProfile } = useUpdateUser(user?.id);
+  const { events: myEvents, loading: myEventsLoading } = useFetchMyEvents(user?.id);
+  const { events: participantEvents, loading: participantEventsLoading } = useFetchParticipantEvents(user?.id);
 
   const [showEditModal, setShowEditModal] = useState(false);
   const [activityTab, setActivityTab] = useState<ActivityTab>('upcoming');
+
+  const now = new Date();
+  const upcomingEvents = useMemo(
+    () => participantEvents.filter((e) => new Date(e.start_date) > now),
+    [participantEvents],
+  );
+  const createdEvents = useMemo(
+    () => myEvents.filter((e) => new Date(e.start_date) > now),
+    [myEvents],
+  );
+  const pastEvents = useMemo(
+    () => participantEvents.filter((e) => new Date(e.end_date) < now),
+    [participantEvents],
+  );
+
+  const activitiesLoading = activityTab === 'created' ? myEventsLoading : participantEventsLoading;
+  const activeEvents: Event[] = activityTab === 'upcoming' ? upcomingEvents : activityTab === 'created' ? createdEvents : pastEvents;
   const [editForm, setEditForm] = useState({
     first_name: '',
     last_name: '',
@@ -126,33 +134,48 @@ export default function ProfileScreen() {
                 </TouchableOpacity>
               ))}
             </View>
-            {MOCK_MY_ACTIVITIES[activityTab].length === 0 ? (
+            {activitiesLoading ? (
+              <Text style={styles.societyHelperText}>Loading…</Text>
+            ) : activeEvents.length === 0 ? (
               <Text style={styles.societyHelperText}>Nothing here yet.</Text>
             ) : (
-              MOCK_MY_ACTIVITIES[activityTab].map((a) => (
-                <View key={a.id} style={styles.activityItem}>
-                  <View style={styles.activityItemInfo}>
-                    <Text style={styles.activityItemTitle}>{a.title}</Text>
-                    <View style={styles.activityItemMeta}>
-                      <Clock size={12} color="#888" />
-                      <Text style={styles.activityItemMetaText}>{a.time}</Text>
-                      <MapPin size={12} color="#888" />
-                      <Text style={styles.activityItemMetaText}>{a.location}</Text>
+              activeEvents.map((e) => {
+                const startDate = new Date(e.start_date);
+                const isToday = startDate.toDateString() === new Date().toDateString();
+                const timeLabel = isToday
+                  ? `Today · ${startDate.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`
+                  : `${startDate.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })} · ${startDate.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`;
+                const isHosting = activityTab === 'created';
+                const isPast = activityTab === 'past';
+                return (
+                  <View key={e.id} style={styles.activityItem}>
+                    <View style={styles.activityItemInfo}>
+                      <Text style={styles.activityItemTitle}>{e.name}</Text>
+                      <View style={styles.activityItemMeta}>
+                        <Clock size={12} color="#888" />
+                        <Text style={styles.activityItemMetaText}>{timeLabel}</Text>
+                        {e.address && (
+                          <>
+                            <MapPin size={12} color="#888" />
+                            <Text style={styles.activityItemMetaText}>{e.address}</Text>
+                          </>
+                        )}
+                      </View>
+                    </View>
+                    <View style={[styles.activityStatusBadge,
+                      isHosting && styles.activityStatusHosting,
+                      isPast && styles.activityStatusCompleted,
+                    ]}>
+                      <Text style={[styles.activityStatusText,
+                        isHosting && styles.activityStatusTextHosting,
+                        isPast && styles.activityStatusTextCompleted,
+                      ]}>
+                        {isHosting ? 'Hosting' : isPast ? 'Attended' : 'Going'}
+                      </Text>
                     </View>
                   </View>
-                  <View style={[styles.activityStatusBadge,
-                    a.status === 'hosting' && styles.activityStatusHosting,
-                    a.status === 'completed' && styles.activityStatusCompleted,
-                  ]}>
-                    <Text style={[styles.activityStatusText,
-                      a.status === 'hosting' && styles.activityStatusTextHosting,
-                      a.status === 'completed' && styles.activityStatusTextCompleted,
-                    ]}>
-                      {a.status.charAt(0).toUpperCase() + a.status.slice(1)}
-                    </Text>
-                  </View>
-                </View>
-              ))
+                );
+              })
             )}
           </View>
         )}
