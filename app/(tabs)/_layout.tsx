@@ -1,5 +1,6 @@
 import { Tabs } from 'expo-router';
 import { Chrome as Home, Map, Calendar, User, Plus, Users } from 'lucide-react-native';
+import { tabs } from '@/constants/appVariant';
 
 export default function TabLayout() {
   return (
@@ -27,6 +28,7 @@ export default function TabLayout() {
         name="index"
         options={{
           title: 'Home',
+          href: tabs.home ? undefined : null,
           tabBarIcon: ({ size, color }) => (
             <Home size={size} color={color} />
           ),
@@ -35,7 +37,8 @@ export default function TabLayout() {
       <Tabs.Screen
         name="map"
         options={{
-          title: 'Courts',
+          title: 'Map',
+          href: tabs.map ? undefined : null,
           tabBarIcon: ({ size, color }) => (
             <Map size={size} color={color} />
           ),
@@ -45,6 +48,7 @@ export default function TabLayout() {
         name="events"
         options={{
           title: 'Events',
+          href: tabs.events ? undefined : null,
           tabBarIcon: ({ size, color }) => (
             <Calendar size={size} color={color} />
           ),
@@ -54,6 +58,7 @@ export default function TabLayout() {
         name="clubs"
         options={{
           title: 'Clubs',
+          href: tabs.clubs ? undefined : null,
           tabBarIcon: ({ size, color }) => (
             <Users size={size} color={color} />
           ),
@@ -63,6 +68,7 @@ export default function TabLayout() {
         name="add-court"
         options={{
           title: 'Add Court',
+          href: tabs.addCourt ? undefined : null,
           tabBarIcon: ({ size, color }) => (
             <Plus size={size} color={color} />
           ),
@@ -72,6 +78,7 @@ export default function TabLayout() {
         name="profile"
         options={{
           title: 'Profile',
+          href: tabs.profile ? undefined : null,
           tabBarIcon: ({ size, color }) => (
             <User size={size} color={color} />
           ),
