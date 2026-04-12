@@ -1,13 +1,13 @@
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState, useMemo, useEffect } from 'react';
-import { Search, Filter, Plus, Users, Crown, ChevronRight, Clock, MapPin, Calendar } from 'lucide-react-native';
+import { Search, Filter, Plus, Users, Crown, ChevronRight, Calendar } from 'lucide-react-native';
 import { useAuth } from '@/hooks/useAuth';
 import useFetchUserSocieties from '@/hooks/societies/useFetchUserSocieties';
 import { useFetchEvents } from '@/hooks/events/useFetchEvents';
 import useFetchUniversities from '@/hooks/universities/useFetchUniversities';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
-import { Event, EventBookingMode, EventHostType } from '@/types/event';
+import { EventCard } from '@/components/events/EventCard';
 
 // Placeholder until backend query is wired up
 const MOCK_DISCOVER_SOCIETIES = [
@@ -166,7 +166,7 @@ export default function SocietiesScreen() {
                     </View>
                   ) : (
                     filteredEvents.map((event) => (
-                      <SocietyEventCard key={event.id} event={event} societyNameMap={societyNameMap} universityNameMap={universityNameMap} />
+                      <EventCard key={event.id} event={event} societyNameMap={societyNameMap} universityNameMap={universityNameMap} />
                     ))
                   )}
                 </View>
@@ -301,93 +301,6 @@ export default function SocietiesScreen() {
   );
 }
 
-type HostTag = { label: string; type: 'user' | 'society' | 'university' };
-
-function getHostTag(
-  event: Event,
-  societyNameMap: Map<string, string>,
-  universityNameMap: Map<string, string>,
-): HostTag {
-  if (event.host_type === EventHostType.SOCIETY && event.society_id) {
-    const name = societyNameMap.get(event.society_id) ?? event.society_id;
-    return { label: `Hosted by ${name}`, type: 'society' };
-  }
-  if (event.host_type === EventHostType.UNIVERSITY && event.university_id) {
-    const name = universityNameMap.get(event.university_id) ?? event.university_id;
-    return { label: `Hosted by ${name}`, type: 'university' };
-  }
-  return { label: 'Student Hosted', type: 'user' };
-}
-
-const hostBadgeColors: Record<'user' | 'society' | 'university', { bg: { backgroundColor: string }; text: { color: string } }> = {
-  user:       { bg: { backgroundColor: '#F0FDF4' }, text: { color: '#16A34A' } },
-  society:    { bg: { backgroundColor: '#EEF2FF' }, text: { color: '#4A6CF7' } },
-  university: { bg: { backgroundColor: '#FFF7ED' }, text: { color: '#EA6C00' } },
-};
-
-function SocietyEventCard({
-  event,
-  societyNameMap,
-  universityNameMap,
-}: {
-  event: Event;
-  societyNameMap: Map<string, string>;
-  universityNameMap: Map<string, string>;
-}) {
-  const isFree = event.booking_mode === EventBookingMode.FREE;
-  const hostTag = getHostTag(event, societyNameMap, universityNameMap);
-  const startDate = new Date(event.start_date);
-  const now = new Date();
-  const isToday =
-    startDate.getDate() === now.getDate() &&
-    startDate.getMonth() === now.getMonth() &&
-    startDate.getFullYear() === now.getFullYear();
-
-  const timeLabel = isToday
-    ? `Today · ${startDate.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`
-    : `${startDate.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })} · ${startDate.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`;
-
-  return (
-    <View style={cardStyles.card}>
-      <View style={cardStyles.cardTop}>
-        <View style={cardStyles.titleRow}>
-          <Text style={cardStyles.cardTitle} numberOfLines={2}>{event.name}</Text>
-          <View style={[cardStyles.hostBadge, hostBadgeColors[hostTag.type].bg]}>
-            <Text style={[cardStyles.hostBadgeText, hostBadgeColors[hostTag.type].text]}>{hostTag.label}</Text>
-          </View>
-        </View>
-        <View style={cardStyles.metaCol}>
-          <View style={cardStyles.metaItem}>
-            <Clock size={13} color="#888" />
-            <Text style={cardStyles.metaText}>{timeLabel}</Text>
-          </View>
-          {event.address && (
-            <View style={cardStyles.metaItem}>
-              <MapPin size={13} color="#888" />
-              <Text style={cardStyles.metaText} numberOfLines={1}>{event.address}</Text>
-            </View>
-          )}
-        </View>
-      </View>
-      <View style={cardStyles.cardBottom}>
-        {event.max_participants != null ? (
-          <View style={cardStyles.attendeesRow}>
-            <Users size={14} color="#666" />
-            <Text style={cardStyles.attendeesText}>Up to {event.max_participants}</Text>
-          </View>
-        ) : (
-          <View style={cardStyles.attendeesRow}>
-            <Users size={14} color="#666" />
-            <Text style={cardStyles.attendeesText}>Open</Text>
-          </View>
-        )}
-        <TouchableOpacity style={cardStyles.joinButton}>
-          <Text style={cardStyles.joinButtonText}>{isFree ? 'Join Free' : `Join · £${event.price_from ?? ''}`}</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
-}
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F8F9FA' },
@@ -449,49 +362,4 @@ const styles = StyleSheet.create({
   modalFooter: { paddingHorizontal: 20, paddingVertical: 16, borderTopWidth: 1, borderTopColor: '#F0F0F0' },
   submitButton: { backgroundColor: '#FF6B35', borderRadius: 16, paddingVertical: 16, alignItems: 'center' },
   submitButtonText: { fontSize: 16, fontWeight: '600', color: '#FFFFFF' },
-});
-
-const cardStyles = StyleSheet.create({
-  card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.07,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  cardTop: { marginBottom: 12 },
-  titleRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    gap: 8,
-    marginBottom: 8,
-  },
-  cardTitle: { fontSize: 16, fontWeight: '600', color: '#1A1A1A', flex: 1 },
-  hostBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10, flexShrink: 0 },
-  hostBadgeText: { fontSize: 12, fontWeight: '600' },
-  metaCol: { gap: 4 },
-  metaItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  metaText: { fontSize: 13, color: '#666', flex: 1 },
-  cardBottom: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#F0F0F0',
-  },
-  attendeesRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  attendeesText: { fontSize: 13, color: '#666' },
-  joinButton: {
-    backgroundColor: '#FF6B35',
-    borderRadius: 20,
-    paddingHorizontal: 18,
-    paddingVertical: 8,
-  },
-  joinButtonText: { fontSize: 14, fontWeight: '600', color: '#FFFFFF' },
 });

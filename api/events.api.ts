@@ -276,6 +276,20 @@ export const fetchEventsByUserId = async (userId: string): Promise<Event[]> => {
   }
 }
 
+export const fetchEventById = async (eventId: string): Promise<{ event: Event; participantCount: number }> => {
+  try {
+    const [{ data: eventData, error: eventError }, { count, error: countError }] = await Promise.all([
+      supabase.from('events').select('*').eq('id', eventId).single(),
+      supabase.from('event_participants').select('*', { count: 'exact', head: true }).eq('event_id', eventId),
+    ])
+    if (eventError) throw new Error(JSON.stringify(eventError))
+    if (countError) throw new Error(JSON.stringify(countError))
+    return { event: eventData as Event, participantCount: count ?? 0 }
+  } catch (error: any) {
+    throw new Error(error.message)
+  }
+}
+
 export const fetchParticipantEvents = async (userId: string): Promise<Event[]> => {
   try {
     if (!userId) throw new Error('No userId provided to fetchParticipantEvents')

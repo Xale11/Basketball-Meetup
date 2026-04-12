@@ -45,6 +45,7 @@ function AppNavigator({ fontsLoaded }: { fontsLoaded: boolean }) {
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="auth" />
+        <Stack.Screen name="event" />
         <Stack.Screen name="+not-found" />
       </Stack>
       <StatusBar style="dark" />

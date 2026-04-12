@@ -1,12 +1,13 @@
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ViewStyle } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState, useMemo } from 'react';
-import { Search, Filter, Clock, MapPin, Users, Maximize2, Minimize2 } from 'lucide-react-native';
+import { Search, Filter, Maximize2, Minimize2 } from 'lucide-react-native';
 import { useAuth } from '@/hooks/useAuth';
 import { useFetchEvents } from '@/hooks/events/useFetchEvents';
 import useFetchUserSocieties from '@/hooks/societies/useFetchUserSocieties';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import InteractiveMap from '@/components/InteractiveMap';
+import { EventCard } from '@/components/events/EventCard';
 import { Event, EventBookingMode } from '@/types/event';
 
 type TimeFilter = 'Now' | 'Today' | 'This Week';
@@ -37,8 +38,8 @@ export default function MapScreen() {
         timeFilter === 'Now'
           ? isHappeningNow(e)
           : timeFilter === 'Today'
-          ? start >= startOfToday && start < endOfToday
-          : start >= startOfToday && start < endOfWeek;
+          ? (start >= startOfToday && start < endOfToday) || isHappeningNow(e)
+          : (start >= startOfToday && start < endOfWeek) || isHappeningNow(e);
       const matchesCost =
         costFilter === 'All' ||
         (costFilter === 'Free' && e.booking_mode === EventBookingMode.FREE) ||
@@ -122,7 +123,7 @@ export default function MapScreen() {
             </View>
           ) : (
             filteredEvents.map((event) => (
-              <MapEventCard key={event.id} event={event} />
+              <EventCard key={event.id} event={event} />
             ))
           )}
         </View>
@@ -133,56 +134,6 @@ export default function MapScreen() {
   );
 }
 
-function MapEventCard({ event }: { event: Event }) {
-  const isFree = event.booking_mode === EventBookingMode.FREE;
-  const startDate = new Date(event.start_date);
-  const now = new Date();
-  const isToday = startDate.toDateString() === now.toDateString();
-  const timeLabel = isToday
-    ? `Today · ${startDate.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`
-    : `${startDate.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })} · ${startDate.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`;
-
-  return (
-    <View style={card.container}>
-      <View style={card.top}>
-        <View style={card.titleRow}>
-          <Text style={card.title} numberOfLines={2}>{event.name}</Text>
-          <View style={[card.badge, isFree ? card.badgeFree : card.badgePaid]}>
-            <Text style={[card.badgeText, isFree ? card.badgeTextFree : card.badgeTextPaid]}>
-              {isFree ? 'Free' : `£${event.price_from ?? ''}`}
-            </Text>
-          </View>
-        </View>
-        <View style={card.meta}>
-          <Clock size={13} color="#888" />
-          <Text style={card.metaText}>{timeLabel}</Text>
-        </View>
-        {event.address && (
-          <View style={card.meta}>
-            <MapPin size={13} color="#888" />
-            <Text style={card.metaText} numberOfLines={1}>{event.address}</Text>
-          </View>
-        )}
-      </View>
-      <View style={card.bottom}>
-        {event.max_participants != null ? (
-          <View style={card.attendees}>
-            <Users size={14} color="#666" />
-            <Text style={card.attendeesText}>Up to {event.max_participants}</Text>
-          </View>
-        ) : (
-          <View style={card.attendees}>
-            <Users size={14} color="#666" />
-            <Text style={card.attendeesText}>Open</Text>
-          </View>
-        )}
-        <TouchableOpacity style={card.joinButton}>
-          <Text style={card.joinText}>{isFree ? 'Join Free' : `Join · £${event.price_from ?? ''}`}</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
-}
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F8F9FA' },
@@ -228,41 +179,4 @@ const styles = StyleSheet.create({
   emptyState: { alignItems: 'center', paddingVertical: 40 },
   emptyTitle: { fontSize: 16, fontWeight: '600', color: '#1A1A1A' },
   emptySubtitle: { fontSize: 14, color: '#888', marginTop: 4 },
-});
-
-const card = StyleSheet.create({
-  container: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.07,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  top: { marginBottom: 12 },
-  titleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8, marginBottom: 8 },
-  title: { fontSize: 16, fontWeight: '600', color: '#1A1A1A', flex: 1 },
-  badge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10, flexShrink: 0 },
-  badgeFree: { backgroundColor: '#F0FDF4' },
-  badgePaid: { backgroundColor: '#FFF7ED' },
-  badgeText: { fontSize: 12, fontWeight: '600' },
-  badgeTextFree: { color: '#16A34A' },
-  badgeTextPaid: { color: '#EA6C00' },
-  meta: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 4 },
-  metaText: { fontSize: 13, color: '#666', flex: 1 },
-  bottom: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#F0F0F0',
-  },
-  attendees: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  attendeesText: { fontSize: 13, color: '#666' },
-  joinButton: { backgroundColor: '#FF6B35', borderRadius: 20, paddingHorizontal: 18, paddingVertical: 8 },
-  joinText: { fontSize: 14, fontWeight: '600', color: '#FFFFFF' },
 });
