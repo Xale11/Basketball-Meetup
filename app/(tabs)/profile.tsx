@@ -10,6 +10,8 @@ import { useFetchParticipantEvents } from '@/hooks/events/useFetchParticipantEve
 import { appVariant } from '@/constants/appVariant';
 import { EditProfileModal } from '@/components/profile/EditProfileModal';
 import { ActivitySection } from '@/components/profile/ActivitySection';
+import { Button } from '@/components/ui/Button';
+import { SectionCard } from '@/components/ui/SectionCard';
 import { useState } from 'react';
 
 export default function ProfileScreen() {
@@ -88,7 +90,7 @@ export default function ProfileScreen() {
 
         {/* Activity Section */}
         {appVariant === 'activCampus' && (
-          <View style={styles.sectionCard}>
+          <SectionCard style={styles.sectionCardSpacing}>
             <Text style={styles.sectionTitle}>My Activity</Text>
             <ActivitySection
               myEvents={myEvents}
@@ -96,11 +98,11 @@ export default function ProfileScreen() {
               myEventsLoading={myEventsLoading}
               participantEventsLoading={participantEventsLoading}
             />
-          </View>
+          </SectionCard>
         )}
 
         {/* Society Memberships */}
-        <View style={styles.sectionCard}>
+        <SectionCard style={styles.sectionCardSpacing}>
           <Text style={styles.sectionTitle}>Society Memberships</Text>
           {societiesLoading ? (
             <Text style={styles.helperText}>Loading societies…</Text>
@@ -121,7 +123,7 @@ export default function ProfileScreen() {
               </View>
             ))
           )}
-        </View>
+        </SectionCard>
 
         {/* Menu */}
         <View style={styles.menuSection}>
@@ -136,9 +138,7 @@ export default function ProfileScreen() {
           ))}
         </View>
 
-        <TouchableOpacity style={styles.logoutButton} onPress={logout}>
-          <Text style={styles.logoutText}>Log Out</Text>
-        </TouchableOpacity>
+        <Button label="Log Out" variant="destructive" onPress={logout} style={styles.logoutButton} />
       </ScrollView>
 
       <EditProfileModal
@@ -214,16 +214,8 @@ const styles = StyleSheet.create({
   },
   statusText: { fontSize: 12, fontWeight: '600', color: '#28A745' },
   editButton: { padding: 8, borderRadius: 12, backgroundColor: '#FFF4F0' },
-  sectionCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 20,
+  sectionCardSpacing: {
     marginTop: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
   },
   sectionTitle: { fontSize: 18, fontWeight: '600', color: '#1A1A1A', marginBottom: 16 },
   helperText: { fontSize: 14, color: '#666', marginTop: 4 },
@@ -271,17 +263,7 @@ const styles = StyleSheet.create({
   menuItemLeft: { flexDirection: 'row', alignItems: 'center' },
   menuItemText: { fontSize: 16, color: '#1A1A1A', marginLeft: 12 },
   logoutButton: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    paddingVertical: 16,
-    alignItems: 'center',
     marginTop: 20,
     marginBottom: 40,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
   },
-  logoutText: { fontSize: 16, fontWeight: '600', color: '#DC3545' },
 });

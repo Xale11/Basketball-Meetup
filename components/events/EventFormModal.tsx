@@ -4,8 +4,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  TextInput,
-  Switch,
   Modal,
   Alert,
 } from 'react-native';
@@ -30,6 +28,9 @@ import { User } from '@/types/user';
 import DateTimeInput from '@/components/DateTimeInput';
 import { ImagePicker } from '@/components/ImagePicker';
 import { PillSelector } from '@/components/ui/PillSelector';
+import { TextInputField } from '@/components/ui/TextInputField';
+import { ToggleRow } from '@/components/ui/ToggleRow';
+import { Button } from '@/components/ui/Button';
 
 const VISIBILITY_OPTIONS = [
   { label: 'Public', value: EventVisibility.PUBLIC },
@@ -201,34 +202,27 @@ export function EventFormModal({
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Basic Info</Text>
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Event Name *</Text>
-              <TextInput
-                style={[styles.input, formErrors.name ? styles.inputError : null]}
-                value={form.name}
-                onChangeText={(val) => {
-                  setForm((p) => ({ ...p, name: val }));
-                  if (val.trim()) setFormErrors((e) => ({ ...e, name: undefined as any }));
-                }}
-                placeholder="What's the event called?"
-                placeholderTextColor="#999"
-              />
-              {formErrors.name && <Text style={styles.fieldError}>{formErrors.name}</Text>}
-            </View>
+            <TextInputField
+              label="Event Name *"
+              value={form.name}
+              onChangeText={(val) => {
+                setForm((p) => ({ ...p, name: val }));
+                if (val.trim()) setFormErrors((e) => ({ ...e, name: undefined as any }));
+              }}
+              placeholder="What's the event called?"
+              error={formErrors.name}
+              style={styles.inputGroup}
+            />
 
-            <View style={styles.inputGroupNoMargin}>
-              <Text style={styles.label}>Description</Text>
-              <TextInput
-                style={[styles.input, styles.textArea]}
-                value={form.description ?? ''}
-                onChangeText={(val) => setForm((p) => ({ ...p, description: val || null }))}
-                placeholder="Tell people what this event is about..."
-                placeholderTextColor="#999"
-                multiline
-                numberOfLines={4}
-                textAlignVertical="top"
-              />
-            </View>
+            <TextInputField
+              label="Description"
+              value={form.description ?? ''}
+              onChangeText={(val) => setForm((p) => ({ ...p, description: val || null }))}
+              placeholder="Tell people what this event is about..."
+              multiline
+              numberOfLines={4}
+              multilineHeight={100}
+            />
           </View>
 
           {/* Date & Time */}
@@ -277,23 +271,20 @@ export function EventFormModal({
           {/* Location */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Location</Text>
-            <View style={styles.toggleRow}>
-              <Text style={styles.label}>Online event</Text>
-              <Switch
-                value={form.is_online}
-                onValueChange={(val) =>
-                  setForm((p) => ({
-                    ...p,
-                    is_online: val,
-                    address: val ? null : p.address,
-                    latitude: val ? null : p.latitude,
-                    longitude: val ? null : p.longitude,
-                  }))
-                }
-                trackColor={{ false: '#E9ECEF', true: '#FF6B35' }}
-                thumbColor="#FFFFFF"
-              />
-            </View>
+            <ToggleRow
+              label="Online event"
+              value={form.is_online}
+              onValueChange={(val) =>
+                setForm((p) => ({
+                  ...p,
+                  is_online: val,
+                  address: val ? null : p.address,
+                  latitude: val ? null : p.latitude,
+                  longitude: val ? null : p.longitude,
+                }))
+              }
+              style={styles.toggleRow}
+            />
             {!form.is_online && (
               <View style={styles.inputGroupNoMargin}>
                 <Text style={styles.label}>Address *</Text>
@@ -410,22 +401,18 @@ export function EventFormModal({
           {/* Capacity */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Capacity</Text>
-            <View style={styles.inputGroupNoMargin}>
-              <Text style={styles.label}>Max Participants</Text>
-              <TextInput
-                style={styles.input}
-                value={form.max_participants?.toString() ?? ''}
-                onChangeText={(val) =>
-                  setForm((p) => ({
-                    ...p,
-                    max_participants: val ? parseInt(val, 10) || null : null,
-                  }))
-                }
-                placeholder="Leave blank for unlimited"
-                placeholderTextColor="#999"
-                keyboardType="number-pad"
-              />
-            </View>
+            <TextInputField
+              label="Max Participants"
+              value={form.max_participants?.toString() ?? ''}
+              onChangeText={(val) =>
+                setForm((p) => ({
+                  ...p,
+                  max_participants: val ? parseInt(val, 10) || null : null,
+                }))
+              }
+              placeholder="Leave blank for unlimited"
+              keyboardType="number-pad"
+            />
           </View>
 
           {/* Images */}
@@ -529,38 +516,31 @@ export function EventFormModal({
             </View>
 
             {form.booking_mode === EventBookingMode.TICKETED && (
-              <View style={[styles.inputGroup, { marginTop: 16 }]}>
-                <Text style={styles.label}>Starting Price *</Text>
-                <TextInput
-                  style={[styles.input, formErrors.price_from ? styles.inputError : null]}
-                  value={form.price_from?.toString() ?? ''}
-                  onChangeText={(val) => {
-                    setForm((p) => ({
-                      ...p,
-                      price_from: val ? parseFloat(val) || null : null,
-                    }));
-                    if (val) setFormErrors((e) => ({ ...e, price_from: undefined as any }));
-                  }}
-                  placeholder="0.00"
-                  placeholderTextColor="#999"
-                  keyboardType="decimal-pad"
-                />
-                {formErrors.price_from && <Text style={styles.fieldError}>{formErrors.price_from}</Text>}
-              </View>
+              <TextInputField
+                label="Starting Price *"
+                value={form.price_from?.toString() ?? ''}
+                onChangeText={(val) => {
+                  setForm((p) => ({
+                    ...p,
+                    price_from: val ? parseFloat(val) || null : null,
+                  }));
+                  if (val) setFormErrors((e) => ({ ...e, price_from: undefined as any }));
+                }}
+                placeholder="0.00"
+                keyboardType="decimal-pad"
+                error={formErrors.price_from}
+                style={{ marginTop: 16 }}
+              />
             )}
           </View>
         </ScrollView>
 
         <View style={styles.footer}>
-          <TouchableOpacity
-            style={[styles.submitButton, loading && styles.submitButtonDisabled]}
+          <Button
+            label={editingEvent ? 'Save Changes' : 'Create Event'}
             onPress={handleSubmit}
-            disabled={loading}
-          >
-            <Text style={styles.submitButtonText}>
-              {loading ? 'Saving…' : editingEvent ? 'Save Changes' : 'Create Event'}
-            </Text>
-          </TouchableOpacity>
+            loading={loading}
+          />
         </View>
       </SafeAreaView>
     </Modal>
@@ -599,20 +579,9 @@ const styles = StyleSheet.create({
   label: { fontSize: 14, fontWeight: '500', color: '#444', marginBottom: 8 },
   inputGroup: { marginBottom: 16 },
   inputGroupNoMargin: { marginBottom: 0 },
-  subSection: { marginTop: 16 },
-  input: {
-    backgroundColor: '#F8F9FA',
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-    fontSize: 15,
-    color: '#1A1A1A',
-    borderWidth: 1,
-    borderColor: '#E9ECEF',
-  },
   inputError: { borderColor: '#DC3545' },
-  textArea: { height: 100, textAlignVertical: 'top' },
   fieldError: { fontSize: 13, color: '#DC3545', marginTop: 4 },
+  subSection: { marginTop: 16 },
   dateTimeRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -622,9 +591,6 @@ const styles = StyleSheet.create({
   separator: { fontSize: 13, color: '#888', fontWeight: '500' },
   dateError: { fontSize: 13, color: '#DC3545', marginTop: 10, fontWeight: '500' },
   toggleRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     marginBottom: 16,
   },
   addressWrapper: {
@@ -684,12 +650,4 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#F0F0F0',
   },
-  submitButton: {
-    backgroundColor: '#FF6B35',
-    borderRadius: 14,
-    paddingVertical: 16,
-    alignItems: 'center',
-  },
-  submitButtonDisabled: { opacity: 0.6 },
-  submitButtonText: { fontSize: 16, fontWeight: '700', color: '#FFFFFF' },
 });

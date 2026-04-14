@@ -3,18 +3,16 @@ import {
   View,
   Text,
   StyleSheet,
-  TextInput,
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  Switch,
   Modal,
   FlatList,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { User as UserIcon, BookOpen, GraduationCap, CheckCircle2, Camera, ChevronDown, X, Search } from 'lucide-react-native';
+import { User as UserIcon, BookOpen, GraduationCap, CheckCircle2, ChevronDown, X, Search } from 'lucide-react-native';
 import { useAuth } from '@/hooks/useAuth';
 import { OnboardingStatus, OnboardingUserForm } from '@/types/user';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
@@ -22,6 +20,10 @@ import { ImagePicker } from '@/components/ImagePicker';
 import useFetchUniversities from '@/hooks/universities/useFetchUniversities';
 import useFetchSocietiesByUniId from '@/hooks/societies/useFetchSocietiesByUniId';
 import useOnboardUser from '@/hooks/users/useOnboardUser';
+import { Button } from '@/components/ui/Button';
+import { TextInputField } from '@/components/ui/TextInputField';
+import { FormAlert } from '@/components/ui/FormAlert';
+import { ToggleRow } from '@/components/ui/ToggleRow';
 
 export default function OnboardingScreen() {
   const { user, loading, session } = useAuth();
@@ -208,60 +210,36 @@ export default function OnboardingScreen() {
             </View>
 
             <View style={styles.form}>
-              {error ? (
-                <View style={styles.errorContainer}>
-                  <Text style={styles.errorText}>{error}</Text>
-                </View>
-              ) : null}
+              {error ? <FormAlert message={error} style={styles.errorSpacing} /> : null}
 
               {step === 1 && (
                 <View>
                   <Text style={styles.sectionTitle}>Basic info</Text>
-                  <View style={styles.inputContainer}>
-                    <UserIcon size={20} color="#666" style={styles.inputIcon} />
-                    <TextInput
-                      style={styles.input}
-                      placeholder="First name"
-                      value={form.first_name}
-                      onChangeText={(text) =>
-                        setForm((prev) => ({ ...prev, first_name: text }))
-                      }
-                      autoCapitalize="words"
-                    />
-                  </View>
+                  <TextInputField
+                    icon={UserIcon}
+                    placeholder="First name"
+                    value={form.first_name}
+                    onChangeText={(text) => setForm((prev) => ({ ...prev, first_name: text }))}
+                    autoCapitalize="words"
+                    style={styles.inputSpacing}
+                  />
 
-                  <View style={styles.inputContainer}>
-                    <UserIcon size={20} color="#666" style={styles.inputIcon} />
-                    <TextInput
-                      style={styles.input}
-                      placeholder="Last name"
-                      value={form.last_name}
-                      onChangeText={(text) =>
-                        setForm((prev) => ({ ...prev, last_name: text }))
-                      }
-                      autoCapitalize="words"
-                    />
-                  </View>
+                  <TextInputField
+                    icon={UserIcon}
+                    placeholder="Last name"
+                    value={form.last_name}
+                    onChangeText={(text) => setForm((prev) => ({ ...prev, last_name: text }))}
+                    autoCapitalize="words"
+                    style={styles.inputSpacing}
+                  />
 
-                  <View style={styles.toggleRow}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.toggleLabel}>Are you over 18?</Text>
-                      <Text style={styles.toggleDescription}>
-                        You must be 18+ to join games and events.
-                      </Text>
-                    </View>
-                    <Switch
-                      value={form.over_18}
-                      onValueChange={(value) =>
-                        setForm((prev) => ({
-                          ...prev,
-                          over_18: value,
-                        }))
-                      }
-                      thumbColor={form.over_18 ? '#FFFFFF' : '#FFFFFF'}
-                      trackColor={{ false: '#E9ECEF', true: '#FF6B35' }}
-                    />
-                  </View>
+                  <ToggleRow
+                    label="Are you over 18?"
+                    sublabel="You must be 18+ to join games and events."
+                    value={form.over_18}
+                    onValueChange={(value) => setForm((prev) => ({ ...prev, over_18: value }))}
+                    style={styles.toggleRow}
+                  />
 
                   <View style={styles.photoSection}>
                     <Text style={styles.photoLabel}>Profile Photo (Optional)</Text>
@@ -278,23 +256,15 @@ export default function OnboardingScreen() {
               {step === 2 && (
                 <View>
                   <Text style={styles.sectionTitle}>About you</Text>
-                  <View style={[styles.inputContainer, styles.textAreaContainer]}>
-                    <BookOpen size={20} color="#666" style={styles.inputIconTop} />
-                    <TextInput
-                      style={[styles.input, styles.textArea]}
-                      placeholder="Share your playing style, favorite position, or anything you'd like other players to know."
-                      value={form.bio}
-                      onChangeText={(text) =>
-                        setForm((prev) => ({
-                          ...prev,
-                          bio: text,
-                        }))
-                      }
-                      multiline
-                      numberOfLines={4}
-                      textAlignVertical="top"
-                    />
-                  </View>
+                  <TextInputField
+                    icon={BookOpen}
+                    placeholder="Share your playing style, favorite position, or anything you'd like other players to know."
+                    value={form.bio ?? ""}
+                    onChangeText={(text) => setForm((prev) => ({ ...prev, bio: text }))}
+                    multiline
+                    numberOfLines={4}
+                    multilineHeight={120}
+                  />
                 </View>
               )}
 
@@ -302,30 +272,22 @@ export default function OnboardingScreen() {
                 <View>
                   <Text style={styles.sectionTitle}>University (optional)</Text>
                   <TouchableOpacity
-                    style={styles.inputContainer}
+                    style={styles.universityPicker}
                     onPress={openUniversityPicker}
                   >
                     <GraduationCap size={20} color="#666" style={styles.inputIcon} />
-                    <Text style={[styles.input, !selectedUniversity && styles.placeholderText]}>
+                    <Text style={[styles.universityPickerText, !selectedUniversity && styles.placeholderText]}>
                       {selectedUniversity ? selectedUniversity.name : 'Select University'}
                     </Text>
                     <ChevronDown size={20} color="#666" />
                   </TouchableOpacity>
 
-                  <View style={styles.inputContainer}>
-                    <BookOpen size={20} color="#666" style={styles.inputIcon} />
-                    <TextInput
-                      style={styles.input}
-                      placeholder="Course"
-                      value={form.course}
-                      onChangeText={(text) =>
-                        setForm((prev) => ({
-                          ...prev,
-                          course: text,
-                        }))
-                      }
-                    />
-                  </View>
+                  <TextInputField
+                    icon={BookOpen}
+                    placeholder="Course"
+                    value={form.course ?? ""}
+                    onChangeText={(text) => setForm((prev) => ({ ...prev, course: text }))}
+                  />
                 </View>
               )}
 
@@ -336,18 +298,14 @@ export default function OnboardingScreen() {
                     Select the societies you're part of
                   </Text>
 
-                  <View style={[styles.inputContainer, styles.societySearchContainer]}>
-                    <Search size={20} color="#666" style={styles.inputIcon} />
-                    <TextInput
-                      style={styles.input}
-                      placeholder="Search societies"
-                      value={societySearch}
-                      onChangeText={setSocietySearch}
-                      autoCorrect={false}
-                      autoCapitalize="none"
-                      clearButtonMode="while-editing"
-                    />
-                  </View>
+                  <TextInputField
+                    icon={Search}
+                    placeholder="Search societies"
+                    value={societySearch}
+                    onChangeText={setSocietySearch}
+                    autoCapitalize="none"
+                    style={styles.inputSpacing}
+                  />
 
                   {societiesLoading ? (
                     <Text style={styles.societyHelperText}>Loading societies…</Text>
@@ -415,22 +373,19 @@ export default function OnboardingScreen() {
 
             <View style={styles.footer}>
               <View style={styles.footerButtons}>
-                <TouchableOpacity style={styles.secondaryButton} onPress={handleBack}>
-                  <Text style={styles.secondaryButtonText}>
-                    {step === 1 ? 'Back' : 'Previous'}
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity style={styles.primaryButton} onPress={handleNext}>
-                  <Text style={styles.primaryButtonText}>
-                    {isLastStep ? 'Finish' : 'Continue'}
-                  </Text>
-                </TouchableOpacity>
+                <Button
+                  label={step === 1 ? 'Back' : 'Previous'}
+                  variant="secondary"
+                  onPress={handleBack}
+                  style={styles.footerButton}
+                />
+                <Button
+                  label={isLastStep ? 'Finish' : 'Continue'}
+                  onPress={handleNext}
+                  style={styles.footerButton}
+                />
               </View>
-
-              <TouchableOpacity onPress={handleSkip} style={styles.skipButton}>
-                <Text style={styles.skipText}>Skip for now</Text>
-              </TouchableOpacity>
+              <Button label="Skip for now" variant="ghost" onPress={handleSkip} style={styles.skipButton} />
             </View>
           </View>
         </ScrollView>
@@ -552,18 +507,11 @@ const styles = StyleSheet.create({
     flex: 1,
     marginTop: 8,
   },
-  errorContainer: {
-    backgroundColor: '#FEF2F2',
-    borderRadius: 12,
-    padding: 12,
+  errorSpacing: {
     marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#FECACA',
   },
-  errorText: {
-    color: '#DC2626',
-    fontSize: 13,
-    textAlign: 'center',
+  inputSpacing: {
+    marginBottom: 16,
   },
   sectionTitle: {
     fontSize: 18,
@@ -571,7 +519,10 @@ const styles = StyleSheet.create({
     color: '#1A1A1A',
     marginBottom: 16,
   },
-  inputContainer: {
+  inputIcon: {
+    marginRight: 12,
+  },
+  universityPicker: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#F8F9FA',
@@ -582,45 +533,19 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E9ECEF',
   },
-  inputIcon: {
-    marginRight: 12,
-  },
-  inputIconTop: {
-    marginRight: 12,
-    marginTop: 12,
-  },
-  input: {
+  universityPickerText: {
     flex: 1,
     fontSize: 16,
     paddingVertical: 14,
     color: '#1A1A1A',
   },
-  textAreaContainer: {
-    alignItems: 'flex-start',
-  },
-  textArea: {
-    minHeight: 120,
-  },
   toggleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
     marginTop: 8,
     padding: 16,
     borderRadius: 16,
     backgroundColor: '#F8F9FA',
     borderWidth: 1,
     borderColor: '#E9ECEF',
-  },
-  toggleLabel: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#1A1A1A',
-    marginBottom: 4,
-  },
-  toggleDescription: {
-    fontSize: 13,
-    color: '#666',
   },
   summaryCard: {
     flexDirection: 'row',
@@ -647,47 +572,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 12,
   },
-  secondaryButton: {
+  footerButton: {
     flex: 1,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#E9ECEF',
-    paddingVertical: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
-  },
-  secondaryButtonText: {
-    fontSize: 15,
-    fontWeight: '500',
-    color: '#1A1A1A',
-  },
-  primaryButton: {
-    flex: 1,
-    borderRadius: 16,
-    paddingVertical: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FF6B35',
-    shadowColor: '#FF6B35',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  primaryButtonText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#FFFFFF',
   },
   skipButton: {
-    marginTop: 12,
-    alignItems: 'center',
-  },
-  skipText: {
-    fontSize: 13,
-    color: '#9CA3AF',
-    textDecorationLine: 'underline',
+    marginTop: 4,
   },
   photoSection: {
     marginTop: 8,
@@ -700,9 +589,6 @@ const styles = StyleSheet.create({
   },
   placeholderText: {
     color: '#9CA3AF',
-  },
-  societySearchContainer: {
-    marginBottom: 8,
   },
   societyHelperText: {
     fontSize: 13,

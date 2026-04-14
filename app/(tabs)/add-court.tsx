@@ -23,7 +23,7 @@ import {
 import Constants from 'expo-constants';
 import ngeohash from 'ngeohash';
 import { useCreateCourt } from '@/hooks/courts/useCreateCourt';
-import { LoadingSpinner } from '@/components/LoadingSpinner';
+import { Button } from '@/components/ui/Button';
 
 const INITIAL_OPENING_HOURS: OpeningHours = {
   always_open: false,
@@ -242,15 +242,7 @@ export default function AddCourtScreen() {
       </ScrollView>
 
       <View style={styles.footer}>
-        {!loading ? (
-          <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
-            <Text style={styles.submitButtonText}>Add Court</Text>
-          </TouchableOpacity>
-        ) : (
-          <TouchableOpacity style={styles.loadingButton}>
-            <LoadingSpinner color="white" size="large" />
-          </TouchableOpacity>
-        )}
+        <Button label="Add Court" onPress={handleSubmit} loading={loading} />
       </View>
     </SafeAreaView>
   );
@@ -321,28 +313,5 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderTopWidth: 1,
     borderTopColor: '#F0F0F0',
-  },
-  submitButton: {
-    backgroundColor: '#FF6B35',
-    borderRadius: 16,
-    paddingVertical: 18,
-    alignItems: 'center',
-    shadowColor: '#FF6B35',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  submitButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '600' },
-  loadingButton: {
-    backgroundColor: '#FF6B35',
-    borderRadius: 16,
-    paddingVertical: 28,
-    alignItems: 'center',
-    shadowColor: '#FF6B35',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
   },
 });

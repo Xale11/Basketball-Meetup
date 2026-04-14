@@ -4,7 +4,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  TextInput,
   Switch,
   Alert,
 } from 'react-native';
@@ -30,6 +29,8 @@ import DateTimeInput from '@/components/DateTimeInput';
 import { ImagePicker } from '@/components/ImagePicker';
 import { OptionCardList } from '@/components/ui/OptionCard';
 import { PillSelector } from '@/components/ui/PillSelector';
+import { Button } from '@/components/ui/Button';
+import { TextInputField } from '@/components/ui/TextInputField';
 
 const VISIBILITY_OPTIONS = [
   { label: 'Public',          description: 'Everyone can see this',        value: EventVisibility.PUBLIC,          icon: Globe },
@@ -155,32 +156,28 @@ export default function CreateScreen() {
         {/* Name */}
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>What's happening? *</Text>
-          <TextInput
-            style={[styles.input, formErrors.name ? styles.inputError : null]}
+          <TextInputField
             value={form.name}
             onChangeText={(val) => {
               setForm((p) => ({ ...p, name: val }));
               if (val.trim()) setFormErrors((e) => ({ ...e, name: undefined as any }));
             }}
             placeholder="e.g. 5-a-side football, study session..."
-            placeholderTextColor="#999"
             maxLength={80}
+            error={formErrors.name}
           />
-          {formErrors.name && <Text style={styles.fieldError}>{formErrors.name}</Text>}
         </View>
 
         {/* Description */}
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>Description</Text>
-          <TextInput
-            style={[styles.input, styles.textArea]}
+          <TextInputField
             value={form.description ?? ''}
             onChangeText={(val) => setForm((p) => ({ ...p, description: val || null }))}
             placeholder="Tell people what this activity is about..."
-            placeholderTextColor="#999"
             multiline
             numberOfLines={3}
-            textAlignVertical="top"
+            multilineHeight={90}
           />
         </View>
 
@@ -421,15 +418,7 @@ export default function CreateScreen() {
       </ScrollView>
 
       <View style={styles.footer}>
-        <TouchableOpacity
-          style={[styles.createButton, loading && styles.createButtonDisabled]}
-          onPress={handleCreate}
-          disabled={loading}
-        >
-          <Text style={styles.createButtonText}>
-            {loading ? 'Creating…' : 'Create Activity'}
-          </Text>
-        </TouchableOpacity>
+        <Button label="Create Activity" onPress={handleCreate} loading={loading} />
       </View>
     </SafeAreaView>
   );
@@ -457,18 +446,6 @@ const styles = StyleSheet.create({
   },
   onlineToggle: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   onlineToggleLabel: { fontSize: 14, color: '#666' },
-  input: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 16,
-    color: '#1A1A1A',
-    borderWidth: 1,
-    borderColor: '#E9ECEF',
-  },
-  inputError: { borderColor: '#DC3545' },
-  textArea: { height: 90, textAlignVertical: 'top' },
   fieldError: { fontSize: 13, color: '#DC3545', marginTop: 4 },
   dateTimeRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   dateSeparator: { fontSize: 14, color: '#888' },
@@ -541,12 +518,4 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#F0F0F0',
   },
-  createButton: {
-    backgroundColor: '#FF6B35',
-    borderRadius: 16,
-    paddingVertical: 16,
-    alignItems: 'center',
-  },
-  createButtonDisabled: { opacity: 0.6 },
-  createButtonText: { fontSize: 16, fontWeight: '700', color: '#FFFFFF' },
 });

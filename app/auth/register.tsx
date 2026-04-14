@@ -1,10 +1,13 @@
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState } from 'react';
 import { Link, router } from 'expo-router';
 import { Mail, Lock, User, Eye, EyeOff } from 'lucide-react-native';
 import { useAuth } from '@/hooks/useAuth';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
+import { Button } from '@/components/ui/Button';
+import { TextInputField } from '@/components/ui/TextInputField';
+import { FormAlert } from '@/components/ui/FormAlert';
 
 export default function RegisterScreen() {
   const [name, setName] = useState('');
@@ -68,84 +71,60 @@ export default function RegisterScreen() {
             </View>
 
             <View style={styles.form}>
-              {error ? (
-                <View style={styles.errorContainer}>
-                  <Text style={styles.errorText}>{error}</Text>
-                </View>
-              ) : null}
+              {error ? <FormAlert message={error} style={styles.alert} /> : null}
 
-              <View style={styles.inputContainer}>
-                <User size={20} color="#666" style={styles.inputIcon} />
-                <TextInput
-                  style={styles.input}
-                  placeholder="Full name"
-                  value={name}
-                  onChangeText={setName}
-                  autoCapitalize="words"
-                  autoComplete="name"
-                />
-              </View>
+              <TextInputField
+                icon={User}
+                placeholder="Full name"
+                value={name}
+                onChangeText={setName}
+                autoCapitalize="words"
+                autoComplete="name"
+                style={styles.inputSpacing}
+              />
 
-              <View style={styles.inputContainer}>
-                <Mail size={20} color="#666" style={styles.inputIcon} />
-                <TextInput
-                  style={styles.input}
-                  placeholder="Email address"
-                  value={email}
-                  onChangeText={setEmail}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoComplete="email"
-                />
-              </View>
+              <TextInputField
+                icon={Mail}
+                placeholder="Email address"
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoComplete="email"
+                style={styles.inputSpacing}
+              />
 
-              <View style={styles.inputContainer}>
-                <Lock size={20} color="#666" style={styles.inputIcon} />
-                <TextInput
-                  style={styles.input}
-                  placeholder="Password"
-                  value={password}
-                  onChangeText={setPassword}
-                  secureTextEntry={!showPassword}
-                  autoComplete="new-password"
-                />
-                <TouchableOpacity 
-                  onPress={() => setShowPassword(!showPassword)}
-                  style={styles.eyeIcon}
-                >
-                  {showPassword ? (
-                    <EyeOff size={20} color="#666" />
-                  ) : (
-                    <Eye size={20} color="#666" />
-                  )}
-                </TouchableOpacity>
-              </View>
+              <TextInputField
+                icon={Lock}
+                placeholder="Password"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={!showPassword}
+                autoComplete="new-password"
+                style={styles.inputSpacing}
+                rightElement={
+                  <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
+                    {showPassword ? <EyeOff size={20} color="#666" /> : <Eye size={20} color="#666" />}
+                  </TouchableOpacity>
+                }
+              />
 
-              <View style={styles.inputContainer}>
-                <Lock size={20} color="#666" style={styles.inputIcon} />
-                <TextInput
-                  style={styles.input}
-                  placeholder="Confirm password"
-                  value={confirmPassword}
-                  onChangeText={setConfirmPassword}
-                  secureTextEntry={!showConfirmPassword}
-                  autoComplete="new-password"
-                />
-                <TouchableOpacity 
-                  onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-                  style={styles.eyeIcon}
-                >
-                  {showConfirmPassword ? (
-                    <EyeOff size={20} color="#666" />
-                  ) : (
-                    <Eye size={20} color="#666" />
-                  )}
-                </TouchableOpacity>
-              </View>
+              <TextInputField
+                icon={Lock}
+                placeholder="Confirm password"
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                secureTextEntry={!showConfirmPassword}
+                autoComplete="new-password"
+                style={styles.inputSpacing}
+                rightElement={
+                  <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)} style={styles.eyeIcon}>
+                    {showConfirmPassword ? <EyeOff size={20} color="#666" /> : <Eye size={20} color="#666" />}
+                  </TouchableOpacity>
+                }
+              />
 
-              <TouchableOpacity style={styles.registerButton} onPress={handleRegister}>
-                <Text style={styles.registerButtonText}>Create Account</Text>
-              </TouchableOpacity>
+              <Button label="Create Account" onPress={handleRegister} style={styles.registerButton} />
 
               <View style={styles.terms}>
                 <Text style={styles.termsText}>
@@ -220,58 +199,17 @@ const styles = StyleSheet.create({
   form: {
     marginBottom: 32,
   },
-  errorContainer: {
-    backgroundColor: '#FEF2F2',
-    borderRadius: 12,
-    padding: 16,
+  alert: {
     marginBottom: 24,
-    borderWidth: 1,
-    borderColor: '#FECACA',
   },
-  errorText: {
-    color: '#DC2626',
-    fontSize: 14,
-    textAlign: 'center',
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F8F9FA',
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 4,
+  inputSpacing: {
     marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#E9ECEF',
-  },
-  inputIcon: {
-    marginRight: 12,
-  },
-  input: {
-    flex: 1,
-    fontSize: 16,
-    paddingVertical: 16,
-    color: '#1A1A1A',
   },
   eyeIcon: {
     padding: 4,
   },
   registerButton: {
-    backgroundColor: '#FF6B35',
-    borderRadius: 16,
-    paddingVertical: 18,
-    alignItems: 'center',
     marginTop: 8,
-    shadowColor: '#FF6B35',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  registerButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
   },
   terms: {
     marginTop: 24,

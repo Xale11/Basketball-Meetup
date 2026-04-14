@@ -1,7 +1,9 @@
-import { View, Text, TextInput, TouchableOpacity, Modal, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, Modal, StyleSheet } from 'react-native';
 import { X } from 'lucide-react-native';
 import { useState, useEffect } from 'react';
 import { User } from '@/types/user';
+import { TextInputField } from '@/components/ui/TextInputField';
+import { Button } from '@/components/ui/Button';
 
 interface EditProfileForm {
   first_name: string;
@@ -48,42 +50,40 @@ export function EditProfileModal({ visible, user, saving, onClose, onSave }: Edi
             </TouchableOpacity>
           </View>
 
-          <Text style={styles.label}>First Name</Text>
-          <TextInput
-            style={styles.input}
+          <TextInputField
+            label="First Name"
             value={form.first_name}
             onChangeText={(t) => setForm((p) => ({ ...p, first_name: t }))}
             autoCapitalize="words"
+            style={styles.inputSpacing}
           />
 
-          <Text style={styles.label}>Last Name</Text>
-          <TextInput
-            style={styles.input}
+          <TextInputField
+            label="Last Name"
             value={form.last_name}
             onChangeText={(t) => setForm((p) => ({ ...p, last_name: t }))}
             autoCapitalize="words"
+            style={styles.inputSpacing}
           />
 
-          <Text style={styles.label}>Bio</Text>
-          <TextInput
-            style={[styles.input, styles.textArea]}
+          <TextInputField
+            label="Bio"
             value={form.bio}
             onChangeText={(t) => setForm((p) => ({ ...p, bio: t }))}
             multiline
             numberOfLines={3}
-            textAlignVertical="top"
+            multilineHeight={80}
+            style={styles.inputSpacing}
           />
 
-          <Text style={styles.label}>Course</Text>
-          <TextInput
-            style={styles.input}
+          <TextInputField
+            label="Course"
             value={form.course}
             onChangeText={(t) => setForm((p) => ({ ...p, course: t }))}
+            style={styles.inputSpacing}
           />
 
-          <TouchableOpacity style={styles.saveButton} onPress={() => onSave(form)} disabled={saving}>
-            <Text style={styles.saveButtonText}>{saving ? 'Saving…' : 'Save Changes'}</Text>
-          </TouchableOpacity>
+          <Button label={saving ? 'Saving…' : 'Save Changes'} onPress={() => onSave(form)} disabled={saving} style={styles.saveButton} />
         </View>
       </View>
     </Modal>
@@ -109,25 +109,6 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   title: { fontSize: 20, fontWeight: '700', color: '#1A1A1A' },
-  label: { fontSize: 14, fontWeight: '500', color: '#444', marginBottom: 6 },
-  input: {
-    backgroundColor: '#F8F9FA',
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 15,
-    color: '#1A1A1A',
-    borderWidth: 1,
-    borderColor: '#E9ECEF',
-    marginBottom: 16,
-  },
-  textArea: { height: 80, textAlignVertical: 'top' },
-  saveButton: {
-    backgroundColor: '#FF6B35',
-    borderRadius: 14,
-    paddingVertical: 14,
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  saveButtonText: { fontSize: 16, fontWeight: '700', color: '#FFFFFF' },
+  inputSpacing: { marginBottom: 16 },
+  saveButton: { marginTop: 4 },
 });
