@@ -25,29 +25,29 @@ import {
 } from '@/types/event';
 import { useCreateEvent } from '@/hooks/events/useCreateEvent';
 import { useFetchUserSocieties } from '@/hooks/societies/useFetchUserSocieties';
-import { useFetchUniversityMembership } from '@/hooks/universities/useFetchUniversityMembership';
 import { useAuth } from '@/hooks/useAuth';
-import { UniversityRole } from '@/types/universities';
 import DateTimeInput from '@/components/DateTimeInput';
 import { ImagePicker } from '@/components/ImagePicker';
+import { OptionCardList } from '@/components/ui/OptionCard';
+import { PillSelector } from '@/components/ui/PillSelector';
 
-const VISIBILITY_OPTIONS: { label: string; description: string; value: EventVisibility; icon: typeof Globe }[] = [
+const VISIBILITY_OPTIONS = [
   { label: 'Public',          description: 'Everyone can see this',        value: EventVisibility.PUBLIC,          icon: Globe },
   { label: 'Society Only',    description: 'Society members only',         value: EventVisibility.SOCIETY_ONLY,    icon: Users },
   { label: 'University Only', description: 'Your university only',         value: EventVisibility.UNIVERSITY_ONLY, icon: Building },
   { label: 'Private',         description: 'Hidden from discovery',        value: EventVisibility.PRIVATE,         icon: Lock },
 ];
 
-const JOIN_POLICY_OPTIONS: { label: string; description: string; value: EventJoinPolicy; icon: typeof Globe }[] = [
-  { label: 'Open',             description: 'Anyone can join instantly',    value: EventJoinPolicy.OPEN,              icon: Globe },
-  { label: 'Approval',         description: 'You approve each request',    value: EventJoinPolicy.APPROVAL_REQUIRED, icon: Clock },
-  { label: 'Invite Only',      description: 'By invitation only',          value: EventJoinPolicy.INVITE_ONLY,       icon: Lock },
+const JOIN_POLICY_OPTIONS = [
+  { label: 'Open',        description: 'Anyone can join instantly',   value: EventJoinPolicy.OPEN,              icon: Globe },
+  { label: 'Approval',    description: 'You approve each request',    value: EventJoinPolicy.APPROVAL_REQUIRED, icon: Clock },
+  { label: 'Invite Only', description: 'By invitation only',          value: EventJoinPolicy.INVITE_ONLY,       icon: Lock },
 ];
 
-const HOST_TYPE_OPTIONS: { label: string; description: string; value: EventHostType; icon: typeof Globe }[] = [
-  { label: 'Personal',    description: 'Just you',                         value: EventHostType.USER,       icon: Users },
-  { label: 'Society',     description: 'On behalf of a society',           value: EventHostType.SOCIETY,    icon: Users },
-  { label: 'University',  description: 'On behalf of your university',     value: EventHostType.UNIVERSITY, icon: Building },
+const HOST_TYPE_OPTIONS = [
+  { label: 'Personal',   description: 'Just you',                        value: EventHostType.USER,       icon: Users },
+  { label: 'Society',    description: 'On behalf of a society',          value: EventHostType.SOCIETY,    icon: Users },
+  { label: 'University', description: 'On behalf of your university',    value: EventHostType.UNIVERSITY, icon: Building },
 ];
 
 const INITIAL_FORM: CreateEventForm = {
@@ -81,10 +81,7 @@ export default function CreateScreen() {
 
   const { user } = useAuth();
   const { memberships } = useFetchUserSocieties(user?.id);
-  const { membership: uniMembership } = useFetchUniversityMembership(user?.id);
   const { createEvent, loading } = useCreateEvent();
-
-  const isUniAdmin = uniMembership?.role === UniversityRole.ADMIN;
 
   const needsSociety =
     form.host_type === EventHostType.SOCIETY ||
@@ -138,6 +135,11 @@ export default function CreateScreen() {
       },
     );
   };
+
+  const societyPillOptions = memberships.map((m) => ({
+    label: m.societies.name,
+    value: m.society_id,
+  }));
 
   return (
     <SafeAreaView style={styles.container}>
@@ -277,127 +279,65 @@ export default function CreateScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>Visibility</Text>
           <Text style={styles.sectionSubLabel}>Who can see this activity?</Text>
-          <View style={styles.optionList}>
-            {VISIBILITY_OPTIONS.map(({ label, description, value, icon: Icon }) => {
-              const active = form.visibility === value;
-              return (
-                <TouchableOpacity
-                  key={value}
-                  style={[styles.optionCard, active && styles.optionCardActive]}
-                  onPress={() => {
-                    const newNeedsSociety =
-                      form.host_type === EventHostType.SOCIETY ||
-                      value === EventVisibility.SOCIETY_ONLY;
-                    setForm((p) => ({
-                      ...p,
-                      visibility: value,
-                      university_id: user?.university_id ?? null,
-                      society_id: newNeedsSociety ? (memberships[0]?.society_id ?? null) : null,
-                    }));
-                  }}
-                >
-                  <View style={[styles.optionIcon, active && styles.optionIconActive]}>
-                    <Icon size={20} color={active ? '#FFFFFF' : '#666'} />
-                  </View>
-                  <View style={styles.optionText}>
-                    <Text style={[styles.optionLabel, active && styles.optionLabelActive]}>{label}</Text>
-                    <Text style={styles.optionDescription}>{description}</Text>
-                  </View>
-                  <View style={[styles.radioOuter, active && styles.radioOuterActive]}>
-                    {active && <View style={styles.radioInner} />}
-                  </View>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
+          <OptionCardList
+            options={VISIBILITY_OPTIONS}
+            selected={form.visibility}
+            onSelect={(value) => {
+              const newNeedsSociety =
+                form.host_type === EventHostType.SOCIETY ||
+                value === EventVisibility.SOCIETY_ONLY;
+              setForm((p) => ({
+                ...p,
+                visibility: value,
+                university_id: user?.university_id ?? null,
+                society_id: newNeedsSociety ? (memberships[0]?.society_id ?? null) : null,
+              }));
+            }}
+          />
         </View>
 
         {/* Join Policy */}
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>Who Can Join?</Text>
           <Text style={styles.sectionSubLabel}>How do people get in?</Text>
-          <View style={styles.optionList}>
-            {JOIN_POLICY_OPTIONS.map(({ label, description, value, icon: Icon }) => {
-              const active = form.join_policy === value;
-              return (
-                <TouchableOpacity
-                  key={value}
-                  style={[styles.optionCard, active && styles.optionCardActive]}
-                  onPress={() => setForm((p) => ({ ...p, join_policy: value }))}
-                >
-                  <View style={[styles.optionIcon, active && styles.optionIconActive]}>
-                    <Icon size={20} color={active ? '#FFFFFF' : '#666'} />
-                  </View>
-                  <View style={styles.optionText}>
-                    <Text style={[styles.optionLabel, active && styles.optionLabelActive]}>{label}</Text>
-                    <Text style={styles.optionDescription}>{description}</Text>
-                  </View>
-                  <View style={[styles.radioOuter, active && styles.radioOuterActive]}>
-                    {active && <View style={styles.radioInner} />}
-                  </View>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
+          <OptionCardList
+            options={JOIN_POLICY_OPTIONS}
+            selected={form.join_policy}
+            onSelect={(value) => setForm((p) => ({ ...p, join_policy: value }))}
+          />
         </View>
 
         {/* Host Type */}
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>Hosted By</Text>
           <Text style={styles.sectionSubLabel}>Who is organising this activity?</Text>
-          <View style={styles.optionList}>
-            {HOST_TYPE_OPTIONS.map(({ label, description, value, icon: Icon }) => {
-              const active = form.host_type === value;
-              return (
-                <TouchableOpacity
-                  key={value}
-                  style={[styles.optionCard, active && styles.optionCardActive]}
-                  onPress={() => {
-                    const newNeedsSociety =
-                      value === EventHostType.SOCIETY ||
-                      form.visibility === EventVisibility.SOCIETY_ONLY;
-                    setForm((p) => ({
-                      ...p,
-                      host_type: value,
-                      university_id: user?.university_id ?? null,
-                      society_id: newNeedsSociety ? (memberships[0]?.society_id ?? null) : null,
-                    }));
-                  }}
-                >
-                  <View style={[styles.optionIcon, active && styles.optionIconActive]}>
-                    <Icon size={20} color={active ? '#FFFFFF' : '#666'} />
-                  </View>
-                  <View style={styles.optionText}>
-                    <Text style={[styles.optionLabel, active && styles.optionLabelActive]}>{label}</Text>
-                    <Text style={styles.optionDescription}>{description}</Text>
-                  </View>
-                  <View style={[styles.radioOuter, active && styles.radioOuterActive]}>
-                    {active && <View style={styles.radioInner} />}
-                  </View>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
+          <OptionCardList
+            options={HOST_TYPE_OPTIONS}
+            selected={form.host_type}
+            onSelect={(value) => {
+              const newNeedsSociety =
+                value === EventHostType.SOCIETY ||
+                form.visibility === EventVisibility.SOCIETY_ONLY;
+              setForm((p) => ({
+                ...p,
+                host_type: value,
+                university_id: user?.university_id ?? null,
+                society_id: newNeedsSociety ? (memberships[0]?.society_id ?? null) : null,
+              }));
+            }}
+          />
 
           {needsSociety && memberships.length > 1 && (
             <View style={styles.subSection}>
               <Text style={styles.subSectionLabel}>Which society?</Text>
-              <View style={styles.chipRow}>
-                {memberships.map((m) => (
-                  <TouchableOpacity
-                    key={m.society_id}
-                    style={[styles.chip, form.society_id === m.society_id && styles.chipActive]}
-                    onPress={() => {
-                      setForm((p) => ({ ...p, society_id: m.society_id }));
-                      setFormErrors((e) => ({ ...e, society_id: undefined as any }));
-                    }}
-                  >
-                    <Text style={[styles.chipText, form.society_id === m.society_id && styles.chipTextActive]}>
-                      {m.societies.name}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
+              <PillSelector
+                options={societyPillOptions}
+                selected={form.society_id ?? ''}
+                onSelect={(value) => {
+                  setForm((p) => ({ ...p, society_id: value }));
+                  setFormErrors((e) => ({ ...e, society_id: undefined as any }));
+                }}
+              />
               {formErrors.society_id && <Text style={styles.fieldError}>{formErrors.society_id}</Text>}
             </View>
           )}
@@ -530,18 +470,6 @@ const styles = StyleSheet.create({
   inputError: { borderColor: '#DC3545' },
   textArea: { height: 90, textAlignVertical: 'top' },
   fieldError: { fontSize: 13, color: '#DC3545', marginTop: 4 },
-  chipRow: { flexDirection: 'row', gap: 10, flexWrap: 'wrap' },
-  chip: {
-    paddingHorizontal: 18,
-    paddingVertical: 9,
-    borderRadius: 20,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E9ECEF',
-  },
-  chipActive: { backgroundColor: '#FF6B35', borderColor: '#FF6B35' },
-  chipText: { fontSize: 14, fontWeight: '600', color: '#666' },
-  chipTextActive: { color: '#FFFFFF' },
   dateTimeRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   dateSeparator: { fontSize: 14, color: '#888' },
   addressInputWrapper: {
@@ -561,42 +489,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 0,
     height: 48,
   },
-  optionList: { gap: 10 },
-  optionCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: '#E9ECEF',
-    gap: 12,
-  },
-  optionCardActive: { borderColor: '#FF6B35', backgroundColor: '#FFF4F0' },
-  optionIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#F0F0F0',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  optionIconActive: { backgroundColor: '#FF6B35' },
-  optionText: { flex: 1 },
-  optionLabel: { fontSize: 15, fontWeight: '600', color: '#1A1A1A' },
-  optionLabelActive: { color: '#FF6B35' },
-  optionDescription: { fontSize: 13, color: '#888', marginTop: 2 },
-  radioOuter: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: '#CCC',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  radioOuterActive: { borderColor: '#FF6B35' },
-  radioInner: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#FF6B35' },
   subSection: { marginTop: 16 },
   subSectionLabel: { fontSize: 14, fontWeight: '500', color: '#666', marginBottom: 8 },
   autoPopulatedTag: {

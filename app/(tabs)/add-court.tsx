@@ -6,16 +6,16 @@ import {
   TouchableOpacity,
   TextInput,
   Alert,
-  Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState } from 'react';
 import { router } from 'expo-router';
-import { ArrowLeft, MapPin, Plus, X, Clock } from 'lucide-react-native';
+import { ArrowLeft, MapPin, Clock } from 'lucide-react-native';
 import { ImagePicker } from '@/components/ImagePicker';
 import { useAuth } from '@/hooks/useAuth';
 import { CreateCourtForm, OpeningHours } from '@/types/courts';
-import TimeInput from '@/components/TimeInput';
+import { CourtOpeningHours } from '@/components/courts/CourtOpeningHours';
+import { CourtTagSelector } from '@/components/courts/CourtTagSelector';
 import {
   GooglePlaceDetail,
   GooglePlacesAutocomplete,
@@ -25,9 +25,20 @@ import ngeohash from 'ngeohash';
 import { useCreateCourt } from '@/hooks/courts/useCreateCourt';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 
+const INITIAL_OPENING_HOURS: OpeningHours = {
+  always_open: false,
+  monday: { always_open: false, open_time: '', close_time: '23:59' },
+  tuesday: { always_open: false, open_time: '', close_time: '23:59' },
+  wednesday: { always_open: false, open_time: '', close_time: '23:59' },
+  thursday: { always_open: false, open_time: '', close_time: '23:59' },
+  friday: { always_open: false, open_time: '', close_time: '23:59' },
+  saturday: { always_open: false, open_time: '', close_time: '23:59' },
+  sunday: { always_open: false, open_time: '', close_time: '23:59' },
+};
+
 export default function AddCourtScreen() {
   const {} = useAuth();
-  const { createCourt, data, loading } = useCreateCourt();
+  const { createCourt, loading } = useCreateCourt();
 
   const [form, setForm] = useState<CreateCourtForm>({
     name: '',
@@ -38,104 +49,9 @@ export default function AddCourtScreen() {
     description: '',
     images: [],
     tags: [],
-    opening_hours: {
-      always_open: false,
-      monday: { always_open: false, open_time: '', close_time: '23:59' },
-      tuesday: { always_open: false, open_time: '', close_time: '23:59' },
-      wednesday: { always_open: false, open_time: '', close_time: '23:59' },
-      thursday: { always_open: false, open_time: '', close_time: '23:59' },
-      friday: { always_open: false, open_time: '', close_time: '23:59' },
-      saturday: { always_open: false, open_time: '', close_time: '23:59' },
-      sunday: { always_open: false, open_time: '', close_time: '23:59' },
-    },
+    opening_hours: INITIAL_OPENING_HOURS,
     created_by: '',
   });
-
-  const [newTag, setNewTag] = useState('');
-
-  const commonTags = [
-    'Outdoor Court',
-    'Indoor Court',
-    'Full Court',
-    'Half Court',
-    'Lighting',
-    'Free Parking',
-    'Restrooms',
-    'Water Fountain',
-    'Seating',
-    'Scoreboard',
-  ];
-
-  const handleAddImage = (uri: string) => {
-    setForm((prev) => ({ ...prev, images: [...prev.images, uri] }));
-  };
-
-  const handleRemoveImage = (index: number) => {
-    setForm((prev) => ({
-      ...prev,
-      images: prev.images.filter((_, i) => i !== index),
-    }));
-  };
-
-  const handleAddTag = (tag: string) => {
-    if (!form.tags.includes(tag)) {
-      setForm((prev) => ({ ...prev, tags: [...prev.tags, tag] }));
-    }
-  };
-
-  const handleRemoveTag = (tag: string) => {
-    setForm((prev) => ({ ...prev, tags: prev.tags.filter((a) => a !== tag) }));
-  };
-
-  const handleAddCustomTag = () => {
-    if (newTag.trim() && !form.tags.includes(newTag.trim())) {
-      setForm((prev) => ({ ...prev, tags: [...prev.tags, newTag.trim()] }));
-      setNewTag('');
-    }
-  };
-
-  const updateDayHours = (
-    day: keyof Omit<OpeningHours, 'always_open'>,
-    field: 'always_open' | 'open_time' | 'close_time',
-    value: boolean | string
-  ) => {
-    if (
-      (field === 'open_time' && value > form.opening_hours[day].close_time) ||
-      (field === 'close_time' && value < form.opening_hours[day].open_time)
-    ) {
-      Alert.alert('Error', 'Open time must be before close time');
-      return false;
-    } else {
-      setForm((prev) => ({
-        ...prev,
-        opening_hours: {
-          ...prev.opening_hours,
-          [day]: {
-            ...prev.opening_hours[day],
-            [field]: value,
-          },
-        },
-      }));
-      return true;
-    }
-  };
-
-  const updateGlobalAlwaysOpen = (value: boolean) => {
-    setForm((prev) => ({
-      ...prev,
-      opening_hours: {
-        ...prev.opening_hours,
-        always_open: value,
-        monday: { ...prev.opening_hours.monday, always_open: value },
-        tuesday: { ...prev.opening_hours.tuesday, always_open: value },
-        wednesday: { ...prev.opening_hours.wednesday, always_open: value },
-        thursday: { ...prev.opening_hours.thursday, always_open: value },
-        friday: { ...prev.opening_hours.friday, always_open: value },
-        saturday: { ...prev.opening_hours.saturday, always_open: value },
-        sunday: { ...prev.opening_hours.sunday, always_open: value },
-      },
-    }));
-  };
 
   const addLocationToForm = (loc: GooglePlaceDetail | null) => {
     if (
@@ -145,78 +61,48 @@ export default function AddCourtScreen() {
         !loc?.geometry.location.lng &&
         !loc?.geometry.location.lat)
     ) {
-      Alert.alert(
-        'Error',
-        'There was an error setting the location. Please try again. (#Lng/Lat)'
-      );
+      Alert.alert('Error', 'There was an error setting the location. Please try again.');
       return;
-    } else {
-      setForm((prev) => ({
-        ...prev,
-        address: loc?.formatted_address || loc?.formattedAddress,
-        longitude:
-          loc?.geometry.location.longitude || loc?.geometry.location.lng,
-        latitude: loc?.geometry.location.latitude || loc?.geometry.location.lat,
-        geohash: ngeohash.encode(
-          loc?.geometry.location.latitude || loc?.geometry.location.lat,
-          loc?.geometry.location.longitude || loc?.geometry.location.lng,
-          9
-        ),
-      }));
     }
+    setForm((prev) => ({
+      ...prev,
+      address: loc?.formatted_address || loc?.formattedAddress || '',
+      longitude: loc?.geometry.location.longitude || loc?.geometry.location.lng,
+      latitude: loc?.geometry.location.latitude || loc?.geometry.location.lat,
+      geohash: ngeohash.encode(
+        loc?.geometry.location.latitude || loc?.geometry.location.lat,
+        loc?.geometry.location.longitude || loc?.geometry.location.lng,
+        9,
+      ),
+    }));
   };
 
-  const isFormValid = (form: CreateCourtForm): boolean => {
-    if (
-      !form.name ||
-      !form.name.trim() ||
-      !form.address ||
-      !form.address.trim()
-    ) {
+  const isFormValid = (): boolean => {
+    if (!form.name?.trim() || !form.address?.trim()) {
       Alert.alert('Error', 'Please fill in court name and address');
       return false;
     }
-
-    // Check lat/lon required (may be 0 for some, but likely shouldn't)
     if (isNaN(form.latitude) || isNaN(form.longitude)) {
       Alert.alert('Error', 'Location coordinates are missing or invalid.');
       return false;
     }
-
-    // Validate opening hours structure for each day
-    if (form.opening_hours && !form.opening_hours.always_open) {
+    if (!form.opening_hours.always_open) {
       const days: (keyof Omit<OpeningHours, 'always_open'>)[] = [
-        'monday',
-        'tuesday',
-        'wednesday',
-        'thursday',
-        'friday',
-        'saturday',
-        'sunday',
+        'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday',
       ];
       for (const day of days) {
         const dayHours = form.opening_hours[day];
-        if (!dayHours) {
-          Alert.alert('Error', `Opening hours not specified for ${day}.`);
-          return false;
-        }
         if (!dayHours.open_time.trim() || !dayHours.close_time.trim()) {
           Alert.alert(
             'Error',
-            `Please enter both opening and closing times for ${
-              day.charAt(0).toUpperCase() + day.slice(1)
-            }.`
+            `Please enter both opening and closing times for ${day.charAt(0).toUpperCase() + day.slice(1)}.`,
           );
           return false;
         }
-        // Ensures close time is not before the opening time
-        // We'll stringify and compare as "HH:mm"
         if (dayHours.open_time.trim() >= dayHours.close_time.trim()) {
           Alert.alert(
             'Error',
-            `For ${
-              day.charAt(0).toUpperCase() + day.slice(1)
-            }, the closing time must be after the opening time.`
+            `For ${day.charAt(0).toUpperCase() + day.slice(1)}, the closing time must be after the opening time.`,
           );
           return false;
         }
@@ -226,27 +112,17 @@ export default function AddCourtScreen() {
   };
 
   const handleSubmit = () => {
-    if (!isFormValid(form)) return;
-
+    if (!isFormValid()) return;
     createCourt(form, {
-      onSuccess: (_) => {
-        router.replace('/(tabs)/map');
-      },
-      onError: (error) => {
-        console.log(error)
-      }
+      onSuccess: () => router.replace('/(tabs)/map'),
+      onError: (error) => console.log(error),
     });
-
-    
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          style={styles.backButton}
-        >
+        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <ArrowLeft size={24} color="#1A1A1A" />
         </TouchableOpacity>
         <Text style={styles.title}>Add New Court</Text>
@@ -258,6 +134,7 @@ export default function AddCourtScreen() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
+        {/* Basic Information */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Basic Information</Text>
 
@@ -266,9 +143,7 @@ export default function AddCourtScreen() {
             <TextInput
               style={styles.input}
               value={form.name}
-              onChangeText={(val) =>
-                setForm((prev) => ({ ...prev, name: val }))
-              }
+              onChangeText={(val) => setForm((prev) => ({ ...prev, name: val }))}
               placeholder="e.g., Central Park Basketball Court"
               placeholderTextColor="#999"
             />
@@ -289,9 +164,7 @@ export default function AddCourtScreen() {
                   language: 'en',
                   type: 'establishment',
                 }}
-                onPress={(_, details) => {
-                  addLocationToForm(details);
-                }}
+                onPress={(_, details) => addLocationToForm(details ?? null)}
                 enablePoweredByContainer={false}
               />
             </View>
@@ -302,9 +175,7 @@ export default function AddCourtScreen() {
             <TextInput
               style={[styles.input, styles.textArea]}
               value={form.description}
-              onChangeText={(val) =>
-                setForm((prev) => ({ ...prev, description: val }))
-              }
+              onChangeText={(val) => setForm((prev) => ({ ...prev, description: val }))}
               placeholder="Tell players about this court..."
               placeholderTextColor="#999"
               multiline
@@ -313,6 +184,7 @@ export default function AddCourtScreen() {
           </View>
         </View>
 
+        {/* Photos */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Photos</Text>
           <Text style={styles.sectionSubtitle}>
@@ -324,7 +196,12 @@ export default function AddCourtScreen() {
               <ImagePicker
                 selectedImage={image}
                 onImageSelected={() => {}}
-                onImageRemoved={() => handleRemoveImage(index)}
+                onImageRemoved={() =>
+                  setForm((prev) => ({
+                    ...prev,
+                    images: prev.images.filter((_, i) => i !== index),
+                  }))
+                }
                 placeholder="Court Photo"
               />
             </View>
@@ -332,191 +209,35 @@ export default function AddCourtScreen() {
 
           {form.images.length < 5 && (
             <ImagePicker
-              onImageSelected={handleAddImage}
-              placeholder={
-                form.images.length === 0
-                  ? 'Add First Photo'
-                  : 'Add Another Photo'
+              onImageSelected={(uri) =>
+                setForm((prev) => ({ ...prev, images: [...prev.images, uri] }))
               }
+              placeholder={form.images.length === 0 ? 'Add First Photo' : 'Add Another Photo'}
             />
           )}
         </View>
 
+        {/* Tags */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Tags</Text>
-          <Text style={styles.sectionSubtitle}>
-            Select all tags available at this court
-          </Text>
-
-          <View style={styles.tagsGrid}>
-            {commonTags.map((tag) => (
-              <TouchableOpacity
-                key={tag}
-                style={[
-                  styles.tagChip,
-                  form.tags.includes(tag) && styles.tagChipSelected,
-                ]}
-                onPress={() =>
-                  form.tags.includes(tag)
-                    ? handleRemoveTag(tag)
-                    : handleAddTag(tag)
-                }
-              >
-                <Text
-                  style={[
-                    styles.tagText,
-                    form.tags.includes(tag) && styles.tagTextSelected,
-                  ]}
-                >
-                  {tag}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          <View style={styles.customTagContainer}>
-            <TextInput
-              style={styles.customTagInput}
-              value={newTag}
-              onChangeText={setNewTag}
-              placeholder="Add custom tag"
-              placeholderTextColor="#999"
-              onSubmitEditing={handleAddCustomTag}
-            />
-            <TouchableOpacity
-              style={styles.addTagButton}
-              onPress={handleAddCustomTag}
-            >
-              <Plus size={20} color="#FF6B35" />
-            </TouchableOpacity>
-          </View>
-
-          {form.tags.length > 0 && (
-            <View style={styles.selectedTags}>
-              <Text style={styles.selectedTagsTitle}>Selected Tags:</Text>
-              <View style={styles.selectedTagsGrid}>
-                {form.tags.map((tag) => (
-                  <View key={tag} style={styles.selectedTagChip}>
-                    <Text style={styles.selectedTagText}>{tag}</Text>
-                    <TouchableOpacity onPress={() => handleRemoveTag(tag)}>
-                      <X size={16} color="#666" />
-                    </TouchableOpacity>
-                  </View>
-                ))}
-              </View>
-            </View>
-          )}
+          <Text style={styles.sectionSubtitle}>Select all tags available at this court</Text>
+          <CourtTagSelector
+            tags={form.tags}
+            onChange={(tags) => setForm((prev) => ({ ...prev, tags }))}
+          />
         </View>
 
+        {/* Opening Hours */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Clock size={20} color="#FF6B35" />
             <Text style={styles.sectionTitle}>Opening Hours</Text>
           </View>
-          <Text style={styles.sectionSubtitle}>
-            Set when your court is available for play
-          </Text>
-
-          {/* Global Always Open Toggle */}
-          <View style={styles.alwaysOpenContainer}>
-            <View style={styles.alwaysOpenTextContainer}>
-              <Text style={styles.label}>Always Open</Text>
-              <Text style={styles.alwaysOpenSubtitle}>
-                Court is available 24/7
-              </Text>
-            </View>
-            <Switch
-              value={form.opening_hours.always_open}
-              onValueChange={updateGlobalAlwaysOpen}
-              trackColor={{ false: '#E9ECEF', true: '#FF6B35' }}
-              thumbColor={form.opening_hours.always_open ? '#FFFFFF' : '#FFFFFF'}
-            />
-          </View>
-
-          {!form.opening_hours.always_open && (
-            <>
-              {[
-                { key: 'monday', label: 'Monday' },
-                { key: 'tuesday', label: 'Tuesday' },
-                { key: 'wednesday', label: 'Wednesday' },
-                { key: 'thursday', label: 'Thursday' },
-                { key: 'friday', label: 'Friday' },
-                { key: 'saturday', label: 'Saturday' },
-                { key: 'sunday', label: 'Sunday' },
-              ].map(({ key, label }) => (
-                <View key={key} style={styles.dayHoursContainer}>
-                  <View style={styles.dayHeader}>
-                    <Text style={styles.dayLabel}>{label}</Text>
-                    <View style={styles.openAllDayContainer}>
-                      <Text>Open All Day</Text>
-                      <Switch
-                        trackColor={{ false: '#E9ECEF', true: '#FF6B35' }}
-                        thumbColor={
-                          form.opening_hours[
-                            key as keyof Omit<OpeningHours, 'always_open'>
-                          ].always_open
-                            ? '#FFFFFF'
-                            : '#FFFFFF'
-                        }
-                        value={
-                          form.opening_hours[
-                            key as keyof Omit<OpeningHours, 'always_open'>
-                          ].always_open
-                        }
-                        onValueChange={(value) => {
-                          updateDayHours(
-                            key as keyof Omit<OpeningHours, 'always_open'>,
-                            'always_open',
-                            value
-                          );
-                        }}
-                      />
-                    </View>
-                  </View>
-
-                  {!form.opening_hours[
-                    key as keyof Omit<OpeningHours, 'always_open'>
-                  ].always_open && (
-                    <View style={styles.timeInputsContainer}>
-                      <TimeInput
-                        defaultValue={
-                          form.opening_hours[
-                            key as keyof Omit<OpeningHours, 'always_open'>
-                          ].open_time
-                        }
-                        label="Open Time"
-                        onChange={(time: string) =>
-                          updateDayHours(
-                            key as keyof Omit<OpeningHours, 'always_open'>,
-                            'open_time',
-                            time
-                          )
-                        }
-                      />
-                      <Text style={styles.timeSeparator}>to</Text>
-                      <View style={styles.timeInputGroup}>
-                        <TimeInput
-                          defaultValue={
-                            form.opening_hours[
-                              key as keyof Omit<OpeningHours, 'always_open'>
-                            ].close_time
-                          }
-                          label="Close Time"
-                          onChange={(time: string) =>
-                            updateDayHours(
-                              key as keyof Omit<OpeningHours, 'always_open'>,
-                              'close_time',
-                              time
-                            )
-                          }
-                        />
-                      </View>
-                    </View>
-                  )}
-                </View>
-              ))}
-            </>
-          )}
+          <Text style={styles.sectionSubtitle}>Set when your court is available for play</Text>
+          <CourtOpeningHours
+            value={form.opening_hours}
+            onChange={(opening_hours) => setForm((prev) => ({ ...prev, opening_hours }))}
+          />
         </View>
       </ScrollView>
 
@@ -536,10 +257,7 @@ export default function AddCourtScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F8F9FA',
-  },
+  container: { flex: 1, backgroundColor: '#F8F9FA' },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -550,23 +268,10 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#F0F0F0',
   },
-  backButton: {
-    padding: 8,
-    borderRadius: 12,
-    backgroundColor: '#F8F9FA',
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1A1A1A',
-  },
-  placeholder: {
-    width: 40,
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: 20,
-  },
+  backButton: { padding: 8, borderRadius: 12, backgroundColor: '#F8F9FA' },
+  title: { fontSize: 18, fontWeight: '600', color: '#1A1A1A' },
+  placeholder: { width: 40 },
+  content: { flex: 1, paddingHorizontal: 20 },
   section: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
@@ -578,26 +283,16 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 3,
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1A1A1A',
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
     marginBottom: 8,
   },
-  sectionSubtitle: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 20,
-  },
-  inputGroup: {
-    marginBottom: 20,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#1A1A1A',
-    marginBottom: 8,
-  },
+  sectionTitle: { fontSize: 18, fontWeight: '600', color: '#1A1A1A', marginBottom: 8 },
+  sectionSubtitle: { fontSize: 14, color: '#666', marginBottom: 20 },
+  inputGroup: { marginBottom: 20 },
+  label: { fontSize: 16, fontWeight: '500', color: '#1A1A1A', marginBottom: 8 },
   input: {
     backgroundColor: '#F8F9FA',
     borderRadius: 12,
@@ -608,10 +303,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E9ECEF',
   },
-  textArea: {
-    height: 100,
-    textAlignVertical: 'top',
-  },
+  textArea: { height: 100, textAlignVertical: 'top' },
   addressInput: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -622,99 +314,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E9ECEF',
   },
-  addressTextInput: {
-    flex: 1,
-    fontSize: 16,
-    color: '#1A1A1A',
-    marginLeft: 12,
-  },
-  imageContainer: {
-    marginBottom: 16,
-  },
-  tagsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-    marginBottom: 20,
-  },
-  tagChip: {
-    backgroundColor: '#F8F9FA',
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderWidth: 1,
-    borderColor: '#E9ECEF',
-  },
-  tagChipSelected: {
-    backgroundColor: '#FF6B35',
-    borderColor: '#FF6B35',
-  },
-  tagText: {
-    fontSize: 14,
-    color: '#1A1A1A',
-    fontWeight: '500',
-  },
-  tagTextSelected: {
-    color: '#FFFFFF',
-  },
-  customTagContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginBottom: 20,
-  },
-  customTagInput: {
-    flex: 1,
-    backgroundColor: '#F8F9FA',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 14,
-    color: '#1A1A1A',
-    borderWidth: 1,
-    borderColor: '#E9ECEF',
-  },
-  addTagButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#FFF4F0',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#FF6B35',
-  },
-  selectedTags: {
-    marginTop: 20,
-    paddingTop: 20,
-    borderTopWidth: 1,
-    borderTopColor: '#F0F0F0',
-  },
-  selectedTagsTitle: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#1A1A1A',
-    marginBottom: 12,
-  },
-  selectedTagsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  selectedTagChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#E8F5E8',
-    borderRadius: 16,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    gap: 8,
-  },
-  selectedTagText: {
-    fontSize: 12,
-    color: '#28A745',
-    fontWeight: '500',
-  },
+  imageContainer: { marginBottom: 16 },
   footer: {
     paddingHorizontal: 20,
     paddingVertical: 16,
@@ -733,11 +333,7 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 8,
   },
-  submitButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
+  submitButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '600' },
   loadingButton: {
     backgroundColor: '#FF6B35',
     borderRadius: 16,
@@ -748,82 +344,5 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 8,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 8,
-  },
-  alwaysOpenContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#F8F9FA',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: '#E9ECEF',
-  },
-  alwaysOpenTextContainer: {
-    flex: 1,
-  },
-  alwaysOpenSubtitle: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 2,
-  },
-  dayHoursContainer: {
-    backgroundColor: '#F8F9FA',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#E9ECEF',
-  },
-  dayHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 12,
-  },
-  dayLabel: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#1A1A1A',
-  },
-  openAllDayContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  timeInputsContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  timeInputGroup: {
-    flex: 1,
-  },
-  timeLabel: {
-    fontSize: 12,
-    color: '#666',
-    marginBottom: 4,
-  },
-  timeInput: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    fontSize: 14,
-    color: '#1A1A1A',
-    borderWidth: 1,
-    borderColor: '#E9ECEF',
-  },
-  timeSeparator: {
-    fontSize: 14,
-    color: '#666',
-    fontWeight: '500',
   },
 });
