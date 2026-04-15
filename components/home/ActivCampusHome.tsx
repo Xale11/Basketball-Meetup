@@ -10,6 +10,8 @@ import useFetchSocietiesByUniId from '@/hooks/societies/useFetchSocietiesByUniId
 import useFetchUniversities from '@/hooks/universities/useFetchUniversities';
 import { Event, EventBookingMode } from '@/types/event';
 import { EventCard } from '@/components/events/EventCard';
+import { useUserParticipatingEvents } from '@/hooks/events/useUserParticipatingEvents';
+import { useJoinLeaveEvent } from '@/hooks/events/useJoinLeaveEvent';
 
 type TimeFilter = 'Now' | 'Today' | 'This Week';
 type CostFilter = 'All' | 'Free' | 'Paid';
@@ -39,6 +41,9 @@ export default function ActivCampusHome() {
     () => new Map(universities.map((u) => [u.id, u.name])),
     [universities],
   );
+
+  const { isJoined } = useUserParticipatingEvents(user?.id);
+  const { join, leave } = useJoinLeaveEvent();
 
   const now = new Date();
   const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -139,6 +144,9 @@ export default function ActivCampusHome() {
                     event={event}
                     societyNameMap={societyNameMap}
                     universityNameMap={universityNameMap}
+                    isJoined={isJoined(event.id)}
+                    onJoin={() => join(event.id)}
+                    onLeave={() => leave(event.id)}
                   />
                 ))}
               </View>
@@ -164,6 +172,9 @@ export default function ActivCampusHome() {
                     event={event}
                     societyNameMap={societyNameMap}
                     universityNameMap={universityNameMap}
+                    isJoined={isJoined(event.id)}
+                    onJoin={() => join(event.id)}
+                    onLeave={() => leave(event.id)}
                   />
                 ))
               )}

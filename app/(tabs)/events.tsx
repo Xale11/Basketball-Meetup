@@ -2,7 +2,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState } from 'react';
 import { Search, Filter, Plus } from 'lucide-react-native';
-import { EventCard } from '@/components/EventCard';
+import { EventCard } from '@/components/events/EventCard';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { TabBar } from '@/components/ui/TabBar';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -15,6 +15,8 @@ import { useUpdateEvent } from '@/hooks/events/useUpdateEvent';
 import { useFetchUserSocieties } from '@/hooks/societies/useFetchUserSocieties';
 import { useFetchUniversityMembership } from '@/hooks/universities/useFetchUniversityMembership';
 import { useAuth } from '@/hooks/useAuth';
+import { useUserParticipatingEvents } from '@/hooks/events/useUserParticipatingEvents';
+import { useJoinLeaveEvent } from '@/hooks/events/useJoinLeaveEvent';
 import { SocietyRoleIdEnum } from '@/types/societies';
 import { UniversityRole } from '@/types/universities';
 import { Alert } from 'react-native';
@@ -56,6 +58,8 @@ export default function EventsScreen() {
   const { createEvent, loading: createLoading } = useCreateEvent();
   const { updateEvent, loading: updateLoading } = useUpdateEvent();
   const { membership: uniMembership } = useFetchUniversityMembership(user?.id);
+  const { isJoined } = useUserParticipatingEvents(user?.id);
+  const { join, leave } = useJoinLeaveEvent();
 
   const privilegedSocietyIds = new Set(
     memberships
@@ -146,6 +150,9 @@ export default function EventsScreen() {
                   ? () => handleOpen(event)
                   : () => {}
               }
+              isJoined={isJoined(event.id)}
+              onJoin={() => join(event.id)}
+              onLeave={() => leave(event.id)}
             />
           ))
         )}

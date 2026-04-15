@@ -29,10 +29,12 @@ export enum EventOrganizerRole {
 }
 
 export enum EventParticipantStatus {
-  GOING = "GOING",
-  PENDING = "PENDING",
+  REQUESTED = "REQUESTED",   // waiting approval
+  GOING = "GOING",           // confirmed
+  REJECTED = "REJECTED",
+  LEFT = "LEFT",
   WAITLISTED = "WAITLISTED",
-  CANCELLED = "CANCELLED",
+  INVITED = "INVITED",       // for invite-only events
 }
 
 export enum EventImageType {

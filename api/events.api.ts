@@ -1,4 +1,4 @@
-import { Event, CreateEventForm, EventImageType } from '@/types/event'
+import { Event, CreateEventForm, EventImageType, EventParticipantStatus } from '@/types/event'
 import { SocietyRoleIdEnum } from '@/types/societies'
 import { UniversityRole } from '@/types/universities'
 import { supabase } from './supabase'
@@ -285,6 +285,49 @@ export const fetchEventById = async (eventId: string): Promise<{ event: Event; p
     if (eventError) throw new Error(JSON.stringify(eventError))
     if (countError) throw new Error(JSON.stringify(countError))
     return { event: eventData as Event, participantCount: count ?? 0 }
+  } catch (error: any) {
+    throw new Error(error.message)
+  }
+}
+
+export const joinEvent = async (eventId: string, userId: string): Promise<void> => {
+  console.log('[joinEvent] inserting participant — eventId:', eventId, '| userId:', userId)
+  try {
+    const { error } = await supabase
+      .from('event_participants')
+      .insert({ event_id: eventId, user_id: userId, status: EventParticipantStatus.GOING })
+    if (error) {
+      console.error('[joinEvent] supabase error:', JSON.stringify(error))
+      throw new Error(JSON.stringify(error))
+    }
+    console.log('[joinEvent] insert successful')
+  } catch (error: any) {
+    console.error('[joinEvent] caught error:', error.message)
+    throw new Error(error.message)
+  }
+}
+
+export const leaveEvent = async (eventId: string, userId: string): Promise<void> => {
+  try {
+    const { error } = await supabase
+      .from('event_participants')
+      .delete()
+      .eq('event_id', eventId)
+      .eq('user_id', userId)
+    if (error) throw new Error(JSON.stringify(error))
+  } catch (error: any) {
+    throw new Error(error.message)
+  }
+}
+
+export const fetchUserParticipatingEventIds = async (userId: string): Promise<string[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('event_participants')
+      .select('event_id')
+      .eq('user_id', userId)
+    if (error) throw new Error(JSON.stringify(error))
+    return (data ?? []).map((p: { event_id: string }) => p.event_id)
   } catch (error: any) {
     throw new Error(error.message)
   }

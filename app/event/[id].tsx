@@ -8,10 +8,17 @@ import useFetchUniversities from '@/hooks/universities/useFetchUniversities';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { EventBookingMode, EventHostType, EventJoinPolicy, EventVisibility } from '@/types/event';
 import { useEffect, useMemo, type ReactNode } from 'react';
+import { useAuth } from '@/hooks/useAuth';
+import { useJoinLeaveEvent } from '@/hooks/events/useJoinLeaveEvent';
+import { useUserParticipatingEvents } from '@/hooks/events/useUserParticipatingEvents';
 
 export default function EventDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { event, participantCount, loading } = useFetchEvent(id);
+
+  const { user } = useAuth();
+  const { join, leave, isJoining, isLeaving } = useJoinLeaveEvent();
+  const { isJoined } = useUserParticipatingEvents(user?.id);
 
   const { societies, fetchSocieties } = useFetchSocietiesByUniId(event?.university_id ?? null);
   const { universities, fetchUniversities } = useFetchUniversities();
@@ -143,13 +150,29 @@ export default function EventDetailScreen() {
         <View style={{ height: 100 }} />
       </ScrollView>
 
-      {/* Join CTA */}
+      {/* Join / Leave CTA */}
       <View style={styles.footer}>
-        <TouchableOpacity style={[styles.joinButton, !isFree && styles.joinButtonPaid]}>
-          <Text style={styles.joinButtonText}>
-            {isFree ? 'Join Free' : `Join · £${event.price_from ?? ''}`}
-          </Text>
-        </TouchableOpacity>
+        {isJoined(id) ? (
+          <TouchableOpacity
+            style={styles.leaveButton}
+            onPress={() => leave(id)}
+            disabled={isLeaving}
+          >
+            <Text style={styles.leaveButtonText}>
+              {isLeaving ? 'Leaving…' : 'Leave Activity'}
+            </Text>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity
+            style={[styles.joinButton, !isFree && styles.joinButtonPaid]}
+            onPress={() => join(id)}
+            disabled={isJoining}
+          >
+            <Text style={styles.joinButtonText}>
+              {isJoining ? 'Joining…' : isFree ? 'Join Free' : `Join · £${event.price_from ?? ''}`}
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
     </SafeAreaView>
   );
@@ -297,6 +320,13 @@ const styles = StyleSheet.create({
   },
   joinButtonPaid: { backgroundColor: '#1A1A1A' },
   joinButtonText: { fontSize: 16, fontWeight: '700', color: '#FFFFFF' },
+  leaveButton: {
+    backgroundColor: '#F0F0F0',
+    borderRadius: 16,
+    paddingVertical: 16,
+    alignItems: 'center',
+  },
+  leaveButtonText: { fontSize: 16, fontWeight: '700', color: '#555' },
 });
 
 const detail = StyleSheet.create({
