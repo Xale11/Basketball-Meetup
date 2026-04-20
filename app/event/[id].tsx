@@ -165,7 +165,7 @@ export default function EventDetailScreen() {
         ) : (
           <TouchableOpacity
             style={[styles.joinButton, !isFree && styles.joinButtonPaid]}
-            onPress={() => join(id)}
+            onPress={() => join(id, event!.join_policy)}
             disabled={isJoining}
           >
             <Text style={styles.joinButtonText}>

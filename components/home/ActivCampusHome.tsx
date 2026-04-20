@@ -145,7 +145,7 @@ export default function ActivCampusHome() {
                     societyNameMap={societyNameMap}
                     universityNameMap={universityNameMap}
                     isJoined={isJoined(event.id)}
-                    onJoin={() => join(event.id)}
+                    onJoin={() => join(event.id, event.join_policy)}
                     onLeave={() => leave(event.id)}
                   />
                 ))}
@@ -173,7 +173,7 @@ export default function ActivCampusHome() {
                     societyNameMap={societyNameMap}
                     universityNameMap={universityNameMap}
                     isJoined={isJoined(event.id)}
-                    onJoin={() => join(event.id)}
+                    onJoin={() => join(event.id, event.join_policy)}
                     onLeave={() => leave(event.id)}
                   />
                 ))
