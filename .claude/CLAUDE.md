@@ -58,6 +58,7 @@ Root layout (`app/_layout.tsx`) wraps everything in `QueryClientProvider > AuthP
 ### Data Layer
 - I utlise only supabase for my backend database and auth. Any references to firebase should be ignored or refactored to point at supabase
 - **Supabase** — users, events, societies, universities, check-ins, payments (`api/*.api.ts`)
+- The alot of the types in ./types model tables and relationships in the supabase database
 
 All API functions are plain async functions in `api/`. They throw `new Error(JSON.stringify(error))` on failure.
 
