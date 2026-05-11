@@ -4,6 +4,14 @@ export enum OnboardingStatus {
   COMPLETED = 'completed',
 }
 
+/**
+ * Supabase table: profiles
+ * Stores public profile data for each authenticated user.
+ * `id` is a FK to auth.users.id — one profile per auth account.
+ * Referenced by: events.created_by_user_id, event_participants.user_id,
+ * event_invites.invited_user_id / invited_by_user_id,
+ * university_memberships.user_id, society_memberships.user_id.
+ */
 export interface User {
   id: string;
   first_name: string | null;
@@ -36,7 +44,6 @@ export interface OnboardingUserForm {
   societies?: string[];
 }
 
-
 export interface Badge {
   id: string;
   name: string;
@@ -52,5 +59,4 @@ export interface UserStats {
   avg_points_per_game?: number;
   assists?: number;
   rebounds?: number;
-  // add more as needed
 }

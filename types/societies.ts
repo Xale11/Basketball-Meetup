@@ -2,7 +2,7 @@ export enum SocietyStatusEnum {
   ACTIVE = "ACTIVE",
   DEACTIVATED = "DEACTIVATED",
   SUSPENDED = "SUSPENDED",
-  ARCHIVED = "ARCHIVED"
+  ARCHIVED = "ARCHIVED",
 }
 
 export enum SocietyRoleIdEnum {
@@ -19,12 +19,22 @@ export enum SocietyMembershipStatusEnum {
   BANNED = "BANNED",
 }
 
-
+/**
+ * Supabase table: society_roles
+ * Lookup table of available roles within a society (e.g. OWNER, MEMBER).
+ * Referenced by: society_memberships.role_id.
+ */
 export interface SocietyRole {
   id: string
   name: string | null
 }
 
+/**
+ * Supabase table: societies
+ * Represents a student society or club, optionally tied to a university.
+ * FK: university_id → universities.id, created_by_user_id → auth.users.id.
+ * Referenced by: society_memberships.society_id, events.society_id, event_societies.society_id.
+ */
 export interface Society {
   id: string;
   university_id: string | null;
@@ -37,6 +47,12 @@ export interface Society {
   status: string;
 }
 
+/**
+ * Supabase table: society_memberships
+ * Junction table linking a profile to a society with a role and membership status.
+ * PK: (user_id, society_id).
+ * FK: user_id → profiles.id, society_id → societies.id, role_id → society_roles.id.
+ */
 export interface SocietyMembership {
   society_id: string;
   user_id: string;
