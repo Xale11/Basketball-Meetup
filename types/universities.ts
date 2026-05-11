@@ -6,13 +6,14 @@ export enum UniversityRole {
 
 export interface University {
     id: string
-    name: string
+    name: string | null
+    status: string
 }
 
 export interface UniversityMembership {
     user_id: string
     university_id: string
     role: UniversityRole
-    created_at: number
-    updated_at: number
+    created_at: string
+    updated_at: string
 }

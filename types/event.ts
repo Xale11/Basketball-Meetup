@@ -40,6 +40,12 @@ export enum EventImageType {
   GALLERY = "GALLERY",
 }
 
+export enum EventInviteStatus {
+  PENDING = "PENDING",
+  ACCEPTED = "ACCEPTED",
+  DECLINED = "DECLINED",
+}
+
 export interface Event {
   id: string
   name: string
@@ -56,7 +62,7 @@ export interface Event {
   geohash: string | null
 
   visibility: EventVisibility
-  join_policy: EventJoinPolicy
+  join_policy: EventJoinPolicy | null
 
   max_participants: number | null
   is_cancelled: boolean
@@ -68,12 +74,12 @@ export interface Event {
 
   banner_image_url: string | null
 
-  booking_mode: EventBookingMode
+  booking_mode: EventBookingMode | null
   price_from: number | null
   currency: string | null
 
   created_at: string
-  updated_at: string
+  update_at: string
 }
 
 export interface EventSociety {
@@ -85,7 +91,7 @@ export interface EventSociety {
 export interface EventUniversity {
   event_id: string
   university_id: string
-  role: EventOrganizerRole
+  role: EventOrganizerRole | null
 }
 
 export interface EventParticipant {
@@ -105,7 +111,7 @@ export interface EventImage {
 }
 
 export interface EventTicket {
-  id: string
+  id: number
   event_id: string
   name: string
   description: string | null
@@ -114,9 +120,19 @@ export interface EventTicket {
   max_quantity: number | null
   sales_start_date: string | null
   sales_end_date: string | null
-  is_active: boolean
+  is_active: boolean | null
   created_at: string
-  updated_at: string
+  update_at: string | null
+}
+
+export interface EventInvite {
+  id: string
+  event_id: string
+  invited_user_id: string
+  invited_by_user_id: string
+  status: EventInviteStatus
+  created_at: string
+  updated_at: string | null
 }
 
 export interface CreateEventForm {

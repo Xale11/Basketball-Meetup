@@ -1,6 +1,3 @@
-import { UserClubAssociation } from "./club";
-import { CourtVisit } from "./courts";
-
 export enum OnboardingStatus {
   NOT_STARTED = 'not_started',
   IN_PROGRESS = 'in_progress',
@@ -9,17 +6,14 @@ export enum OnboardingStatus {
 
 export interface User {
   id: string;
-  email: string;
-  first_name: string;
-  last_name: string;
-  bio?: string;
+  first_name: string | null;
+  last_name: string | null;
+  bio: string | null;
   over_18: boolean;
-  created_at: string;
-  last_active?: string;
   onboarding_status: OnboardingStatus;
-  photo_url?: string;
-  university_id?: string;
-  course?: string;
+  photo_url: string | null;
+  university_id: string | null;
+  course: string | null;
 }
 
 export interface CreateUserForm {
