@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html><head>
+  <meta charset="utf-8"><title>Codebase Explorer</title>
+  <style>
+    body { font: 14px/1.5 system-ui, sans-serif; margin: 0; background: #1a1a2e; color: #eee; }
+    .container { display: flex; height: 100vh; }
+    .sidebar { width: 280px; background: #252542; padding: 20px; border-right: 1px solid #3d3d5c; overflow-y: auto; flex-shrink: 0; }
+    .main { flex: 1; padding: 20px; overflow-y: auto; }
+    h1 { margin: 0 0 10px 0; font-size: 18px; }
+    h2 { margin: 20px 0 10px 0; font-size: 14px; color: #888; text-transform: uppercase; }
+    .stat { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #3d3d5c; }
+    .stat-value { font-weight: bold; }
+    .bar-row { display: flex; align-items: center; margin: 6px 0; }
+    .bar-label { width: 55px; font-size: 12px; color: #aaa; }
+    .bar { height: 18px; border-radius: 3px; }
+    .bar-pct { margin-left: 8px; font-size: 12px; color: #666; }
+    .tree { list-style: none; padding-left: 20px; }
+    details { cursor: pointer; }
+    summary { padding: 4px 8px; border-radius: 4px; }
+    summary:hover { background: #2d2d44; }
+    .folder { color: #ffd700; }
+    .file { display: flex; align-items: center; padding: 4px 8px; border-radius: 4px; }
+    .file:hover { background: #2d2d44; }
+    .size { color: #888; margin-left: auto; font-size: 12px; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; margin-right: 8px; }
+  </style>
+</head><body>
+  <div class="container">
+    <div class="sidebar">
+      <h1>📊 Summary</h1>
+      <div class="stat"><span>Files</span><span class="stat-value">86</span></div>
+      <div class="stat"><span>Directories</span><span class="stat-value">25</span></div>
+      <div class="stat"><span>Total size</span><span class="stat-value">818.2 KB</span></div>
+      <div class="stat"><span>File types</span><span class="stat-value">8</span></div>
+      <h2>By file type</h2>
+      <div class="bar-row"><span class="bar-label">.lock</span><div class="bar" style="width:38.08172808945044%;background:#6b7280"></div><span class="bar-pct">38.1%</span></div><div class="bar-row"><span class="bar-label">.tsx</span><div class="bar" style="width:36.459913562107694%;background:#3178c6"></div><span class="bar-pct">36.5%</span></div><div class="bar-row"><span class="bar-label">.png</span><div class="bar" style="width:17.225035717397503%;background:#6b7280"></div><span class="bar-pct">17.2%</span></div><div class="bar-row"><span class="bar-label">.ts</span><div class="bar" style="width:7.169260479788788%;background:#3178c6"></div><span class="bar-pct">7.2%</span></div><div class="bar-row"><span class="bar-label">.md</span><div class="bar" style="width:0.44066376471515006%;background:#083fa1"></div><span class="bar-pct">0.4%</span></div><div class="bar-row"><span class="bar-label">.json</span><div class="bar" style="width:0.3696467170430172%;background:#6b7280"></div><span class="bar-pct">0.4%</span></div><div class="bar-row"><span class="bar-label">.js</span><div class="bar" style="width:0.2537516694974022%;background:#f7df1e"></div><span class="bar-pct">0.3%</span></div><div class="bar-row"><span class="bar-label">.html</span><div class="bar" style="width:0.0%;background:#e34c26"></div><span class="bar-pct">0.0%</span></div>
+    </div>
+    <div class="main">
+      <h1>📁 Basketball-Meetup</h1>
+      <ul class="tree" id="root"></ul>
+    </div>
+  </div>
+  <script>
+    const data = {"name": "Basketball-Meetup", "children": [{"name": "api", "children": [{"name": "courts.api.ts", "size": 1766, "ext": ".ts"}, {"name": "events.api.ts", "size": 10547, "ext": ".ts"}, {"name": "firebase.ts", "size": 941, "ext": ".ts"}, {"name": "societies.api.ts", "size": 2133, "ext": ".ts"}, {"name": "supabase-storage.api.ts", "size": 1819, "ext": ".ts"}, {"name": "supabase.ts", "size": 1173, "ext": ".ts"}, {"name": "universities.api.ts", "size": 1133, "ext": ".ts"}, {"name": "users.api.ts", "size": 2389, "ext": ".ts"}, {"name": "utils.api.ts", "size": 2694, "ext": ".ts"}], "size": 24595}, {"name": "app", "children": [{"name": "(tabs)", "children": [{"name": "_layout.tsx", "size": 3215, "ext": ".tsx"}, {"name": "add-court.tsx", "size": 24453, "ext": ".tsx"}, {"name": "clubs.tsx", "size": 294, "ext": ".tsx"}, {"name": "create.tsx", "size": 26039, "ext": ".tsx"}, {"name": "events.tsx", "size": 36708, "ext": ".tsx"}, {"name": "index.tsx", "size": 267, "ext": ".tsx"}, {"name": "map.tsx", "size": 7783, "ext": ".tsx"}, {"name": "profile.tsx", "size": 20965, "ext": ".tsx"}], "size": 119724}, {"name": "+not-found.tsx", "size": 708, "ext": ".tsx"}, {"name": "_layout.tsx", "size": 1993, "ext": ".tsx"}, {"name": "auth", "children": [{"name": "_layout.tsx", "size": 233, "ext": ".tsx"}, {"name": "checkEmail.tsx", "size": 5955, "ext": ".tsx"}, {"name": "login.tsx", "size": 6087, "ext": ".tsx"}, {"name": "register.tsx", "size": 8571, "ext": ".tsx"}], "size": 20846}, {"name": "club", "children": [{"name": "[id]", "children": [{"name": "manage.tsx", "size": 19585, "ext": ".tsx"}], "size": 19585}], "size": 19585}, {"name": "event", "children": [{"name": "[id].tsx", "size": 11516, "ext": ".tsx"}], "size": 11516}, {"name": "onboarding", "children": [{"name": "onboarding.tsx", "size": 24833, "ext": ".tsx"}], "size": 24833}], "size": 199205}, {"name": "app.config.js", "size": 2126, "ext": ".js"}, {"name": "assets", "children": [{"name": "images", "children": [{"name": "court.png", "size": 120470, "ext": ".png"}, {"name": "favicon.png", "size": 1466, "ext": ".png"}, {"name": "icon.png", "size": 22380, "ext": ".png"}], "size": 144316}], "size": 144316}, {"name": "CLAUDE.md", "size": 3692, "ext": ".md"}, {"name": "codebase-map.html", "size": 0, "ext": ".html"}, {"name": "components", "children": [{"name": "ClubCard.tsx", "size": 6620, "ext": ".tsx"}, {"name": "clubs", "children": [{"name": "BasketballClubsScreen.tsx", "size": 11808, "ext": ".tsx"}], "size": 11808}, {"name": "CourtCard.tsx", "size": 2879, "ext": ".tsx"}, {"name": "DateTimeInput.tsx", "size": 6894, "ext": ".tsx"}, {"name": "EventCard.tsx", "size": 6014, "ext": ".tsx"}, {"name": "events", "children": [{"name": "EventCard.tsx", "size": 6372, "ext": ".tsx"}], "size": 6372}, {"name": "home", "children": [{"name": "ActivCampusHome.tsx", "size": 9160, "ext": ".tsx"}, {"name": "BasketballHome.tsx", "size": 5070, "ext": ".tsx"}], "size": 14230}, {"name": "ImagePicker.tsx", "size": 4654, "ext": ".tsx"}, {"name": "InteractiveMap.tsx", "size": 8485, "ext": ".tsx"}, {"name": "LoadingSpinner.tsx", "size": 579, "ext": ".tsx"}, {"name": "societies", "children": [{"name": "SocietiesScreen.tsx", "size": 19308, "ext": ".tsx"}], "size": 19308}, {"name": "TimeInput.tsx", "size": 3040, "ext": ".tsx"}], "size": 90883}, {"name": "constants", "children": [{"name": "appVariant.ts", "size": 799, "ext": ".ts"}, {"name": "theme.ts", "size": 969, "ext": ".ts"}], "size": 1768}, {"name": "eas.json", "size": 344, "ext": ".json"}, {"name": "expo-env.d.ts", "size": 110, "ext": ".ts"}, {"name": "hooks", "children": [{"name": "courts", "children": [{"name": "useCreateCourt.ts", "size": 1167, "ext": ".ts"}], "size": 1167}, {"name": "events", "children": [{"name": "useCreateEvent.ts", "size": 1258, "ext": ".ts"}, {"name": "useFetchEvent.ts", "size": 670, "ext": ".ts"}, {"name": "useFetchEvents.ts", "size": 697, "ext": ".ts"}, {"name": "useFetchMyEvents.ts", "size": 704, "ext": ".ts"}, {"name": "useFetchParticipantEvents.ts", "size": 604, "ext": ".ts"}, {"name": "useUpdateEvent.ts", "size": 1375, "ext": ".ts"}], "size": 5308}, {"name": "societies", "children": [{"name": "useFetchSocietiesByUniId.tsx", "size": 906, "ext": ".tsx"}, {"name": "useFetchUserSocieties.tsx", "size": 689, "ext": ".tsx"}], "size": 1595}, {"name": "universities", "children": [{"name": "useFetchUniversities.tsx", "size": 709, "ext": ".tsx"}, {"name": "useFetchUniversityMembership.ts", "size": 618, "ext": ".ts"}], "size": 1327}, {"name": "useAuth.ts", "size": 166, "ext": ".ts"}, {"name": "useFrameworkReady.ts", "size": 211, "ext": ".ts"}, {"name": "users", "children": [{"name": "useFetchUserById.ts", "size": 1436, "ext": ".ts"}, {"name": "useOnboardUser.tsx", "size": 3876, "ext": ".tsx"}, {"name": "useUpdateProfilePhoto.tsx", "size": 3162, "ext": ".tsx"}, {"name": "useUpdateUser.tsx", "size": 856, "ext": ".tsx"}], "size": 9330}], "size": 19104}, {"name": "package.json", "size": 2476, "ext": ".json"}, {"name": "providers", "children": [{"name": "AuthProvider.tsx", "size": 5185, "ext": ".tsx"}], "size": 5185}, {"name": "tsconfig.json", "size": 277, "ext": ".json"}, {"name": "types", "children": [{"name": "checkin.ts", "size": 436, "ext": ".ts"}, {"name": "club.ts", "size": 712, "ext": ".ts"}, {"name": "courts.ts", "size": 1784, "ext": ".ts"}, {"name": "event.ts", "size": 2965, "ext": ".ts"}, {"name": "payment.ts", "size": 370, "ext": ".ts"}, {"name": "societies.ts", "size": 898, "ext": ".ts"}, {"name": "universities.ts", "size": 339, "ext": ".ts"}, {"name": "user.ts", "size": 1254, "ext": ".ts"}], "size": 8758}, {"name": "utils", "children": [{"name": "cleanObject.ts", "size": 610, "ext": ".ts"}, {"name": "findCheapTicket.ts", "size": 464, "ext": ".ts"}, {"name": "getFilenameFromUri.ts", "size": 151, "ext": ".ts"}, {"name": "getFirebaseFilepathFromUrl.ts", "size": 820, "ext": ".ts"}, {"name": "mapService.ts", "size": 1723, "ext": ".ts"}, {"name": "mockData.ts", "size": 5785, "ext": ".ts"}, {"name": "societyData.ts", "size": 1908, "ext": ".ts"}, {"name": "ukUniversities.ts", "size": 4468, "ext": ".ts"}], "size": 15929}, {"name": "yarn.lock", "size": 319059, "ext": ".lock"}], "size": 837827};
+    const colors = {".js": "#f7df1e", ".ts": "#3178c6", ".py": "#3776ab", ".go": "#00add8", ".rs": "#dea584", ".rb": "#cc342d", ".css": "#264de4", ".html": "#e34c26", ".json": "#6b7280", ".md": "#083fa1", ".yaml": "#cb171e", ".yml": "#cb171e", ".mdx": "#083fa1", ".tsx": "#3178c6", ".jsx": "#61dafb", ".sh": "#4eaa25"};
+    function fmt(b) { if (b < 1024) return b + ' B'; if (b < 1048576) return (b/1024).toFixed(1) + ' KB'; return (b/1048576).toFixed(1) + ' MB'; }
+    function render(node, parent) {
+      if (node.children) {
+        const det = document.createElement('details');
+        det.open = parent === document.getElementById('root');
+        det.innerHTML = `<summary><span class="folder">📁 ${node.name}</span><span class="size">${fmt(node.size)}</span></summary>`;
+        const ul = document.createElement('ul'); ul.className = 'tree';
+        node.children.sort((a,b) => (b.children?1:0)-(a.children?1:0) || a.name.localeCompare(b.name));
+        node.children.forEach(c => render(c, ul));
+        det.appendChild(ul);
+        const li = document.createElement('li'); li.appendChild(det); parent.appendChild(li);
+      } else {
+        const li = document.createElement('li'); li.className = 'file';
+        li.innerHTML = `<span class="dot" style="background:${colors[node.ext]||'#6b7280'}"></span>${node.name}<span class="size">${fmt(node.size)}</span>`;
+        parent.appendChild(li);
+      }
+    }
+    data.children.forEach(c => render(c, document.getElementById('root')));
+  </script>
+</body></html>
