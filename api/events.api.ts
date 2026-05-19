@@ -1,4 +1,4 @@
-import { Event, CreateEventForm, EventImageType } from '@/types/event'
+import { Event, CreateEventForm, EventImageType, EventParticipant, EventParticipantStatus, EventJoinPolicy } from '@/types/event'
 import { SocietyRoleIdEnum } from '@/types/societies'
 import { UniversityRole } from '@/types/universities'
 import { supabase } from './supabase'
@@ -285,6 +285,57 @@ export const fetchEventById = async (eventId: string): Promise<{ event: Event; p
     if (eventError) throw new Error(JSON.stringify(eventError))
     if (countError) throw new Error(JSON.stringify(countError))
     return { event: eventData as Event, participantCount: count ?? 0 }
+  } catch (error: any) {
+    throw new Error(error.message)
+  }
+}
+
+export const fetchUserParticipations = async (userId: string): Promise<EventParticipant[]> => {
+  try {
+    if (!userId) throw new Error('No userId provided')
+    const { data, error } = await supabase
+      .from('event_participants')
+      .select('event_id, user_id, status, joined_at')
+      .eq('user_id', userId)
+    if (error) throw new Error(JSON.stringify(error))
+    return (data ?? []) as EventParticipant[]
+  } catch (error: any) {
+    throw new Error(error.message)
+  }
+}
+
+export const joinEvent = async (
+  eventId: string,
+  userId: string,
+  joinPolicy: EventJoinPolicy | null,
+): Promise<EventParticipant> => {
+  try {
+    const status =
+      joinPolicy === EventJoinPolicy.APPROVAL_REQUIRED
+        ? EventParticipantStatus.PENDING
+        : EventParticipantStatus.GOING
+
+    const { data, error } = await supabase
+      .from('event_participants')
+      .insert({ event_id: eventId, user_id: userId, status })
+      .select('*')
+      .single()
+
+    if (error) throw new Error(JSON.stringify(error))
+    return data as EventParticipant
+  } catch (error: any) {
+    throw new Error(error.message)
+  }
+}
+
+export const leaveEvent = async (eventId: string, userId: string): Promise<void> => {
+  try {
+    const { error } = await supabase
+      .from('event_participants')
+      .delete()
+      .eq('event_id', eventId)
+      .eq('user_id', userId)
+    if (error) throw new Error(JSON.stringify(error))
   } catch (error: any) {
     throw new Error(error.message)
   }

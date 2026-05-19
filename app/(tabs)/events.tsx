@@ -27,6 +27,7 @@ import { useCreateEvent } from '@/hooks/events/useCreateEvent';
 import { useFetchEvents } from '@/hooks/events/useFetchEvents';
 import { useFetchMyEvents } from '@/hooks/events/useFetchMyEvents';
 import { useUpdateEvent } from '@/hooks/events/useUpdateEvent';
+import { useUserParticipations } from '@/hooks/events/useUserParticipations';
 import { useFetchUserSocieties } from '@/hooks/societies/useFetchUserSocieties';
 import { useFetchUniversityMembership } from '@/hooks/universities/useFetchUniversityMembership';
 import { useAuth } from '@/hooks/useAuth';
@@ -97,6 +98,7 @@ export default function EventsScreen() {
   const { createEvent } = useCreateEvent();
   const { updateEvent } = useUpdateEvent();
   const { membership: uniMembership } = useFetchUniversityMembership(user?.id);
+  const { participationMap } = useUserParticipations(user?.id);
 
   const privilegedSocietyIds = new Set(
     memberships
@@ -302,6 +304,7 @@ export default function EventsScreen() {
             <EventCard
               key={event.id}
               event={event}
+              participantStatus={participationMap.get(event.id) ?? null}
               onPress={selectedTab === 'my-events' && (
                 event.created_by_user_id === user?.id ||
                 (event.host_type === EventHostType.SOCIETY && event.society_id != null && privilegedSocietyIds.has(event.society_id)) ||

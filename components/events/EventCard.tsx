@@ -1,7 +1,9 @@
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { router } from 'expo-router';
-import { Clock, MapPin, Users } from 'lucide-react-native';
-import { Event, EventBookingMode, EventHostType } from '@/types/event';
+import { Clock, MapPin } from 'lucide-react-native';
+import { Event, EventBookingMode, EventHostType, EventJoinPolicy, EventParticipantStatus } from '@/types/event';
+import { useJoinEvent } from '@/hooks/events/useJoinEvent';
+import { useLeaveEvent } from '@/hooks/events/useLeaveEvent';
 
 type HostTagType = 'user' | 'society' | 'university';
 type HostTag = { label: string; type: HostTagType };
@@ -32,9 +34,10 @@ interface EventCardProps {
   event: Event;
   societyNameMap?: Map<string, string>;
   universityNameMap?: Map<string, string>;
+  participantStatus?: EventParticipantStatus | null;
 }
 
-export function EventCard({ event, societyNameMap, universityNameMap }: EventCardProps) {
+export function EventCard({ event, societyNameMap, universityNameMap, participantStatus }: EventCardProps) {
   const isFree = event.booking_mode === EventBookingMode.FREE;
   const startDate = new Date(event.start_date);
   const endDate = new Date(event.end_date);
@@ -52,6 +55,78 @@ export function EventCard({ event, societyNameMap, universityNameMap }: EventCar
     societyNameMap && universityNameMap
       ? getHostTag(event, societyNameMap, universityNameMap)
       : null;
+
+  const { joinEvent, loading: joining } = useJoinEvent();
+  const { leaveEvent, loading: leaving } = useLeaveEvent();
+  const actionLoading = joining || leaving;
+
+  const isInviteOnly = event.join_policy === EventJoinPolicy.INVITE_ONLY;
+  const isJoined = participantStatus === EventParticipantStatus.GOING;
+  const isPending = participantStatus === EventParticipantStatus.PENDING;
+
+  const handleJoin = () => {
+    joinEvent(
+      { eventId: event.id, joinPolicy: event.join_policy },
+      {
+        onSuccess: (participant) => {
+          const msg = participant.status === EventParticipantStatus.PENDING
+            ? 'Your request has been sent. You\'ll be notified when approved.'
+            : 'You\'re going! See you there.';
+          Alert.alert('Joined!', msg);
+        },
+        onError: (err) => Alert.alert('Could not join', err.message),
+      },
+    );
+  };
+
+  const handleLeave = () => {
+    Alert.alert(
+      isPending ? 'Cancel Request' : 'Leave Activity',
+      isPending ? 'Cancel your join request?' : 'Are you sure you want to leave this activity?',
+      [
+        { text: 'No', style: 'cancel' },
+        {
+          text: isPending ? 'Cancel Request' : 'Leave',
+          style: 'destructive',
+          onPress: () =>
+            leaveEvent(
+              { eventId: event.id },
+              { onError: (err) => Alert.alert('Error', err.message) },
+            ),
+        },
+      ],
+    );
+  };
+
+  const renderJoinButton = () => {
+    if (isInviteOnly && !participantStatus) return null;
+    if (actionLoading) {
+      return (
+        <View style={[s.joinButton, s.joinButtonLoading]}>
+          <ActivityIndicator size="small" color="#FFFFFF" />
+        </View>
+      );
+    }
+    if (isJoined) {
+      return (
+        <TouchableOpacity style={[s.joinButton, s.joinButtonJoined]} onPress={handleLeave}>
+          <Text style={s.joinButtonText}>Joined ✓</Text>
+        </TouchableOpacity>
+      );
+    }
+    if (isPending) {
+      return (
+        <TouchableOpacity style={[s.joinButton, s.joinButtonPending]} onPress={handleLeave}>
+          <Text style={[s.joinButtonText, s.joinButtonTextDark]}>Requested</Text>
+        </TouchableOpacity>
+      );
+    }
+    return (
+      <TouchableOpacity style={s.joinButton} onPress={handleJoin}>
+        <Text style={s.joinButtonText}>{isFree ? 'Join Free' : `Join · £${event.price_from ?? ''}`}</Text>
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <TouchableOpacity
@@ -93,20 +168,8 @@ export function EventCard({ event, societyNameMap, universityNameMap }: EventCar
         </View>
       </View>
       <View style={s.cardBottom}>
-        {event.max_participants != null ? (
-          <View style={s.attendeesRow}>
-            <Users size={14} color="#666" />
-            <Text style={s.attendeesText}>Up to {event.max_participants}</Text>
-          </View>
-        ) : (
-          <View style={s.attendeesRow}>
-            <Users size={14} color="#666" />
-            <Text style={s.attendeesText}>Open</Text>
-          </View>
-        )}
-        <TouchableOpacity style={s.joinButton}>
-          <Text style={s.joinButtonText}>{isFree ? 'Join Free' : `Join · £${event.price_from ?? ''}`}</Text>
-        </TouchableOpacity>
+        <View style={s.attendeesRow} />
+        {renderJoinButton()}
       </View>
     </TouchableOpacity>
   );
@@ -138,16 +201,19 @@ const s = StyleSheet.create({
   metaText: { fontSize: 13, color: '#666', flex: 1 },
   cardBottom: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-end',
     alignItems: 'center',
     paddingTop: 12,
     borderTopWidth: 1,
     borderTopColor: '#F0F0F0',
   },
-  attendeesRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  attendeesText: { fontSize: 13, color: '#666' },
-  joinButton: { backgroundColor: '#FF6B35', borderRadius: 20, paddingHorizontal: 18, paddingVertical: 8 },
+  attendeesRow: { flex: 1 },
+  joinButton: { backgroundColor: '#FF6B35', borderRadius: 20, paddingHorizontal: 18, paddingVertical: 8, minWidth: 90, alignItems: 'center' },
+  joinButtonJoined: { backgroundColor: '#16A34A' },
+  joinButtonPending: { backgroundColor: '#E9ECEF' },
+  joinButtonLoading: { backgroundColor: '#FF6B35' },
   joinButtonText: { fontSize: 14, fontWeight: '600', color: '#FFFFFF' },
+  joinButtonTextDark: { color: '#444' },
   liveBadge: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 8 },
   liveDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#E53E3E' },
   liveText: { fontSize: 12, fontWeight: '700', color: '#E53E3E', letterSpacing: 0.5 },

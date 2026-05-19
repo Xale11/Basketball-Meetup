@@ -1,13 +1,88 @@
-import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Image, Alert, ActivityIndicator } from 'react-native';
 import { Calendar, Users, DollarSign, MapPin, Wifi } from 'lucide-react-native';
-import { Event, EventHostType } from '@/types/event';
+import { Event, EventHostType, EventJoinPolicy, EventParticipantStatus } from '@/types/event';
+import { useJoinEvent } from '@/hooks/events/useJoinEvent';
+import { useLeaveEvent } from '@/hooks/events/useLeaveEvent';
 
 interface EventCardProps {
   event: Event;
   onPress: () => void;
+  participantStatus?: EventParticipantStatus | null;
 }
 
-export function EventCard({ event, onPress }: EventCardProps) {
+export function EventCard({ event, onPress, participantStatus }: EventCardProps) {
+  const { joinEvent, loading: joining } = useJoinEvent();
+  const { leaveEvent, loading: leaving } = useLeaveEvent();
+  const actionLoading = joining || leaving;
+
+  const isInviteOnly = event.join_policy === EventJoinPolicy.INVITE_ONLY;
+  const isJoined = participantStatus === EventParticipantStatus.GOING;
+  const isPending = participantStatus === EventParticipantStatus.PENDING;
+
+  const handleJoin = () => {
+    joinEvent(
+      { eventId: event.id, joinPolicy: event.join_policy },
+      {
+        onSuccess: (participant) => {
+          const msg = participant.status === EventParticipantStatus.PENDING
+            ? 'Your request has been sent. You\'ll be notified when approved.'
+            : 'You\'re going! See you there.';
+          Alert.alert('Joined!', msg);
+        },
+        onError: (err) => Alert.alert('Could not join', err.message),
+      },
+    );
+  };
+
+  const handleLeave = () => {
+    Alert.alert(
+      isPending ? 'Cancel Request' : 'Leave Event',
+      isPending ? 'Cancel your join request?' : 'Are you sure you want to leave this event?',
+      [
+        { text: 'No', style: 'cancel' },
+        {
+          text: isPending ? 'Cancel Request' : 'Leave',
+          style: 'destructive',
+          onPress: () =>
+            leaveEvent(
+              { eventId: event.id },
+              { onError: (err) => Alert.alert('Error', err.message) },
+            ),
+        },
+      ],
+    );
+  };
+
+  const renderJoinButton = () => {
+    if (isInviteOnly && !participantStatus) return null;
+    if (actionLoading) {
+      return (
+        <View style={[styles.joinButton, styles.joinButtonLoading]}>
+          <ActivityIndicator size="small" color="#FFFFFF" />
+        </View>
+      );
+    }
+    if (isJoined) {
+      return (
+        <TouchableOpacity style={[styles.joinButton, styles.joinButtonJoined]} onPress={handleLeave}>
+          <Text style={styles.joinButtonText}>Joined ✓</Text>
+        </TouchableOpacity>
+      );
+    }
+    if (isPending) {
+      return (
+        <TouchableOpacity style={[styles.joinButton, styles.joinButtonPending]} onPress={handleLeave}>
+          <Text style={[styles.joinButtonText, styles.joinButtonTextDark]}>Requested</Text>
+        </TouchableOpacity>
+      );
+    }
+    return (
+      <TouchableOpacity style={styles.joinButton} onPress={handleJoin}>
+        <Text style={styles.joinButtonText}>Join Event</Text>
+      </TouchableOpacity>
+    );
+  };
+
   return (
     <TouchableOpacity style={styles.container} onPress={onPress}>
       {event.banner_image_url && (
@@ -91,9 +166,7 @@ export function EventCard({ event, onPress }: EventCardProps) {
               </View>
             )}
           </View>
-          <TouchableOpacity style={styles.joinButton}>
-            <Text style={styles.joinButtonText}>Join Event</Text>
-          </TouchableOpacity>
+          {renderJoinButton()}
         </View>
       </View>
     </TouchableOpacity>
@@ -211,10 +284,16 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 8,
+    minWidth: 90,
+    alignItems: 'center',
   },
+  joinButtonJoined: { backgroundColor: '#16A34A' },
+  joinButtonPending: { backgroundColor: '#E9ECEF' },
+  joinButtonLoading: { backgroundColor: '#1A1A1A' },
   joinButtonText: {
     fontSize: 14,
     fontWeight: '600',
     color: '#FFFFFF',
   },
+  joinButtonTextDark: { color: '#444' },
 });
