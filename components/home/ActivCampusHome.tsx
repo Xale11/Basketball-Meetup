@@ -11,6 +11,8 @@ import useFetchUniversities from '@/hooks/universities/useFetchUniversities';
 import { useUserParticipations } from '@/hooks/events/useUserParticipations';
 import { Event, EventBookingMode } from '@/types/event';
 import { EventCard } from '@/components/events/EventCard';
+import { useUserParticipatingEvents } from '@/hooks/events/useUserParticipatingEvents';
+import { useJoinLeaveEvent } from '@/hooks/events/useJoinLeaveEvent';
 
 type TimeFilter = 'Now' | 'Today' | 'This Week';
 type CostFilter = 'All' | 'Free' | 'Paid';
@@ -41,6 +43,9 @@ export default function ActivCampusHome() {
     () => new Map(universities.map((u) => [u.id, u.name])),
     [universities],
   );
+
+  const { isJoined } = useUserParticipatingEvents(user?.id);
+  const { join, leave } = useJoinLeaveEvent();
 
   const now = new Date();
   const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());

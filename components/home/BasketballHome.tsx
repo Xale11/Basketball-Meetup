@@ -2,7 +2,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Search, Bell, Plus, MapPin, Calendar, Users } from 'lucide-react-native';
 import { CourtCard } from '@/components/CourtCard';
-import { EventCard } from '@/components/EventCard';
+import { EventCard } from '@/components/events/EventCard';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { mockCourts, mockEvents } from '@/utils/mockData';
 import { useAuth } from '@/hooks/useAuth';
@@ -70,7 +70,7 @@ export default function BasketballHome() {
             </TouchableOpacity>
           </View>
           {mockEvents.slice(0, 2).map((event) => (
-            <EventCard key={event.id} event={event} onPress={() => {}} />
+            <EventCard key={event.id} event={event} />
           ))}
         </View>
       </ScrollView>

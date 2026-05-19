@@ -131,7 +131,7 @@ export function EventCard({ event, societyNameMap, universityNameMap, participan
   return (
     <TouchableOpacity
       style={s.card}
-      onPress={() => router.push({ pathname: '/event/[id]', params: { id: event.id } })}
+      onPress={() => onPress ? onPress() : router.push({ pathname: '/event/[id]', params: { id: event.id } })}
     >
       <View style={s.cardTop}>
         {isLive && (

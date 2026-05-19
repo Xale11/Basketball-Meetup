@@ -1,11 +1,14 @@
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Link, router } from 'expo-router';
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react-native';
 import { useAuth } from '@/hooks/useAuth';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { auth } from '@/api/firebase';
+import { Button } from '@/components/ui/Button';
+import { TextInputField } from '@/components/ui/TextInputField';
+import { FormAlert } from '@/components/ui/FormAlert';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -48,50 +51,35 @@ export default function LoginScreen() {
           </View>
 
           <View style={styles.form}>
-            {error ? (
-              <View style={styles.errorContainer}>
-                <Text style={styles.errorText}>{error}</Text>
-              </View>
-            ) : null}
+            {error ? <FormAlert message={error} style={styles.alert} /> : null}
 
-            <View style={styles.inputContainer}>
-              <Mail size={20} color="#666" style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                placeholder="Email address"
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoComplete="email"
-              />
-            </View>
+            <TextInputField
+              icon={Mail}
+              placeholder="Email address"
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoComplete="email"
+              style={styles.inputSpacing}
+            />
 
-            <View style={styles.inputContainer}>
-              <Lock size={20} color="#666" style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                placeholder="Password"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry={!showPassword}
-                autoComplete="password"
-              />
-              <TouchableOpacity 
-                onPress={() => setShowPassword(!showPassword)}
-                style={styles.eyeIcon}
-              >
-                {showPassword ? (
-                  <EyeOff size={20} color="#666" />
-                ) : (
-                  <Eye size={20} color="#666" />
-                )}
-              </TouchableOpacity>
-            </View>
+            <TextInputField
+              icon={Lock}
+              placeholder="Password"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry={!showPassword}
+              autoComplete="password"
+              style={styles.inputSpacing}
+              rightElement={
+                <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
+                  {showPassword ? <EyeOff size={20} color="#666" /> : <Eye size={20} color="#666" />}
+                </TouchableOpacity>
+              }
+            />
 
-            <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
-              <Text style={styles.loginButtonText}>Sign In</Text>
-            </TouchableOpacity>
+            <Button label="Sign In" onPress={handleLogin} style={styles.loginButton} />
 
             <TouchableOpacity style={styles.forgotPassword}>
               <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
@@ -156,58 +144,17 @@ const styles = StyleSheet.create({
   form: {
     marginBottom: 32,
   },
-  errorContainer: {
-    backgroundColor: '#FEF2F2',
-    borderRadius: 12,
-    padding: 16,
+  alert: {
     marginBottom: 24,
-    borderWidth: 1,
-    borderColor: '#FECACA',
   },
-  errorText: {
-    color: '#DC2626',
-    fontSize: 14,
-    textAlign: 'center',
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F8F9FA',
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 4,
+  inputSpacing: {
     marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#E9ECEF',
-  },
-  inputIcon: {
-    marginRight: 12,
-  },
-  input: {
-    flex: 1,
-    fontSize: 16,
-    paddingVertical: 16,
-    color: '#1A1A1A',
   },
   eyeIcon: {
     padding: 4,
   },
   loginButton: {
-    backgroundColor: '#FF6B35',
-    borderRadius: 16,
-    paddingVertical: 18,
-    alignItems: 'center',
     marginTop: 8,
-    shadowColor: '#FF6B35',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  loginButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
   },
   forgotPassword: {
     alignItems: 'center',

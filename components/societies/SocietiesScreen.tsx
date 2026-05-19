@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, TextInput } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState, useMemo, useEffect } from 'react';
 import { Search, Filter, Plus, Users, Crown, ChevronRight, Calendar } from 'lucide-react-native';
@@ -9,6 +9,8 @@ import useFetchUniversities from '@/hooks/universities/useFetchUniversities';
 import { useUserParticipations } from '@/hooks/events/useUserParticipations';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { EventCard } from '@/components/events/EventCard';
+import { Button } from '@/components/ui/Button';
+import { TextInputField } from '@/components/ui/TextInputField';
 
 // Placeholder until backend query is wired up
 const MOCK_DISCOVER_SOCIETIES = [
@@ -116,9 +118,7 @@ export default function SocietiesScreen() {
                 <Calendar size={48} color="#CCC" />
                 <Text style={styles.emptyTitle}>No societies, no events</Text>
                 <Text style={styles.emptyDescription}>Join a society to start seeing their events here</Text>
-                <TouchableOpacity style={styles.discoverButton} onPress={() => setSelectedTab('discover')}>
-                  <Text style={styles.discoverButtonText}>Find a Society</Text>
-                </TouchableOpacity>
+                <Button label="Find a Society" onPress={() => setSelectedTab('discover')} style={styles.discoverButton} />
               </View>
             ) : (
               <>
@@ -226,9 +226,7 @@ export default function SocietiesScreen() {
                 <Users size={48} color="#CCC" />
                 <Text style={styles.emptyTitle}>No societies yet</Text>
                 <Text style={styles.emptyDescription}>Discover and join societies to see them here</Text>
-                <TouchableOpacity style={styles.discoverButton} onPress={() => setSelectedTab('discover')}>
-                  <Text style={styles.discoverButtonText}>Browse Societies</Text>
-                </TouchableOpacity>
+                <Button label="Browse Societies" onPress={() => setSelectedTab('discover')} style={styles.discoverButton} />
               </View>
             ) : (
               memberships.map((m) => (
@@ -255,9 +253,7 @@ export default function SocietiesScreen() {
               <Crown size={48} color="#CCC" />
               <Text style={styles.emptyTitle}>No societies managed</Text>
               <Text style={styles.emptyDescription}>Create a society to bring your community together</Text>
-              <TouchableOpacity style={styles.discoverButton} onPress={() => setShowCreateModal(true)}>
-                <Text style={styles.discoverButtonText}>Create a Society</Text>
-              </TouchableOpacity>
+              <Button label="Create a Society" onPress={() => setShowCreateModal(true)} style={styles.discoverButton} />
             </View>
           </View>
         )}
@@ -276,32 +272,14 @@ export default function SocietiesScreen() {
           </View>
           <ScrollView style={styles.modalContent}>
             <View style={styles.formSection}>
-              <Text style={styles.inputLabel}>Society Name *</Text>
-              <TextInput
-                style={styles.textInput}
-                value={societyName}
-                onChangeText={setSocietyName}
-                placeholder="e.g., Photography Society"
-                placeholderTextColor="#999"
-              />
+              <TextInputField label="Society Name *" value={societyName} onChangeText={setSocietyName} placeholder="e.g., Photography Society" />
             </View>
             <View style={styles.formSection}>
-              <Text style={styles.inputLabel}>Description *</Text>
-              <TextInput
-                style={[styles.textInput, styles.textArea]}
-                value={societyDescription}
-                onChangeText={setSocietyDescription}
-                placeholder="What's your society about?"
-                placeholderTextColor="#999"
-                multiline
-                numberOfLines={4}
-              />
+              <TextInputField label="Description *" value={societyDescription} onChangeText={setSocietyDescription} placeholder="What's your society about?" multiline numberOfLines={4} multilineHeight={120} />
             </View>
           </ScrollView>
           <View style={styles.modalFooter}>
-            <TouchableOpacity style={styles.submitButton} onPress={handleCreate}>
-              <Text style={styles.submitButtonText}>Create Society</Text>
-            </TouchableOpacity>
+            <Button label="Create Society" onPress={handleCreate} />
           </View>
         </SafeAreaView>
       </Modal>
@@ -356,18 +334,12 @@ const styles = StyleSheet.create({
   emptyState: { alignItems: 'center', paddingVertical: 60, paddingHorizontal: 40 },
   emptyTitle: { fontSize: 20, fontWeight: '600', color: '#1A1A1A', marginTop: 16, marginBottom: 8 },
   emptyDescription: { fontSize: 15, color: '#666', textAlign: 'center', lineHeight: 22, marginBottom: 24 },
-  discoverButton: { backgroundColor: '#FF6B35', borderRadius: 16, paddingHorizontal: 24, paddingVertical: 12 },
-  discoverButtonText: { color: '#FFFFFF', fontSize: 15, fontWeight: '600' },
+  discoverButton: { paddingHorizontal: 24 },
   modalContainer: { flex: 1, backgroundColor: '#FFFFFF' },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: '#F0F0F0' },
   modalTitle: { fontSize: 20, fontWeight: '600', color: '#1A1A1A' },
   cancelText: { fontSize: 16, color: '#FF6B35', fontWeight: '600' },
   modalContent: { flex: 1, paddingHorizontal: 20 },
   formSection: { paddingVertical: 16 },
-  inputLabel: { fontSize: 14, fontWeight: '500', color: '#1A1A1A', marginBottom: 8 },
-  textInput: { backgroundColor: '#F8F9FA', borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14, fontSize: 16, color: '#1A1A1A', borderWidth: 1, borderColor: '#E9ECEF' },
-  textArea: { height: 120, textAlignVertical: 'top' },
   modalFooter: { paddingHorizontal: 20, paddingVertical: 16, borderTopWidth: 1, borderTopColor: '#F0F0F0' },
-  submitButton: { backgroundColor: '#FF6B35', borderRadius: 16, paddingVertical: 16, alignItems: 'center' },
-  submitButtonText: { fontSize: 16, fontWeight: '600', color: '#FFFFFF' },
 });

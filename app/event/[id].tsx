@@ -12,6 +12,9 @@ import { useAuth } from '@/hooks/useAuth';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { EventBookingMode, EventHostType, EventJoinPolicy, EventParticipantStatus, EventVisibility } from '@/types/event';
 import { useEffect, useMemo, type ReactNode } from 'react';
+import { useAuth } from '@/hooks/useAuth';
+import { useJoinLeaveEvent } from '@/hooks/events/useJoinLeaveEvent';
+import { useUserParticipatingEvents } from '@/hooks/events/useUserParticipatingEvents';
 
 export default function EventDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -192,6 +195,7 @@ export default function EventDetailScreen() {
         <View style={{ height: 100 }} />
       </ScrollView>
 
+      {/* Join / Leave CTA */}
       {/* Join / Leave CTA */}
       <View style={styles.footer}>
         {actionLoading ? (
