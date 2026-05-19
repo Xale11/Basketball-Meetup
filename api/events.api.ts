@@ -1,4 +1,4 @@
-import { Event, CreateEventForm, EventImageType } from '@/types/event'
+import { Event, CreateEventForm, EventImageType, EventJoinPolicy, EventParticipantStatus } from '@/types/event'
 import { SocietyRoleIdEnum } from '@/types/societies'
 import { UniversityRole } from '@/types/universities'
 import { supabase } from './supabase'
@@ -6,10 +6,24 @@ import { uploadToSupabaseBucket } from './supabase-storage.api'
 
 const EVENT_IMAGES_BUCKET = 'event_images'
 
+// Logs a Supabase error with all fields that matter for debugging (code, hint, details
+// are dropped by JSON.stringify on some error shapes, so we pull them explicitly).
+function logSupabaseError(context: string, error: any) {
+  console.error(`[events.api] ${context} — Supabase error:`, {
+    message: error?.message,
+    code: error?.code,        // e.g. '42501' = RLS violation, '23505' = unique constraint
+    details: error?.details,
+    hint: error?.hint,
+    status: error?.status,
+    raw: error,
+  })
+}
+
 export const createEvent = async (
   form: CreateEventForm,
   userId: string,
 ): Promise<Event> => {
+  console.log('[createEvent] start — userId:', userId, '| host_type:', form.host_type)
   try {
     const { data, error } = await supabase
       .from('events')
@@ -38,9 +52,13 @@ export const createEvent = async (
       .select('*')
       .maybeSingle()
 
-    if (error) throw new Error(JSON.stringify(error))
+    if (error) {
+      logSupabaseError('createEvent insert', error)
+      throw new Error(error.message)
+    }
 
     const event = data as Event
+    console.log('[createEvent] insert successful — eventId:', event.id)
 
     // Build folder path based on host_type
     let folder: string
@@ -54,21 +72,24 @@ export const createEvent = async (
 
     // Upload banner
     if (form.banner_image_uri) {
+      console.log('[createEvent] uploading banner — folder:', folder)
       const bannerUrl = await uploadToSupabaseBucket(
         form.banner_image_uri,
         folder,
         'cover',
         EVENT_IMAGES_BUCKET,
       )
-      await supabase
+      const { error: bannerError } = await supabase
         .from('events')
         .update({ banner_image_url: bannerUrl })
         .eq('id', event.id)
+      if (bannerError) logSupabaseError('createEvent banner update', bannerError)
       event.banner_image_url = bannerUrl
     }
 
     // Upload gallery images
     if (form.gallery_image_uris.length > 0) {
+      console.log('[createEvent] uploading', form.gallery_image_uris.length, 'gallery images')
       const galleryRows = await Promise.all(
         form.gallery_image_uris.map(async (uri, index) => {
           const url = await uploadToSupabaseBucket(
@@ -85,11 +106,13 @@ export const createEvent = async (
           }
         })
       )
-      await supabase.from('event_images').insert(galleryRows)
+      const { error: galleryError } = await supabase.from('event_images').insert(galleryRows)
+      if (galleryError) logSupabaseError('createEvent gallery insert', galleryError)
     }
 
     return event
   } catch (error: any) {
+    console.error('[createEvent] caught error:', error.message)
     throw new Error(error.message)
   }
 }
@@ -99,6 +122,7 @@ export const updateEvent = async (
   form: CreateEventForm,
   userId: string,
 ): Promise<Event> => {
+  console.log('[updateEvent] start — eventId:', eventId, '| userId:', userId)
   try {
     const { data, error } = await supabase
       .from('events')
@@ -125,9 +149,13 @@ export const updateEvent = async (
       .select('*')
       .maybeSingle()
 
-    if (error) throw new Error(JSON.stringify(error))
+    if (error) {
+      logSupabaseError('updateEvent update', error)
+      throw new Error(error.message)
+    }
 
     const event = data as Event
+    console.log('[updateEvent] update successful — eventId:', event.id)
 
     // Build folder path based on host_type
     let folder: string
@@ -139,30 +167,33 @@ export const updateEvent = async (
       folder = `USER/${userId}/${eventId}`
     }
 
-    // Upload new banner if one was selected, otherwise keep existing
     if (form.banner_image_uri) {
+      console.log('[updateEvent] uploading new banner — folder:', folder)
       const bannerUrl = await uploadToSupabaseBucket(
         form.banner_image_uri,
         folder,
         'cover',
         EVENT_IMAGES_BUCKET,
       )
-      await supabase
+      const { error: bannerError } = await supabase
         .from('events')
         .update({ banner_image_url: bannerUrl })
         .eq('id', eventId)
+      if (bannerError) logSupabaseError('updateEvent banner update', bannerError)
       event.banner_image_url = bannerUrl
     } else if (form.banner_image_url === null) {
-      // User explicitly removed the banner
-      await supabase
+      console.log('[updateEvent] removing banner — eventId:', eventId)
+      const { error: bannerError } = await supabase
         .from('events')
         .update({ banner_image_url: null })
         .eq('id', eventId)
+      if (bannerError) logSupabaseError('updateEvent banner removal', bannerError)
       event.banner_image_url = null
     }
 
     return event
   } catch (error: any) {
+    console.error('[updateEvent] caught error:', error.message)
     throw new Error(error.message)
   }
 }
@@ -171,16 +202,12 @@ export const fetchEvents = async (
   universityId?: string | null,
   societyIds?: string[],
 ): Promise<Event[]> => {
+  console.log('[fetchEvents] start — universityId:', universityId, '| societyIds:', societyIds?.length ?? 0)
   try {
     const now = new Date().toISOString()
 
-    // Always include PUBLIC events
     const visibilityFilter = ['PUBLIC']
-
-    // Include UNIVERSITY_ONLY if the user belongs to that university
     if (universityId) visibilityFilter.push('UNIVERSITY_ONLY')
-
-    // Include SOCIETY_ONLY if the user is in at least one society
     if (societyIds && societyIds.length > 0) visibilityFilter.push('SOCIETY_ONLY')
 
     const { data, error } = await supabase
@@ -191,43 +218,54 @@ export const fetchEvents = async (
       .in('visibility', visibilityFilter)
       .order('start_date', { ascending: true })
 
-    if (error) throw new Error(JSON.stringify(error))
+    if (error) {
+      logSupabaseError('fetchEvents select', error)
+      throw new Error(error.message)
+    }
 
-    // Post-filter: UNIVERSITY_ONLY must match the user's university,
-    // SOCIETY_ONLY must be hosted by one of the user's societies
     const memberSocietySet = new Set(societyIds ?? [])
-
-    return (data ?? []).filter((e: Event) => {
+    const filtered = (data ?? []).filter((e: Event) => {
       if (e.visibility === 'UNIVERSITY_ONLY') return e.university_id === universityId
       if (e.visibility === 'SOCIETY_ONLY') return e.society_id != null && memberSocietySet.has(e.society_id)
       return true
     }) as Event[]
+
+    console.log('[fetchEvents] returned', filtered.length, 'events')
+    return filtered
   } catch (error: any) {
+    console.error('[fetchEvents] caught error:', error.message)
     throw new Error(error.message)
   }
 }
 
 export const fetchEventsByUserId = async (userId: string): Promise<Event[]> => {
+  console.log('[fetchEventsByUserId] start — userId:', userId)
   try {
     if (!userId) throw new Error('No userId provided to fetchEventsByUserId')
 
-    // Events the user created directly
     const { data: createdEvents, error: createdError } = await supabase
       .from('events')
       .select('*')
       .eq('created_by_user_id', userId)
       .order('start_date', { ascending: true })
-    if (createdError) throw new Error(JSON.stringify(createdError))
+    if (createdError) {
+      logSupabaseError('fetchEventsByUserId createdEvents', createdError)
+      throw new Error(createdError.message)
+    }
+    console.log('[fetchEventsByUserId] createdEvents:', createdEvents?.length ?? 0)
 
-    // Society IDs where the user has EXEC, PRESIDENT, or OWNER role
     const { data: societyMemberships, error: smError } = await supabase
       .from('society_memberships')
       .select('society_id')
       .eq('user_id', userId)
       .in('role_id', [SocietyRoleIdEnum.EXEC, SocietyRoleIdEnum.PRESIDENT, SocietyRoleIdEnum.OWNER])
-    if (smError) throw new Error(JSON.stringify(smError))
+    if (smError) {
+      logSupabaseError('fetchEventsByUserId societyMemberships', smError)
+      throw new Error(smError.message)
+    }
 
     const societyIds = (societyMemberships ?? []).map((m) => m.society_id)
+    console.log('[fetchEventsByUserId] privileged societyIds:', societyIds.length)
 
     let societyEvents: Event[] = []
     if (societyIds.length > 0) {
@@ -237,19 +275,26 @@ export const fetchEventsByUserId = async (userId: string): Promise<Event[]> => {
         .eq('host_type', 'SOCIETY')
         .in('society_id', societyIds)
         .order('start_date', { ascending: true })
-      if (error) throw new Error(JSON.stringify(error))
+      if (error) {
+        logSupabaseError('fetchEventsByUserId societyEvents', error)
+        throw new Error(error.message)
+      }
       societyEvents = (data ?? []) as Event[]
+      console.log('[fetchEventsByUserId] societyEvents:', societyEvents.length)
     }
 
-    // University IDs where the user has ADMIN role
     const { data: uniMemberships, error: umError } = await supabase
       .from('university_memberships')
       .select('university_id')
       .eq('user_id', userId)
       .eq('role', UniversityRole.ADMIN)
-    if (umError) throw new Error(JSON.stringify(umError))
+    if (umError) {
+      logSupabaseError('fetchEventsByUserId uniMemberships', umError)
+      throw new Error(umError.message)
+    }
 
     const universityIds = (uniMemberships ?? []).map((m) => m.university_id)
+    console.log('[fetchEventsByUserId] admin universityIds:', universityIds.length)
 
     let universityEvents: Event[] = []
     if (universityIds.length > 0) {
@@ -259,38 +304,114 @@ export const fetchEventsByUserId = async (userId: string): Promise<Event[]> => {
         .eq('host_type', 'UNIVERSITY')
         .in('university_id', universityIds)
         .order('start_date', { ascending: true })
-      if (error) throw new Error(JSON.stringify(error))
+      if (error) {
+        logSupabaseError('fetchEventsByUserId universityEvents', error)
+        throw new Error(error.message)
+      }
       universityEvents = (data ?? []) as Event[]
+      console.log('[fetchEventsByUserId] universityEvents:', universityEvents.length)
     }
 
-    // Merge and deduplicate by event ID
     const all = [...(createdEvents ?? []), ...societyEvents, ...universityEvents]
     const seen = new Set<string>()
-    return all.filter((e) => {
+    const deduped = all.filter((e) => {
       if (seen.has(e.id)) return false
       seen.add(e.id)
       return true
     }) as Event[]
+
+    console.log('[fetchEventsByUserId] total after dedup:', deduped.length)
+    return deduped
   } catch (error: any) {
+    console.error('[fetchEventsByUserId] caught error:', error.message)
     throw new Error(error.message)
   }
 }
 
 export const fetchEventById = async (eventId: string): Promise<{ event: Event; participantCount: number }> => {
+  console.log('[fetchEventById] start — eventId:', eventId)
   try {
     const [{ data: eventData, error: eventError }, { count, error: countError }] = await Promise.all([
       supabase.from('events').select('*').eq('id', eventId).single(),
       supabase.from('event_participants').select('*', { count: 'exact', head: true }).eq('event_id', eventId),
     ])
-    if (eventError) throw new Error(JSON.stringify(eventError))
-    if (countError) throw new Error(JSON.stringify(countError))
+    if (eventError) {
+      logSupabaseError('fetchEventById event select', eventError)
+      throw new Error(eventError.message)
+    }
+    if (countError) {
+      logSupabaseError('fetchEventById participant count', countError)
+      throw new Error(countError.message)
+    }
+    console.log('[fetchEventById] success — participantCount:', count)
     return { event: eventData as Event, participantCount: count ?? 0 }
   } catch (error: any) {
+    console.error('[fetchEventById] caught error:', error.message)
+    throw new Error(error.message)
+  }
+}
+
+export const joinEvent = async (eventId: string, userId: string, joinPolicy: EventJoinPolicy): Promise<void> => {
+  console.log('[joinEvent] start — eventId:', eventId, '| userId:', userId, '| joinPolicy:', joinPolicy)
+  try {
+    const status = joinPolicy === EventJoinPolicy.APPROVAL_REQUIRED
+      ? EventParticipantStatus.REQUESTED
+      : EventParticipantStatus.GOING
+    const { error } = await supabase
+      .from('event_participants')
+      .insert({ event_id: eventId, user_id: userId, status })
+    if (error) {
+      logSupabaseError('joinEvent insert', error)
+      throw new Error(error.message)
+    }
+    console.log('[joinEvent] insert successful — status:', status)
+  } catch (error: any) {
+    console.error('[joinEvent] caught error:', error.message)
+    throw new Error(error.message)
+  }
+}
+
+export const leaveEvent = async (eventId: string, userId: string): Promise<void> => {
+  console.log('[leaveEvent] start — eventId:', eventId, '| userId:', userId)
+  try {
+    const { error, data } = await supabase
+      .from('event_participants')
+      .delete()
+      .eq('event_id', eventId)
+      .eq('user_id', userId)
+    console.log('[leaveEvent] delete result:', { data, error })
+    if (error) {
+      logSupabaseError('leaveEvent delete', error)
+      throw new Error(error.message)
+    }
+  } catch (error: any) {
+    console.error('[leaveEvent] caught error:', error.message)
+    throw new Error(error.message)
+  }
+}
+
+export const fetchUserParticipatingEventIds = async (userId: string): Promise<string[]> => {
+  console.log('[fetchUserParticipatingEventIds] start — userId:', userId)
+  try {
+    const { data, error } = await supabase
+      .from('event_participants')
+      .select('event_id')
+      .eq('user_id', userId)
+    if (error) {
+      logSupabaseError('fetchUserParticipatingEventIds select', error)
+      throw new Error(error.message)
+    }
+    const ids = (data ?? []).map((p: { event_id: string }) => p.event_id)
+    console.log('[fetchUserParticipatingEventIds] found', ids.length, 'participations')
+    return ids
+  } catch (error: any) {
+    console.error('[fetchUserParticipatingEventIds] caught error:', error.message)
     throw new Error(error.message)
   }
 }
 
 export const fetchParticipantEvents = async (userId: string): Promise<Event[]> => {
+  console.log('[fetchParticipantEvents] start — userId:', userId)
   try {
     if (!userId) throw new Error('No userId provided to fetchParticipantEvents')
 
@@ -298,9 +419,13 @@ export const fetchParticipantEvents = async (userId: string): Promise<Event[]> =
       .from('event_participants')
       .select('event_id')
       .eq('user_id', userId)
-    if (pError) throw new Error(JSON.stringify(pError))
+    if (pError) {
+      logSupabaseError('fetchParticipantEvents participations select', pError)
+      throw new Error(pError.message)
+    }
 
     const eventIds = (participations ?? []).map((p: { event_id: string }) => p.event_id)
+    console.log('[fetchParticipantEvents] found', eventIds.length, 'participation records')
     if (eventIds.length === 0) return []
 
     const { data, error } = await supabase
@@ -308,10 +433,15 @@ export const fetchParticipantEvents = async (userId: string): Promise<Event[]> =
       .select('*')
       .in('id', eventIds)
       .order('start_date', { ascending: true })
-    if (error) throw new Error(JSON.stringify(error))
+    if (error) {
+      logSupabaseError('fetchParticipantEvents events select', error)
+      throw new Error(error.message)
+    }
 
+    console.log('[fetchParticipantEvents] returned', data?.length ?? 0, 'events')
     return (data ?? []) as Event[]
   } catch (error: any) {
+    console.error('[fetchParticipantEvents] caught error:', error.message)
     throw new Error(error.message)
   }
 }

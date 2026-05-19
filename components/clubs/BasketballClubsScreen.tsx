@@ -1,10 +1,12 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, TextInput } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState } from 'react';
 import { Search, Filter, Plus, Users, Calendar, DollarSign, Crown } from 'lucide-react-native';
 import { ClubCard } from '@/components/ClubCard';
 import { mockClubs } from '@/utils/mockData';
 import { useAuth } from '@/hooks/useAuth';
+import { Button } from '@/components/ui/Button';
+import { TextInputField } from '@/components/ui/TextInputField';
 
 export default function BasketballClubsScreen() {
   const { user } = useAuth();
@@ -86,9 +88,7 @@ export default function BasketballClubsScreen() {
                 <Crown size={48} color="#CCC" />
                 <Text style={styles.emptyTitle}>No Clubs Managed</Text>
                 <Text style={styles.emptyDescription}>Create a club to start managing players and training sessions</Text>
-                <TouchableOpacity style={styles.createClubButton} onPress={() => setShowCreateClub(true)}>
-                  <Text style={styles.createClubButtonText}>Create Your First Club</Text>
-                </TouchableOpacity>
+                <Button label="Create Your First Club" onPress={() => setShowCreateClub(true)} style={styles.createClubButton} />
               </View>
             )}
           </View>
@@ -106,14 +106,8 @@ export default function BasketballClubsScreen() {
           <ScrollView style={styles.modalContent}>
             <View style={styles.formSection}>
               <Text style={styles.formLabel}>Club Information</Text>
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Club Name *</Text>
-                <TextInput style={styles.textInput} value={clubName} onChangeText={setClubName} placeholder="e.g., Downtown Ballers" placeholderTextColor="#999" />
-              </View>
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Description *</Text>
-                <TextInput style={[styles.textInput, styles.textArea]} value={clubDescription} onChangeText={setClubDescription} placeholder="Tell players about your club..." placeholderTextColor="#999" multiline numberOfLines={4} />
-              </View>
+              <TextInputField label="Club Name *" value={clubName} onChangeText={setClubName} placeholder="e.g., Downtown Ballers" style={styles.inputGroup} />
+              <TextInputField label="Description *" value={clubDescription} onChangeText={setClubDescription} placeholder="Tell players about your club..." multiline numberOfLines={4} multilineHeight={100} />
             </View>
             <View style={styles.formSection}>
               <Text style={styles.formLabel}>Membership Fees</Text>
@@ -122,14 +116,14 @@ export default function BasketballClubsScreen() {
                   <Text style={styles.inputLabel}>Monthly Fee</Text>
                   <View style={styles.priceInputContainer}>
                     <DollarSign size={20} color="#666" />
-                    <TextInput style={styles.priceInput} value={monthlyFee} onChangeText={setMonthlyFee} placeholder="0" placeholderTextColor="#999" keyboardType="numeric" />
+                    <TextInputField style={styles.priceInput} value={monthlyFee} onChangeText={setMonthlyFee} placeholder="0" placeholderTextColor="#999" keyboardType="numeric" />
                   </View>
                 </View>
                 <View style={styles.feeInput}>
                   <Text style={styles.inputLabel}>Per Session</Text>
                   <View style={styles.priceInputContainer}>
                     <DollarSign size={20} color="#666" />
-                    <TextInput style={styles.priceInput} value={sessionFee} onChangeText={setSessionFee} placeholder="0" placeholderTextColor="#999" keyboardType="numeric" />
+                    <TextInputField style={styles.priceInput} value={sessionFee} onChangeText={setSessionFee} placeholder="0" placeholderTextColor="#999" keyboardType="numeric" />
                   </View>
                 </View>
               </View>
@@ -154,9 +148,7 @@ export default function BasketballClubsScreen() {
             </View>
           </ScrollView>
           <View style={styles.modalFooter}>
-            <TouchableOpacity style={styles.submitButton} onPress={handleCreateClub}>
-              <Text style={styles.submitButtonText}>Create Club</Text>
-            </TouchableOpacity>
+            <Button label="Create Club" onPress={handleCreateClub} />
           </View>
         </SafeAreaView>
       </Modal>
@@ -181,8 +173,7 @@ const styles = StyleSheet.create({
   emptyState: { alignItems: 'center', paddingVertical: 60, paddingHorizontal: 40 },
   emptyTitle: { fontSize: 20, fontWeight: '600', color: '#1A1A1A', marginTop: 16, marginBottom: 8 },
   emptyDescription: { fontSize: 16, color: '#666', textAlign: 'center', lineHeight: 24, marginBottom: 24 },
-  createClubButton: { backgroundColor: '#FF6B35', borderRadius: 16, paddingHorizontal: 24, paddingVertical: 12 },
-  createClubButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '600' },
+  createClubButton: { paddingHorizontal: 24 },
   modalContainer: { flex: 1, backgroundColor: '#FFFFFF' },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: '#F0F0F0' },
   modalTitle: { fontSize: 20, fontWeight: '600', color: '#1A1A1A' },
@@ -191,9 +182,6 @@ const styles = StyleSheet.create({
   formSection: { paddingVertical: 20, borderBottomWidth: 1, borderBottomColor: '#F0F0F0' },
   formLabel: { fontSize: 18, fontWeight: '600', color: '#1A1A1A', marginBottom: 16 },
   inputGroup: { marginBottom: 16 },
-  inputLabel: { fontSize: 14, fontWeight: '500', color: '#1A1A1A', marginBottom: 8 },
-  textInput: { backgroundColor: '#F8F9FA', borderRadius: 12, paddingHorizontal: 16, paddingVertical: 16, fontSize: 16, color: '#1A1A1A', borderWidth: 1, borderColor: '#E9ECEF' },
-  textArea: { height: 100, textAlignVertical: 'top' },
   feeRow: { flexDirection: 'row', gap: 16 },
   feeInput: { flex: 1 },
   priceInputContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8F9FA', borderRadius: 12, paddingHorizontal: 16, paddingVertical: 16, borderWidth: 1, borderColor: '#E9ECEF' },
@@ -204,6 +192,4 @@ const styles = StyleSheet.create({
   featureTitle: { fontSize: 16, fontWeight: '600', color: '#1A1A1A', marginBottom: 4 },
   featureDescription: { fontSize: 14, color: '#666' },
   modalFooter: { paddingHorizontal: 20, paddingVertical: 16, borderTopWidth: 1, borderTopColor: '#F0F0F0' },
-  submitButton: { backgroundColor: '#FF6B35', borderRadius: 16, paddingVertical: 16, alignItems: 'center' },
-  submitButtonText: { fontSize: 16, fontWeight: '600', color: '#FFFFFF' },
 });

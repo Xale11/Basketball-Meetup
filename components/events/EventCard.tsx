@@ -32,9 +32,13 @@ interface EventCardProps {
   event: Event;
   societyNameMap?: Map<string, string>;
   universityNameMap?: Map<string, string>;
+  isJoined?: boolean;
+  onJoin?: () => void;
+  onLeave?: () => void;
+  onPress?: () => void;
 }
 
-export function EventCard({ event, societyNameMap, universityNameMap }: EventCardProps) {
+export function EventCard({ event, societyNameMap, universityNameMap, isJoined, onJoin, onLeave, onPress }: EventCardProps) {
   const isFree = event.booking_mode === EventBookingMode.FREE;
   const startDate = new Date(event.start_date);
   const endDate = new Date(event.end_date);
@@ -56,7 +60,7 @@ export function EventCard({ event, societyNameMap, universityNameMap }: EventCar
   return (
     <TouchableOpacity
       style={s.card}
-      onPress={() => router.push({ pathname: '/event/[id]', params: { id: event.id } })}
+      onPress={() => onPress ? onPress() : router.push({ pathname: '/event/[id]', params: { id: event.id } })}
     >
       <View style={s.cardTop}>
         {isLive && (
@@ -104,8 +108,16 @@ export function EventCard({ event, societyNameMap, universityNameMap }: EventCar
             <Text style={s.attendeesText}>Open</Text>
           </View>
         )}
-        <TouchableOpacity style={s.joinButton}>
-          <Text style={s.joinButtonText}>{isFree ? 'Join Free' : `Join · £${event.price_from ?? ''}`}</Text>
+        <TouchableOpacity
+          style={[s.joinButton, isJoined && s.joinButtonJoined]}
+          onPress={(e) => {
+            e.stopPropagation?.();
+            isJoined ? onLeave?.() : onJoin?.();
+          }}
+        >
+          <Text style={[s.joinButtonText, isJoined && s.joinButtonTextJoined]}>
+            {isJoined ? 'Leave' : isFree ? 'Join Free' : `Join · £${event.price_from ?? ''}`}
+          </Text>
         </TouchableOpacity>
       </View>
     </TouchableOpacity>
@@ -147,7 +159,9 @@ const s = StyleSheet.create({
   attendeesRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   attendeesText: { fontSize: 13, color: '#666' },
   joinButton: { backgroundColor: '#FF6B35', borderRadius: 20, paddingHorizontal: 18, paddingVertical: 8 },
+  joinButtonJoined: { backgroundColor: '#F0F0F0' },
   joinButtonText: { fontSize: 14, fontWeight: '600', color: '#FFFFFF' },
+  joinButtonTextJoined: { color: '#555' },
   liveBadge: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 8 },
   liveDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#E53E3E' },
   liveText: { fontSize: 12, fontWeight: '700', color: '#E53E3E', letterSpacing: 0.5 },

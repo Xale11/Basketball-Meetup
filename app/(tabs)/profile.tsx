@@ -1,17 +1,18 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Modal, TextInput, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Settings, Pencil as Edit, ChevronRight, CreditCard, Bell, Shield, X, Camera, User, MapPin, Clock } from 'lucide-react-native';
+import { Settings, Pencil as Edit, ChevronRight, CreditCard, Bell, Shield, User, Camera } from 'lucide-react-native';
 import { useAuth } from '@/hooks/useAuth';
-import { useState, useEffect, useMemo } from 'react';
 import useFetchUserSocieties from '@/hooks/societies/useFetchUserSocieties';
 import useUpdateProfilePhoto from '@/hooks/users/useUpdateProfilePhoto';
 import useUpdateUser from '@/hooks/users/useUpdateUser';
 import { useFetchMyEvents } from '@/hooks/events/useFetchMyEvents';
 import { useFetchParticipantEvents } from '@/hooks/events/useFetchParticipantEvents';
 import { appVariant } from '@/constants/appVariant';
-import { Event } from '@/types/event';
-
-type ActivityTab = 'upcoming' | 'created' | 'past';
+import { EditProfileModal } from '@/components/profile/EditProfileModal';
+import { ActivitySection } from '@/components/profile/ActivitySection';
+import { Button } from '@/components/ui/Button';
+import { SectionCard } from '@/components/ui/SectionCard';
+import { useState } from 'react';
 
 export default function ProfileScreen() {
   const { user, session, logout } = useAuth();
@@ -22,55 +23,6 @@ export default function ProfileScreen() {
   const { events: participantEvents, loading: participantEventsLoading } = useFetchParticipantEvents(user?.id);
 
   const [showEditModal, setShowEditModal] = useState(false);
-  const [activityTab, setActivityTab] = useState<ActivityTab>('upcoming');
-
-  const now = new Date();
-  const upcomingEvents = useMemo(
-    () => participantEvents.filter((e) => new Date(e.start_date) > now),
-    [participantEvents],
-  );
-  const createdEvents = useMemo(
-    () => myEvents.filter((e) => new Date(e.start_date) > now),
-    [myEvents],
-  );
-  const pastEvents = useMemo(
-    () => participantEvents.filter((e) => new Date(e.end_date) < now),
-    [participantEvents],
-  );
-
-  const activitiesLoading = activityTab === 'created' ? myEventsLoading : participantEventsLoading;
-  const activeEvents: Event[] = activityTab === 'upcoming' ? upcomingEvents : activityTab === 'created' ? createdEvents : pastEvents;
-  const [editForm, setEditForm] = useState({
-    first_name: '',
-    last_name: '',
-    bio: '',
-    course: '',
-  });
-
-  useEffect(() => {
-    if (user) {
-      setEditForm({
-        first_name: user.first_name ?? '',
-        last_name: user.last_name ?? '',
-        bio: user.bio ?? '',
-        course: user.course ?? '',
-      });
-    }
-  }, [user]);
-
-  const handleSave = async () => {
-    try {
-      await updateProfile({
-        first_name: editForm.first_name.trim(),
-        last_name: editForm.last_name.trim(),
-        bio: editForm.bio.trim() || undefined,
-        course: editForm.course.trim() || undefined,
-      });
-      setShowEditModal(false);
-    } catch (e) {
-      // error already logged in hook
-    }
-  };
 
   const menuItems = [
     { label: 'Edit Profile', icon: Edit, onPress: () => setShowEditModal(true) },
@@ -79,6 +31,20 @@ export default function ProfileScreen() {
     { label: 'Privacy & Security', icon: Shield, onPress: () => {} },
     { label: 'Settings', icon: Settings, onPress: () => {} },
   ];
+
+  const handleSave = async (form: { first_name: string; last_name: string; bio: string; course: string }) => {
+    try {
+      await updateProfile({
+        first_name: form.first_name.trim(),
+        last_name: form.last_name.trim(),
+        bio: form.bio.trim() || undefined,
+        course: form.course.trim() || undefined,
+      });
+      setShowEditModal(false);
+    } catch {
+      // error already logged in hook
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -90,9 +56,14 @@ export default function ProfileScreen() {
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        {/* Profile Header */}
         <View style={styles.profileSection}>
           <View style={styles.profileHeader}>
-            <TouchableOpacity style={styles.avatarContainer} onPress={() => handlePhotoPress(!!user?.photo_url)} disabled={photoUploading}>
+            <TouchableOpacity
+              style={styles.avatarContainer}
+              onPress={() => handlePhotoPress(!!user?.photo_url)}
+              disabled={photoUploading}
+            >
               {user?.photo_url
                 ? <Image source={{ uri: user.photo_url }} style={styles.avatar} />
                 : <View style={styles.avatarPlaceholder}><User size={36} color="#9CA3AF" /></View>
@@ -117,92 +88,44 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-
+        {/* Activity Section */}
         {appVariant === 'activCampus' && (
-          <View style={styles.clubSection}>
+          <SectionCard style={styles.sectionCardSpacing}>
             <Text style={styles.sectionTitle}>My Activity</Text>
-            <View style={styles.activityTabRow}>
-              {(['upcoming', 'created', 'past'] as ActivityTab[]).map((t) => (
-                <TouchableOpacity
-                  key={t}
-                  style={[styles.activityTabChip, activityTab === t && styles.activityTabChipActive]}
-                  onPress={() => setActivityTab(t)}
-                >
-                  <Text style={[styles.activityTabText, activityTab === t && styles.activityTabTextActive]}>
-                    {t.charAt(0).toUpperCase() + t.slice(1)}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-            {activitiesLoading ? (
-              <Text style={styles.societyHelperText}>Loading…</Text>
-            ) : activeEvents.length === 0 ? (
-              <Text style={styles.societyHelperText}>Nothing here yet.</Text>
-            ) : (
-              activeEvents.map((e) => {
-                const startDate = new Date(e.start_date);
-                const isToday = startDate.toDateString() === new Date().toDateString();
-                const timeLabel = isToday
-                  ? `Today · ${startDate.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`
-                  : `${startDate.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })} · ${startDate.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`;
-                const isHosting = activityTab === 'created';
-                const isPast = activityTab === 'past';
-                return (
-                  <View key={e.id} style={styles.activityItem}>
-                    <View style={styles.activityItemInfo}>
-                      <Text style={styles.activityItemTitle}>{e.name}</Text>
-                      <View style={styles.activityItemMeta}>
-                        <Clock size={12} color="#888" />
-                        <Text style={styles.activityItemMetaText}>{timeLabel}</Text>
-                        {e.address && (
-                          <>
-                            <MapPin size={12} color="#888" />
-                            <Text style={styles.activityItemMetaText}>{e.address}</Text>
-                          </>
-                        )}
-                      </View>
-                    </View>
-                    <View style={[styles.activityStatusBadge,
-                      isHosting && styles.activityStatusHosting,
-                      isPast && styles.activityStatusCompleted,
-                    ]}>
-                      <Text style={[styles.activityStatusText,
-                        isHosting && styles.activityStatusTextHosting,
-                        isPast && styles.activityStatusTextCompleted,
-                      ]}>
-                        {isHosting ? 'Hosting' : isPast ? 'Attended' : 'Going'}
-                      </Text>
-                    </View>
-                  </View>
-                );
-              })
-            )}
-          </View>
+            <ActivitySection
+              myEvents={myEvents}
+              participantEvents={participantEvents}
+              myEventsLoading={myEventsLoading}
+              participantEventsLoading={participantEventsLoading}
+            />
+          </SectionCard>
         )}
 
-        <View style={styles.clubSection}>
+        {/* Society Memberships */}
+        <SectionCard style={styles.sectionCardSpacing}>
           <Text style={styles.sectionTitle}>Society Memberships</Text>
           {societiesLoading ? (
-            <Text style={styles.societyHelperText}>Loading societies…</Text>
+            <Text style={styles.helperText}>Loading societies…</Text>
           ) : memberships.length === 0 ? (
-            <Text style={styles.societyHelperText}>You haven't joined any societies yet.</Text>
+            <Text style={styles.helperText}>You haven't joined any societies yet.</Text>
           ) : (
             memberships.map((m) => (
-              <View key={m.society_id} style={[styles.clubCard, styles.societyCard]}>
-                <View style={styles.clubInfo}>
-                  <View style={styles.clubLogo}>
-                    <Text style={styles.clubInitial}>{m.societies.name.charAt(0).toUpperCase()}</Text>
+              <View key={m.society_id} style={styles.societyCard}>
+                <View style={styles.societyInfo}>
+                  <View style={styles.societyLogo}>
+                    <Text style={styles.societyInitial}>{m.societies.name.charAt(0).toUpperCase()}</Text>
                   </View>
                   <View>
-                    <Text style={styles.clubName}>{m.societies.name}</Text>
-                    <Text style={styles.clubRole}>{m.role_id}</Text>
+                    <Text style={styles.societyName}>{m.societies.name}</Text>
+                    <Text style={styles.societyRole}>{m.role_id}</Text>
                   </View>
                 </View>
               </View>
             ))
           )}
-        </View>
+        </SectionCard>
 
+        {/* Menu */}
         <View style={styles.menuSection}>
           {menuItems.map((item, index) => (
             <TouchableOpacity key={index} style={styles.menuItem} onPress={item.onPress}>
@@ -215,69 +138,22 @@ export default function ProfileScreen() {
           ))}
         </View>
 
-        <TouchableOpacity style={styles.logoutButton} onPress={logout}>
-          <Text style={styles.logoutText}>Log Out</Text>
-        </TouchableOpacity>
+        <Button label="Log Out" variant="destructive" onPress={logout} style={styles.logoutButton} />
       </ScrollView>
 
-      <Modal visible={showEditModal} transparent animationType="slide" onRequestClose={() => setShowEditModal(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Edit Profile</Text>
-              <TouchableOpacity onPress={() => setShowEditModal(false)}>
-                <X size={24} color="#1A1A1A" />
-              </TouchableOpacity>
-            </View>
-
-            <Text style={styles.fieldLabel}>First Name</Text>
-            <TextInput
-              style={styles.fieldInput}
-              value={editForm.first_name}
-              onChangeText={(t) => setEditForm((p) => ({ ...p, first_name: t }))}
-              autoCapitalize="words"
-            />
-
-            <Text style={styles.fieldLabel}>Last Name</Text>
-            <TextInput
-              style={styles.fieldInput}
-              value={editForm.last_name}
-              onChangeText={(t) => setEditForm((p) => ({ ...p, last_name: t }))}
-              autoCapitalize="words"
-            />
-
-            <Text style={styles.fieldLabel}>Bio</Text>
-            <TextInput
-              style={[styles.fieldInput, styles.fieldTextArea]}
-              value={editForm.bio}
-              onChangeText={(t) => setEditForm((p) => ({ ...p, bio: t }))}
-              multiline
-              numberOfLines={3}
-              textAlignVertical="top"
-            />
-
-            <Text style={styles.fieldLabel}>Course</Text>
-            <TextInput
-              style={styles.fieldInput}
-              value={editForm.course}
-              onChangeText={(t) => setEditForm((p) => ({ ...p, course: t }))}
-            />
-
-            <TouchableOpacity style={styles.saveButton} onPress={handleSave} disabled={saving}>
-              <Text style={styles.saveButtonText}>{saving ? 'Saving…' : 'Save Changes'}</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
+      <EditProfileModal
+        visible={showEditModal}
+        user={user ?? null}
+        saving={saving}
+        onClose={() => setShowEditModal(false)}
+        onSave={handleSave}
+      />
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F8F9FA',
-  },
+  container: { flex: 1, backgroundColor: '#F8F9FA' },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -288,20 +164,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#F0F0F0',
   },
-  title: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#1A1A1A',
-  },
-  settingsButton: {
-    padding: 8,
-    borderRadius: 12,
-    backgroundColor: '#F8F9FA',
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: 20,
-  },
+  title: { fontSize: 24, fontWeight: '700', color: '#1A1A1A' },
+  settingsButton: { padding: 8, borderRadius: 12, backgroundColor: '#F8F9FA' },
+  content: { flex: 1, paddingHorizontal: 20 },
   profileSection: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
@@ -313,231 +178,9 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 3,
   },
-  profileHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-  },
-  profileInfo: {
-    flex: 1,
-  },
-  userName: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#1A1A1A',
-    marginBottom: 4,
-  },
-  userEmail: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 8,
-  },
-  statusBadge: {
-    backgroundColor: '#E8F5E8',
-    borderRadius: 12,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    alignSelf: 'flex-start',
-  },
-  statusText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#28A745',
-  },
-  editButton: {
-    padding: 8,
-    borderRadius: 12,
-    backgroundColor: '#FFF4F0',
-  },
-  statsSection: {
-    marginTop: 20,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1A1A1A',
-    marginBottom: 16,
-  },
-  statsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  statCard: {
-    flex: 1,
-    minWidth: 120,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  statValue: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#1A1A1A',
-    marginTop: 8,
-  },
-  statLabel: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 4,
-    textAlign: 'center',
-  },
-  achievementsSection: {
-    marginTop: 20,
-  },
-  achievementsList: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  achievementItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
-  },
-  achievementIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#FFF4F0',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  achievementInfo: {
-    flex: 1,
-  },
-  achievementTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1A1A1A',
-    marginBottom: 4,
-  },
-  achievementDescription: {
-    fontSize: 14,
-    color: '#666',
-  },
-  clubSection: {
-    marginTop: 20,
-  },
-  clubCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 16,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  clubInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  clubLogo: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#FF6B35',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  clubInitial: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#FFFFFF',
-  },
-  clubName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1A1A1A',
-  },
-  clubRole: {
-    fontSize: 14,
-    color: '#666',
-  },
-  clubButton: {
-    backgroundColor: '#F8F9FA',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-  },
-  clubButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#1A1A1A',
-  },
-  menuSection: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    marginTop: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  menuItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
-  },
-  menuItemLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  menuItemText: {
-    fontSize: 16,
-    color: '#1A1A1A',
-    marginLeft: 12,
-  },
-  logoutButton: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    paddingVertical: 16,
-    alignItems: 'center',
-    marginTop: 20,
-    marginBottom: 40,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  logoutText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#DC3545',
-  },
-  avatarContainer: {
-    position: 'relative',
-    marginRight: 16,
-  },
+  profileHeader: { flexDirection: 'row', alignItems: 'center' },
+  avatarContainer: { position: 'relative', marginRight: 16 },
+  avatar: { width: 80, height: 80, borderRadius: 40 },
   avatarPlaceholder: {
     width: 80,
     height: 80,
@@ -559,146 +202,68 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#FFFFFF',
   },
-  societyHelperText: {
-    fontSize: 14,
-    color: '#666',
-    marginTop: 8,
-  },
-  societyCard: {
-    marginBottom: 12,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 24,
-    paddingBottom: 40,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#1A1A1A',
-  },
-  fieldLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#666',
-    marginBottom: 6,
-    marginTop: 12,
-  },
-  fieldInput: {
-    backgroundColor: '#F8F9FA',
+  profileInfo: { flex: 1 },
+  userName: { fontSize: 20, fontWeight: '600', color: '#1A1A1A', marginBottom: 4 },
+  userEmail: { fontSize: 14, color: '#666', marginBottom: 8 },
+  statusBadge: {
+    backgroundColor: '#E8F5E8',
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E9ECEF',
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 16,
-    color: '#1A1A1A',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    alignSelf: 'flex-start',
   },
-  fieldTextArea: {
-    minHeight: 80,
+  statusText: { fontSize: 12, fontWeight: '600', color: '#28A745' },
+  editButton: { padding: 8, borderRadius: 12, backgroundColor: '#FFF4F0' },
+  sectionCardSpacing: {
+    marginTop: 20,
   },
-  saveButton: {
-    backgroundColor: '#FF6B35',
-    borderRadius: 16,
-    paddingVertical: 14,
-    alignItems: 'center',
-    marginTop: 24,
-  },
-  saveButtonText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#FFFFFF',
-  },
-  activityTabRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginBottom: 16,
-  },
-  activityTabChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 7,
-    borderRadius: 16,
-    backgroundColor: '#F0F0F0',
-  },
-  activityTabChipActive: {
-    backgroundColor: '#FF6B35',
-  },
-  activityTabText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#666',
-  },
-  activityTabTextActive: {
-    color: '#FFFFFF',
-  },
-  activityItem: {
-    backgroundColor: '#FFFFFF',
+  sectionTitle: { fontSize: 18, fontWeight: '600', color: '#1A1A1A', marginBottom: 16 },
+  helperText: { fontSize: 14, color: '#666', marginTop: 4 },
+  societyCard: {
+    backgroundColor: '#F8F9FA',
     borderRadius: 12,
     padding: 14,
     marginBottom: 10,
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
+  },
+  societyInfo: { flexDirection: 'row', alignItems: 'center' },
+  societyLogo: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#FF6B35',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  societyInitial: { fontSize: 16, fontWeight: '600', color: '#FFFFFF' },
+  societyName: { fontSize: 16, fontWeight: '600', color: '#1A1A1A' },
+  societyRole: { fontSize: 14, color: '#666' },
+  menuSection: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    marginTop: 20,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
   },
-  activityItemInfo: {
-    flex: 1,
-  },
-  activityItemTitle: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#1A1A1A',
-    marginBottom: 5,
-  },
-  activityItemMeta: {
+  menuItem: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    gap: 4,
-    flexWrap: 'wrap',
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
   },
-  activityItemMetaText: {
-    fontSize: 12,
-    color: '#888',
-    marginRight: 6,
-  },
-  activityStatusBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 10,
-    backgroundColor: '#E8F5E8',
-    marginLeft: 8,
-  },
-  activityStatusHosting: {
-    backgroundColor: '#FFF4E8',
-  },
-  activityStatusCompleted: {
-    backgroundColor: '#F0F0F0',
-  },
-  activityStatusText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#28A745',
-  },
-  activityStatusTextHosting: {
-    color: '#FF9F40',
-  },
-  activityStatusTextCompleted: {
-    color: '#888',
+  menuItemLeft: { flexDirection: 'row', alignItems: 'center' },
+  menuItemText: { fontSize: 16, color: '#1A1A1A', marginLeft: 12 },
+  logoutButton: {
+    marginTop: 20,
+    marginBottom: 40,
   },
 });

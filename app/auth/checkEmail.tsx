@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MailCheck, RefreshCw } from 'lucide-react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { supabase } from '@/api/supabase';
-import { LoadingSpinner } from '@/components/LoadingSpinner';
+import { Button } from '@/components/ui/Button';
+import { FormAlert } from '@/components/ui/FormAlert';
 
 export default function CheckEmailScreen() {
   const { email: initialEmail } = useLocalSearchParams<{ email?: string }>();
@@ -64,48 +65,25 @@ export default function CheckEmailScreen() {
           your account before signing in.
         </Text>
 
-        {message ? (
-          <View style={styles.infoContainer}>
-            <Text style={styles.infoText}>{message}</Text>
-          </View>
-        ) : null}
-
-        {error ? (
-          <View style={styles.errorContainer}>
-            <Text style={styles.errorText}>{error}</Text>
-          </View>
-        ) : null}
+        {message ? <FormAlert message={message} variant="success" style={styles.alert} /> : null}
+        {error ? <FormAlert message={error} style={styles.alert} /> : null}
 
         <View style={styles.actions}>
-          <TouchableOpacity
-            style={[styles.button, styles.primaryButton]}
-            onPress={handleOpenMailApp}
-          >
-            <Text style={styles.primaryButtonText}>I&apos;ve verified my email</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.button, styles.secondaryButton]}
+          <Button label="I've verified my email" onPress={handleOpenMailApp} />
+          <Button
+            label="Resend verification email"
+            variant="secondary"
+            leftIcon={RefreshCw}
+            loading={resending}
             onPress={handleResend}
-            disabled={resending}
-          >
-            {resending ? (
-              <LoadingSpinner />
-            ) : (
-              <>
-                <RefreshCw size={18} color="#FF6B35" style={styles.resendIcon} />
-                <Text style={styles.secondaryButtonText}>Resend verification email</Text>
-              </>
-            )}
-          </TouchableOpacity>
+          />
         </View>
 
-        <TouchableOpacity
-          style={styles.backToLogin}
+        <Button
+          label="Back to sign in"
+          variant="ghost"
           onPress={() => router.replace('/auth/login')}
-        >
-          <Text style={styles.backToLoginText}>Back to sign in</Text>
-        </TouchableOpacity>
+        />
       </View>
     </SafeAreaView>
   );
@@ -147,75 +125,11 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     marginBottom: 32,
   },
-  infoContainer: {
-    backgroundColor: '#ECFDF3',
-    borderRadius: 12,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: '#BBF7D0',
+  alert: {
     marginBottom: 16,
-  },
-  infoText: {
-    color: '#166534',
-    fontSize: 14,
-    textAlign: 'center',
-  },
-  errorContainer: {
-    backgroundColor: '#FEF2F2',
-    borderRadius: 12,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: '#FECACA',
-    marginBottom: 16,
-  },
-  errorText: {
-    color: '#DC2626',
-    fontSize: 14,
-    textAlign: 'center',
   },
   actions: {
     gap: 12,
     marginBottom: 24,
-  },
-  button: {
-    borderRadius: 16,
-    paddingVertical: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexDirection: 'row',
-  },
-  primaryButton: {
-    backgroundColor: '#FF6B35',
-    shadowColor: '#FF6B35',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  primaryButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  secondaryButton: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#FFE0D1',
-  },
-  resendIcon: {
-    marginRight: 8,
-  },
-  secondaryButtonText: {
-    color: '#FF6B35',
-    fontSize: 15,
-    fontWeight: '500',
-  },
-  backToLogin: {
-    alignItems: 'center',
-  },
-  backToLoginText: {
-    color: '#666666',
-    fontSize: 14,
-    textDecorationLine: 'underline',
   },
 });
