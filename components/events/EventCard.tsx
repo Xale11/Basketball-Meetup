@@ -35,9 +35,10 @@ interface EventCardProps {
   societyNameMap?: Map<string, string>;
   universityNameMap?: Map<string, string>;
   participantStatus?: EventParticipantStatus | null;
+  onPress?: () => void;
 }
 
-export function EventCard({ event, societyNameMap, universityNameMap, participantStatus }: EventCardProps) {
+export function EventCard({ event, societyNameMap, universityNameMap, participantStatus, onPress }: EventCardProps) {
   const isFree = event.booking_mode === EventBookingMode.FREE;
   const startDate = new Date(event.start_date);
   const endDate = new Date(event.end_date);
@@ -62,14 +63,14 @@ export function EventCard({ event, societyNameMap, universityNameMap, participan
 
   const isInviteOnly = event.join_policy === EventJoinPolicy.INVITE_ONLY;
   const isJoined = participantStatus === EventParticipantStatus.GOING;
-  const isPending = participantStatus === EventParticipantStatus.PENDING;
+  const isPending = participantStatus === EventParticipantStatus.REQUESTED;
 
   const handleJoin = () => {
     joinEvent(
       { eventId: event.id, joinPolicy: event.join_policy },
       {
         onSuccess: (participant) => {
-          const msg = participant.status === EventParticipantStatus.PENDING
+          const msg = participant.status === EventParticipantStatus.REQUESTED
             ? 'Your request has been sent. You\'ll be notified when approved.'
             : 'You\'re going! See you there.';
           Alert.alert('Joined!', msg);

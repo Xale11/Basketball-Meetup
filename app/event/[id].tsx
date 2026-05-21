@@ -12,9 +12,6 @@ import { useAuth } from '@/hooks/useAuth';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { EventBookingMode, EventHostType, EventJoinPolicy, EventParticipantStatus, EventVisibility } from '@/types/event';
 import { useEffect, useMemo, type ReactNode } from 'react';
-import { useAuth } from '@/hooks/useAuth';
-import { useJoinLeaveEvent } from '@/hooks/events/useJoinLeaveEvent';
-import { useUserParticipatingEvents } from '@/hooks/events/useUserParticipatingEvents';
 
 export default function EventDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -68,7 +65,7 @@ export default function EventDetailScreen() {
 
   const participantStatus = id ? (participationMap.get(id) ?? null) : null;
   const isJoined = participantStatus === EventParticipantStatus.GOING;
-  const isPending = participantStatus === EventParticipantStatus.PENDING;
+  const isPending = participantStatus === EventParticipantStatus.REQUESTED;
   const isInviteOnly = event.join_policy === EventJoinPolicy.INVITE_ONLY;
   const actionLoading = joining || leaving;
 
@@ -77,7 +74,7 @@ export default function EventDetailScreen() {
       { eventId: event.id, joinPolicy: event.join_policy },
       {
         onSuccess: (participant) => {
-          const msg = participant.status === EventParticipantStatus.PENDING
+          const msg = participant.status === EventParticipantStatus.REQUESTED
             ? "Your request has been sent. You'll be notified when approved."
             : "You're going! See you there.";
           Alert.alert('Joined!', msg);
@@ -195,7 +192,6 @@ export default function EventDetailScreen() {
         <View style={{ height: 100 }} />
       </ScrollView>
 
-      {/* Join / Leave CTA */}
       {/* Join / Leave CTA */}
       <View style={styles.footer}>
         {actionLoading ? (

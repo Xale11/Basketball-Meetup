@@ -28,7 +28,7 @@ export const useJoinEvent = () => {
       const previousParticipations = queryClient.getQueryData<EventParticipant[]>(['userParticipations', user.id])
       const status =
         joinPolicy === EventJoinPolicy.APPROVAL_REQUIRED
-          ? EventParticipantStatus.PENDING
+          ? EventParticipantStatus.REQUESTED
           : EventParticipantStatus.GOING
       queryClient.setQueryData<EventParticipant[]>(['userParticipations', user.id], (old) => [
         ...(old ?? []),

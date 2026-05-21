@@ -351,20 +351,27 @@ export const fetchEventById = async (eventId: string): Promise<{ event: Event; p
   }
 }
 
-export const joinEvent = async (eventId: string, userId: string, joinPolicy: EventJoinPolicy): Promise<void> => {
+export const joinEvent = async (
+  eventId: string,
+  userId: string,
+  joinPolicy: EventJoinPolicy | null,
+): Promise<EventParticipant> => {
   console.log('[joinEvent] start — eventId:', eventId, '| userId:', userId, '| joinPolicy:', joinPolicy)
   try {
     const status = joinPolicy === EventJoinPolicy.APPROVAL_REQUIRED
       ? EventParticipantStatus.REQUESTED
       : EventParticipantStatus.GOING
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('event_participants')
       .insert({ event_id: eventId, user_id: userId, status })
+      .select('*')
+      .single()
     if (error) {
       logSupabaseError('joinEvent insert', error)
       throw new Error(error.message)
     }
     console.log('[joinEvent] insert successful — status:', status)
+    return data as EventParticipant
   } catch (error: any) {
     console.error('[joinEvent] caught error:', error.message)
     throw new Error(error.message)
@@ -419,94 +426,6 @@ export const fetchUserParticipations = async (userId: string): Promise<EventPart
       .eq('user_id', userId)
     if (error) throw new Error(JSON.stringify(error))
     return (data ?? []) as EventParticipant[]
-  } catch (error: any) {
-    throw new Error(error.message)
-  }
-}
-
-export const joinEvent = async (
-  eventId: string,
-  userId: string,
-  joinPolicy: EventJoinPolicy | null,
-): Promise<EventParticipant> => {
-  try {
-    const status =
-      joinPolicy === EventJoinPolicy.APPROVAL_REQUIRED
-        ? EventParticipantStatus.PENDING
-        : EventParticipantStatus.GOING
-
-    const { data, error } = await supabase
-      .from('event_participants')
-      .insert({ event_id: eventId, user_id: userId, status })
-      .select('*')
-      .single()
-
-    if (error) throw new Error(JSON.stringify(error))
-    return data as EventParticipant
-  } catch (error: any) {
-    throw new Error(error.message)
-  }
-}
-
-export const leaveEvent = async (eventId: string, userId: string): Promise<void> => {
-  try {
-    const { error } = await supabase
-      .from('event_participants')
-      .delete()
-      .eq('event_id', eventId)
-      .eq('user_id', userId)
-    if (error) throw new Error(JSON.stringify(error))
-  } catch (error: any) {
-    throw new Error(error.message)
-  }
-}
-
-export const fetchUserParticipations = async (userId: string): Promise<EventParticipant[]> => {
-  try {
-    if (!userId) throw new Error('No userId provided')
-    const { data, error } = await supabase
-      .from('event_participants')
-      .select('event_id, user_id, status, joined_at')
-      .eq('user_id', userId)
-    if (error) throw new Error(JSON.stringify(error))
-    return (data ?? []) as EventParticipant[]
-  } catch (error: any) {
-    throw new Error(error.message)
-  }
-}
-
-export const joinEvent = async (
-  eventId: string,
-  userId: string,
-  joinPolicy: EventJoinPolicy | null,
-): Promise<EventParticipant> => {
-  try {
-    const status =
-      joinPolicy === EventJoinPolicy.APPROVAL_REQUIRED
-        ? EventParticipantStatus.PENDING
-        : EventParticipantStatus.GOING
-
-    const { data, error } = await supabase
-      .from('event_participants')
-      .insert({ event_id: eventId, user_id: userId, status })
-      .select('*')
-      .single()
-
-    if (error) throw new Error(JSON.stringify(error))
-    return data as EventParticipant
-  } catch (error: any) {
-    throw new Error(error.message)
-  }
-}
-
-export const leaveEvent = async (eventId: string, userId: string): Promise<void> => {
-  try {
-    const { error } = await supabase
-      .from('event_participants')
-      .delete()
-      .eq('event_id', eventId)
-      .eq('user_id', userId)
-    if (error) throw new Error(JSON.stringify(error))
   } catch (error: any) {
     throw new Error(error.message)
   }

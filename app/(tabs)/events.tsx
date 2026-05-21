@@ -16,8 +16,6 @@ import { useUserParticipations } from '@/hooks/events/useUserParticipations';
 import { useFetchUserSocieties } from '@/hooks/societies/useFetchUserSocieties';
 import { useFetchUniversityMembership } from '@/hooks/universities/useFetchUniversityMembership';
 import { useAuth } from '@/hooks/useAuth';
-import { useUserParticipatingEvents } from '@/hooks/events/useUserParticipatingEvents';
-import { useJoinLeaveEvent } from '@/hooks/events/useJoinLeaveEvent';
 import { SocietyRoleIdEnum } from '@/types/societies';
 import { UniversityRole } from '@/types/universities';
 import { Alert } from 'react-native';
