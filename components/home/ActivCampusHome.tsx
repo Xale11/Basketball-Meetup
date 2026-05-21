@@ -1,8 +1,10 @@
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Search, Bell, ChevronRight } from 'lucide-react-native';
+import { Search, Bell, ChevronRight, Plus, Sparkles } from 'lucide-react-native';
 import { useState, useEffect, useMemo } from 'react';
+import { useRouter } from 'expo-router';
 import { useAuth } from '@/hooks/useAuth';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { useFetchEvents } from '@/hooks/events/useFetchEvents';
 import { useFetchUserSocieties } from '@/hooks/societies/useFetchUserSocieties';
@@ -17,9 +19,17 @@ type TimeFilter = 'Now' | 'Today' | 'This Week';
 type CostFilter = 'All' | 'Free' | 'Paid';
 
 export default function ActivCampusHome() {
+  const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const [timeFilter, setTimeFilter] = useState<TimeFilter>('Today');
   const [costFilter, setCostFilter] = useState<CostFilter>('All');
+
+  const isWidestFilter = timeFilter === 'This Week' && costFilter === 'All';
+  const resetFilters = () => {
+    setTimeFilter('This Week');
+    setCostFilter('All');
+  };
+  const goToCreate = () => router.push('/(tabs)/create');
 
   const { memberships } = useFetchUserSocieties(user?.id);
   const societyIds = memberships.map((m) => m.society_id);
@@ -161,10 +171,25 @@ export default function ActivCampusHome() {
                 <Text style={styles.resultCount}>{filteredEvents.length} activities</Text>
               </View>
               {filteredEvents.length === 0 ? (
-                <View style={styles.emptyState}>
-                  <Text style={styles.emptyTitle}>Nothing here yet</Text>
-                  <Text style={styles.emptySubtitle}>Be the first to create an activity</Text>
-                </View>
+                <EmptyState
+                  emoji="🔍"
+                  title={isWidestFilter ? 'No activities yet' : 'No activities match your filters'}
+                  subtitle={
+                    isWidestFilter
+                      ? "There's nothing on right now — kick things off by creating one."
+                      : 'Try widening your filters to see everything happening this week, or start something of your own.'
+                  }
+                  primaryAction={
+                    isWidestFilter
+                      ? { label: 'Create an activity', onPress: goToCreate, leftIcon: Plus }
+                      : { label: 'View all this week', onPress: resetFilters, leftIcon: Sparkles }
+                  }
+                  secondaryAction={
+                    isWidestFilter
+                      ? undefined
+                      : { label: 'Create an activity', onPress: goToCreate, leftIcon: Plus }
+                  }
+                />
               ) : (
                 filteredEvents.map((event) => (
                   <EventCard
@@ -225,7 +250,4 @@ const styles = StyleSheet.create({
   resultCount: { fontSize: 13, color: '#888' },
   nowBadge: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   nowDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#28A745' },
-  emptyState: { alignItems: 'center', paddingVertical: 40 },
-  emptyTitle: { fontSize: 16, fontWeight: '600', color: '#1A1A1A' },
-  emptySubtitle: { fontSize: 14, color: '#888', marginTop: 4 },
 });
