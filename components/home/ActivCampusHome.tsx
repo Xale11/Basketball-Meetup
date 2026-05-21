@@ -10,10 +10,9 @@ import { useFetchEvents } from '@/hooks/events/useFetchEvents';
 import { useFetchUserSocieties } from '@/hooks/societies/useFetchUserSocieties';
 import useFetchSocietiesByUniId from '@/hooks/societies/useFetchSocietiesByUniId';
 import useFetchUniversities from '@/hooks/universities/useFetchUniversities';
+import { useUserParticipations } from '@/hooks/events/useUserParticipations';
 import { Event, EventBookingMode } from '@/types/event';
 import { EventCard } from '@/components/events/EventCard';
-import { useUserParticipatingEvents } from '@/hooks/events/useUserParticipatingEvents';
-import { useJoinLeaveEvent } from '@/hooks/events/useJoinLeaveEvent';
 
 type TimeFilter = 'Now' | 'Today' | 'This Week';
 type CostFilter = 'All' | 'Free' | 'Paid';
@@ -34,6 +33,7 @@ export default function ActivCampusHome() {
   const { memberships } = useFetchUserSocieties(user?.id);
   const societyIds = memberships.map((m) => m.society_id);
   const { events, loading: eventsLoading } = useFetchEvents(user?.university_id, societyIds);
+  const { participationMap } = useUserParticipations(user?.id);
 
   const { societies, fetchSocieties } = useFetchSocietiesByUniId(user?.university_id ?? null);
   const { universities, fetchUniversities } = useFetchUniversities();
@@ -51,9 +51,6 @@ export default function ActivCampusHome() {
     () => new Map(universities.map((u) => [u.id, u.name])),
     [universities],
   );
-
-  const { isJoined } = useUserParticipatingEvents(user?.id);
-  const { join, leave } = useJoinLeaveEvent();
 
   const now = new Date();
   const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -154,9 +151,7 @@ export default function ActivCampusHome() {
                     event={event}
                     societyNameMap={societyNameMap}
                     universityNameMap={universityNameMap}
-                    isJoined={isJoined(event.id)}
-                    onJoin={() => join(event.id, event.join_policy)}
-                    onLeave={() => leave(event.id)}
+                    participantStatus={participationMap.get(event.id) ?? null}
                   />
                 ))}
               </View>
@@ -197,9 +192,7 @@ export default function ActivCampusHome() {
                     event={event}
                     societyNameMap={societyNameMap}
                     universityNameMap={universityNameMap}
-                    isJoined={isJoined(event.id)}
-                    onJoin={() => join(event.id, event.join_policy)}
-                    onLeave={() => leave(event.id)}
+                    participantStatus={participationMap.get(event.id) ?? null}
                   />
                 ))
               )}

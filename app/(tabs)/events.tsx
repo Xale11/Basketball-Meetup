@@ -12,11 +12,10 @@ import { useCreateEvent } from '@/hooks/events/useCreateEvent';
 import { useFetchEvents } from '@/hooks/events/useFetchEvents';
 import { useFetchMyEvents } from '@/hooks/events/useFetchMyEvents';
 import { useUpdateEvent } from '@/hooks/events/useUpdateEvent';
+import { useUserParticipations } from '@/hooks/events/useUserParticipations';
 import { useFetchUserSocieties } from '@/hooks/societies/useFetchUserSocieties';
 import { useFetchUniversityMembership } from '@/hooks/universities/useFetchUniversityMembership';
 import { useAuth } from '@/hooks/useAuth';
-import { useUserParticipatingEvents } from '@/hooks/events/useUserParticipatingEvents';
-import { useJoinLeaveEvent } from '@/hooks/events/useJoinLeaveEvent';
 import { SocietyRoleIdEnum } from '@/types/societies';
 import { UniversityRole } from '@/types/universities';
 import { Alert } from 'react-native';
@@ -58,8 +57,7 @@ export default function EventsScreen() {
   const { createEvent, loading: createLoading } = useCreateEvent();
   const { updateEvent, loading: updateLoading } = useUpdateEvent();
   const { membership: uniMembership } = useFetchUniversityMembership(user?.id);
-  const { isJoined } = useUserParticipatingEvents(user?.id);
-  const { join, leave } = useJoinLeaveEvent();
+  const { participationMap } = useUserParticipations(user?.id);
 
   const privilegedSocietyIds = new Set(
     memberships
@@ -145,14 +143,12 @@ export default function EventsScreen() {
             <EventCard
               key={event.id}
               event={event}
-              onPress={
-                selectedTab === 'my-events' && canEditEvent(event)
-                  ? () => handleOpen(event)
-                  : () => {}
-              }
-              isJoined={isJoined(event.id)}
-              onJoin={() => join(event.id, event.join_policy)}
-              onLeave={() => leave(event.id)}
+              participantStatus={participationMap.get(event.id) ?? null}
+              onPress={selectedTab === 'my-events' && (
+                event.created_by_user_id === user?.id ||
+                (event.host_type === EventHostType.SOCIETY && event.society_id != null && privilegedSocietyIds.has(event.society_id)) ||
+                (event.host_type === EventHostType.UNIVERSITY && isUniAdmin)
+              ) ? () => openEdit(event) : () => {}}
             />
           ))
         )}
