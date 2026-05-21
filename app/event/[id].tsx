@@ -1,24 +1,26 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { ArrowLeft, Clock, MapPin, Users, Globe, Calendar, Building2, User } from 'lucide-react-native';
 import { useFetchEvent } from '@/hooks/events/useFetchEvent';
 import useFetchSocietiesByUniId from '@/hooks/societies/useFetchSocietiesByUniId';
 import useFetchUniversities from '@/hooks/universities/useFetchUniversities';
-import { LoadingSpinner } from '@/components/LoadingSpinner';
-import { EventBookingMode, EventHostType, EventJoinPolicy, EventVisibility } from '@/types/event';
-import { useEffect, useMemo, type ReactNode } from 'react';
+import { useUserParticipations } from '@/hooks/events/useUserParticipations';
+import { useJoinEvent } from '@/hooks/events/useJoinEvent';
+import { useLeaveEvent } from '@/hooks/events/useLeaveEvent';
 import { useAuth } from '@/hooks/useAuth';
-import { useJoinLeaveEvent } from '@/hooks/events/useJoinLeaveEvent';
-import { useUserParticipatingEvents } from '@/hooks/events/useUserParticipatingEvents';
+import { LoadingSpinner } from '@/components/LoadingSpinner';
+import { EventBookingMode, EventHostType, EventJoinPolicy, EventParticipantStatus, EventVisibility } from '@/types/event';
+import { useEffect, useMemo, type ReactNode } from 'react';
 
 export default function EventDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { event, participantCount, loading } = useFetchEvent(id);
 
   const { user } = useAuth();
-  const { join, leave, isJoining, isLeaving } = useJoinLeaveEvent();
-  const { isJoined } = useUserParticipatingEvents(user?.id);
+  const { participationMap } = useUserParticipations(user?.id);
+  const { joinEvent, loading: joining } = useJoinEvent();
+  const { leaveEvent, loading: leaving } = useLeaveEvent();
 
   const { societies, fetchSocieties } = useFetchSocietiesByUniId(event?.university_id ?? null);
   const { universities, fetchUniversities } = useFetchUniversities();
@@ -60,6 +62,46 @@ export default function EventDetailScreen() {
       </SafeAreaView>
     );
   }
+
+  const participantStatus = id ? (participationMap.get(id) ?? null) : null;
+  const isJoined = participantStatus === EventParticipantStatus.GOING;
+  const isPending = participantStatus === EventParticipantStatus.REQUESTED;
+  const isInviteOnly = event.join_policy === EventJoinPolicy.INVITE_ONLY;
+  const actionLoading = joining || leaving;
+
+  const handleJoin = () => {
+    joinEvent(
+      { eventId: event.id, joinPolicy: event.join_policy },
+      {
+        onSuccess: (participant) => {
+          const msg = participant.status === EventParticipantStatus.REQUESTED
+            ? "Your request has been sent. You'll be notified when approved."
+            : "You're going! See you there.";
+          Alert.alert('Joined!', msg);
+        },
+        onError: (err) => Alert.alert('Could not join', err.message),
+      },
+    );
+  };
+
+  const handleLeave = () => {
+    Alert.alert(
+      isPending ? 'Cancel Request' : 'Leave Activity',
+      isPending ? 'Cancel your join request?' : 'Are you sure you want to leave this activity?',
+      [
+        { text: 'No', style: 'cancel' },
+        {
+          text: isPending ? 'Cancel Request' : 'Leave',
+          style: 'destructive',
+          onPress: () =>
+            leaveEvent(
+              { eventId: event.id },
+              { onError: (err) => Alert.alert('Error', err.message) },
+            ),
+        },
+      ],
+    );
+  };
 
   const isFree = event.booking_mode === EventBookingMode.FREE;
   const startDate = new Date(event.start_date);
@@ -152,24 +194,26 @@ export default function EventDetailScreen() {
 
       {/* Join / Leave CTA */}
       <View style={styles.footer}>
-        {isJoined(id) ? (
-          <TouchableOpacity
-            style={styles.leaveButton}
-            onPress={() => leave(id)}
-            disabled={isLeaving}
-          >
-            <Text style={styles.leaveButtonText}>
-              {isLeaving ? 'Leaving…' : 'Leave Activity'}
-            </Text>
+        {actionLoading ? (
+          <View style={[styles.joinButton, styles.joinButtonLoading]}>
+            <ActivityIndicator color="#FFFFFF" />
+          </View>
+        ) : isInviteOnly && !participantStatus ? (
+          <View style={[styles.joinButton, styles.joinButtonDisabled]}>
+            <Text style={styles.joinButtonText}>Invite Only</Text>
+          </View>
+        ) : isJoined ? (
+          <TouchableOpacity style={[styles.joinButton, styles.joinButtonJoined]} onPress={handleLeave}>
+            <Text style={styles.joinButtonText}>Joined ✓  ·  Leave</Text>
+          </TouchableOpacity>
+        ) : isPending ? (
+          <TouchableOpacity style={[styles.joinButton, styles.joinButtonPending]} onPress={handleLeave}>
+            <Text style={[styles.joinButtonText, styles.joinButtonTextDark]}>Request Sent  ·  Cancel</Text>
           </TouchableOpacity>
         ) : (
-          <TouchableOpacity
-            style={[styles.joinButton, !isFree && styles.joinButtonPaid]}
-            onPress={() => join(id, event!.join_policy)}
-            disabled={isJoining}
-          >
+          <TouchableOpacity style={[styles.joinButton, !isFree && styles.joinButtonPaid]} onPress={handleJoin}>
             <Text style={styles.joinButtonText}>
-              {isJoining ? 'Joining…' : isFree ? 'Join Free' : `Join · £${event.price_from ?? ''}`}
+              {isFree ? 'Join Free' : `Join · £${event.price_from ?? ''}`}
             </Text>
           </TouchableOpacity>
         )}
@@ -319,14 +363,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   joinButtonPaid: { backgroundColor: '#1A1A1A' },
+  joinButtonJoined: { backgroundColor: '#16A34A' },
+  joinButtonPending: { backgroundColor: '#E9ECEF' },
+  joinButtonDisabled: { backgroundColor: '#CCC' },
+  joinButtonLoading: { backgroundColor: '#FF6B35' },
   joinButtonText: { fontSize: 16, fontWeight: '700', color: '#FFFFFF' },
-  leaveButton: {
-    backgroundColor: '#F0F0F0',
-    borderRadius: 16,
-    paddingVertical: 16,
-    alignItems: 'center',
-  },
-  leaveButtonText: { fontSize: 16, fontWeight: '700', color: '#555' },
+  joinButtonTextDark: { color: '#444' },
 });
 
 const detail = StyleSheet.create({

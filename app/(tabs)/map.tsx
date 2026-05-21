@@ -5,6 +5,7 @@ import { Search, Filter, Maximize2, Minimize2 } from 'lucide-react-native';
 import { useAuth } from '@/hooks/useAuth';
 import { useFetchEvents } from '@/hooks/events/useFetchEvents';
 import useFetchUserSocieties from '@/hooks/societies/useFetchUserSocieties';
+import { useUserParticipations } from '@/hooks/events/useUserParticipations';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import InteractiveMap from '@/components/InteractiveMap';
 import { EventCard } from '@/components/events/EventCard';
@@ -18,6 +19,7 @@ export default function MapScreen() {
   const { memberships } = useFetchUserSocieties(user?.id);
   const societyIds = useMemo(() => memberships.map((m) => m.society_id), [memberships]);
   const { events, loading } = useFetchEvents(user?.university_id, societyIds);
+  const { participationMap } = useUserParticipations(user?.id);
 
   const [timeFilter, setTimeFilter] = useState<TimeFilter>('Today');
   const [costFilter, setCostFilter] = useState<CostFilter>('All');
@@ -123,7 +125,11 @@ export default function MapScreen() {
             </View>
           ) : (
             filteredEvents.map((event) => (
-              <EventCard key={event.id} event={event} />
+              <EventCard
+                key={event.id}
+                event={event}
+                participantStatus={participationMap.get(event.id) ?? null}
+              />
             ))
           )}
         </View>

@@ -1,4 +1,4 @@
-import { Event, CreateEventForm, EventImageType, EventJoinPolicy, EventParticipantStatus } from '@/types/event'
+import { Event, CreateEventForm, EventImageType, EventParticipant, EventParticipantStatus, EventJoinPolicy } from '@/types/event'
 import { SocietyRoleIdEnum } from '@/types/societies'
 import { UniversityRole } from '@/types/universities'
 import { supabase } from './supabase'
@@ -351,20 +351,27 @@ export const fetchEventById = async (eventId: string): Promise<{ event: Event; p
   }
 }
 
-export const joinEvent = async (eventId: string, userId: string, joinPolicy: EventJoinPolicy): Promise<void> => {
+export const joinEvent = async (
+  eventId: string,
+  userId: string,
+  joinPolicy: EventJoinPolicy | null,
+): Promise<EventParticipant> => {
   console.log('[joinEvent] start — eventId:', eventId, '| userId:', userId, '| joinPolicy:', joinPolicy)
   try {
     const status = joinPolicy === EventJoinPolicy.APPROVAL_REQUIRED
       ? EventParticipantStatus.REQUESTED
       : EventParticipantStatus.GOING
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('event_participants')
       .insert({ event_id: eventId, user_id: userId, status })
+      .select('*')
+      .single()
     if (error) {
       logSupabaseError('joinEvent insert', error)
       throw new Error(error.message)
     }
     console.log('[joinEvent] insert successful — status:', status)
+    return data as EventParticipant
   } catch (error: any) {
     console.error('[joinEvent] caught error:', error.message)
     throw new Error(error.message)
@@ -406,6 +413,20 @@ export const fetchUserParticipatingEventIds = async (userId: string): Promise<st
     return ids
   } catch (error: any) {
     console.error('[fetchUserParticipatingEventIds] caught error:', error.message)
+    throw new Error(error.message)
+  }
+}
+
+export const fetchUserParticipations = async (userId: string): Promise<EventParticipant[]> => {
+  try {
+    if (!userId) throw new Error('No userId provided')
+    const { data, error } = await supabase
+      .from('event_participants')
+      .select('event_id, user_id, status, joined_at')
+      .eq('user_id', userId)
+    if (error) throw new Error(JSON.stringify(error))
+    return (data ?? []) as EventParticipant[]
+  } catch (error: any) {
     throw new Error(error.message)
   }
 }

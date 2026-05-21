@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import useFetchUserSocieties from '@/hooks/societies/useFetchUserSocieties';
 import { useFetchEvents } from '@/hooks/events/useFetchEvents';
 import useFetchUniversities from '@/hooks/universities/useFetchUniversities';
+import { useUserParticipations } from '@/hooks/events/useUserParticipations';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { EventCard } from '@/components/events/EventCard';
 import { Button } from '@/components/ui/Button';
@@ -39,6 +40,7 @@ export default function SocietiesScreen() {
 
   const societyIds = useMemo(() => memberships.map((m) => m.society_id), [memberships]);
   const { events, loading: eventsLoading } = useFetchEvents(user?.university_id, societyIds);
+  const { participationMap } = useUserParticipations(user?.id);
 
   const { universities, fetchUniversities } = useFetchUniversities();
   useEffect(() => { fetchUniversities(); }, []);
@@ -166,7 +168,13 @@ export default function SocietiesScreen() {
                     </View>
                   ) : (
                     filteredEvents.map((event) => (
-                      <EventCard key={event.id} event={event} societyNameMap={societyNameMap} universityNameMap={universityNameMap} />
+                      <EventCard
+                        key={event.id}
+                        event={event}
+                        societyNameMap={societyNameMap}
+                        universityNameMap={universityNameMap}
+                        participantStatus={participationMap.get(event.id) ?? null}
+                      />
                     ))
                   )}
                 </View>
