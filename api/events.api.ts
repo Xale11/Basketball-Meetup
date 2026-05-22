@@ -431,6 +431,29 @@ export const fetchUserParticipations = async (userId: string): Promise<EventPart
   }
 }
 
+export const fetchEventsBySocietyId = async (societyId: string): Promise<Event[]> => {
+  console.log('[fetchEventsBySocietyId] start — societyId:', societyId)
+  try {
+    const now = new Date().toISOString()
+    const { data, error } = await supabase
+      .from('events')
+      .select('*')
+      .eq('society_id', societyId)
+      .eq('is_cancelled', false)
+      .gte('end_date', now)
+      .order('start_date', { ascending: true })
+    if (error) {
+      logSupabaseError('fetchEventsBySocietyId select', error)
+      throw new Error(error.message)
+    }
+    console.log('[fetchEventsBySocietyId] returned', data?.length ?? 0, 'events')
+    return (data ?? []) as Event[]
+  } catch (error: any) {
+    console.error('[fetchEventsBySocietyId] caught error:', error.message)
+    throw new Error(error.message)
+  }
+}
+
 export const fetchParticipantEvents = async (userId: string): Promise<Event[]> => {
   console.log('[fetchParticipantEvents] start — userId:', userId)
   try {

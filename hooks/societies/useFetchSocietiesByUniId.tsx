@@ -1,37 +1,25 @@
-import { useQuery } from "@tanstack/react-query"
-import { getSocietiesByUniversityId } from "@/api/societies.api"
-import { Society } from "@/types/societies"
+import { useQuery } from '@tanstack/react-query';
+import { getSocietiesByUniversityId, SocietyWithCount } from '@/api/societies.api';
 
-const useFetchSocietiesByUniId = (universityId: string | null) => {
-    const {
-        data,
-        error,
-        isLoading,
-        isFetching,
-        isError,
-        refetch,
-    } = useQuery<Society[]>({
-        queryKey: ["societies", universityId],
-        queryFn: () => {
-            if (!universityId) {
-                return Promise.resolve([])
-            }
-            return getSocietiesByUniversityId(universityId)
-        },
-        enabled: false,
-    })
+const useFetchSocietiesByUniId = (universityId: string | null | undefined) => {
+  const { data, error, isLoading, isFetching, isError, refetch } = useQuery<SocietyWithCount[]>({
+    queryKey: ['societies', universityId],
+    queryFn: () => getSocietiesByUniversityId(universityId!),
+    enabled: !!universityId,
+    staleTime: 1000 * 60 * 5,
+    refetchOnWindowFocus: false,
+  });
 
-    const fetchSocieties = () => refetch()
+  return {
+    societies: data ?? [],
+    error,
+    loading: isLoading,
+    isLoading,
+    isFetching,
+    isError,
+    refetch,
+    fetchSocieties: refetch, // backwards-compat alias
+  };
+};
 
-    return {
-        societies: data ?? [],
-        error,
-        isLoading,
-        isFetching,
-        isError,
-        fetchSocieties,
-    }
-}
-
-export default useFetchSocietiesByUniId
-
+export default useFetchSocietiesByUniId;
