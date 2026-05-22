@@ -1,10 +1,18 @@
+/**
+ * Not a Supabase table — Basketball Meetup (BM_) app only.
+ * No `courts` table exists in Supabase; court data is currently managed
+ * client-side or via a future migration. These types model basketball court
+ * records including location, amenities, reviews, and opening hours.
+ */
+
+/** Not a Supabase table — BM_ only. A single visit/check-in record for a court. */
 export interface CourtVisit {
   court_id: string;
   date: string; // ISO string
   checked_in: boolean;
 }
 
-
+/** Not a Supabase table — BM_ only. Full court record including location, images, and metadata. */
 export interface Court {
   id: string;
   name: string;
@@ -27,6 +35,7 @@ export interface Court {
   verified: boolean;
 }
 
+/** Not a Supabase table — BM_ only. Opening hours configuration for a court. */
 export interface OpeningHours {
   always_open: boolean;
   monday: {
@@ -66,6 +75,7 @@ export interface OpeningHours {
   };
 }
 
+/** Not a Supabase table — BM_ only. A user review attached to a court. */
 export interface Review {
   id: string;
   user_id: string;
@@ -74,6 +84,7 @@ export interface Review {
   created_at: Date;
 }
 
+/** Form type — not a Supabase table. Used when submitting a new court for listing (BM_ only). */
 export interface CreateCourtForm {
   name: string;
   description: string;

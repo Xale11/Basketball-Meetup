@@ -29,6 +29,15 @@ export interface SocietyRole {
   name: string | null
 }
 
+export const SOCIETY_CATEGORIES = ['Sport', 'Social', 'Academic', 'Arts', 'Tech', 'Other'] as const;
+export type SocietyCategory = typeof SOCIETY_CATEGORIES[number];
+
+export const ADMIN_SOCIETY_ROLES = [
+  SocietyRoleIdEnum.OWNER,
+  SocietyRoleIdEnum.PRESIDENT,
+  SocietyRoleIdEnum.EXEC,
+] as const;
+
 /**
  * Supabase table: societies
  * Represents a student society or club, optionally tied to a university.
@@ -41,6 +50,7 @@ export interface Society {
   name: string | null;
   description: string | null;
   logo: string | null;
+  category: string | null;
   created_by_user_id: string | null;
   created_at: string | null;
   updated_at: string | null;
