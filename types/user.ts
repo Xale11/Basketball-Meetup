@@ -8,6 +8,7 @@ export enum OnboardingStatus {
  * Supabase table: profiles
  * Stores public profile data for each authenticated user.
  * `id` is a FK to auth.users.id — one profile per auth account.
+ * DB default for `onboarding_status` is 'not_started'; `over_18` is NOT NULL.
  * Referenced by: events.created_by_user_id, event_participants.user_id,
  * event_invites.invited_user_id / invited_by_user_id,
  * university_memberships.user_id, society_memberships.user_id.
@@ -24,6 +25,7 @@ export interface User {
   course: string | null;
 }
 
+/** Form type — not a Supabase table. Used when registering a new auth user. */
 export interface CreateUserForm {
   email: string;
   first_name: string;
@@ -32,6 +34,7 @@ export interface CreateUserForm {
   onboarding_status: OnboardingStatus;
 }
 
+/** Form type — not a Supabase table. Used to populate the profiles row during onboarding. */
 export interface OnboardingUserForm {
   id: string;
   first_name: string;
@@ -44,6 +47,7 @@ export interface OnboardingUserForm {
   societies?: string[];
 }
 
+/** Not a Supabase table — client-side only. Represents an achievement badge shown on a user profile. */
 export interface Badge {
   id: string;
   name: string;
@@ -52,6 +56,7 @@ export interface Badge {
   description?: string;
 }
 
+/** Not a Supabase table — client-side only. Aggregated basketball statistics for a user (BM_ app). */
 export interface UserStats {
   games_played: number;
   wins: number;
