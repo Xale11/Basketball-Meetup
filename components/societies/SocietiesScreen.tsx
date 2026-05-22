@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   Modal,
   TextInput,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState, useMemo, useEffect } from 'react';
@@ -21,7 +22,9 @@ import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { EventCard } from '@/components/events/EventCard';
 import { Button } from '@/components/ui/Button';
 import { TextInputField } from '@/components/ui/TextInputField';
+import { ImagePicker } from '@/components/ImagePicker';
 import { SOCIETY_CATEGORIES } from '@/types/societies';
+import { useCreateSociety } from '@/hooks/societies/useCreateSociety';
 
 const CATEGORY_COLORS: Record<string, string> = {
   Arts: '#FFF4E8',
@@ -66,6 +69,10 @@ export default function SocietiesScreen() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [societyName, setSocietyName] = useState('');
   const [societyDescription, setSocietyDescription] = useState('');
+  const [createCategory, setCreateCategory] = useState<string | null>(null);
+  const [createLogoUri, setCreateLogoUri] = useState<string | undefined>(undefined);
+
+  const { createSociety: submitCreate, loading: creating } = useCreateSociety();
 
   // Discover tab state
   const [searchQuery, setSearchQuery] = useState('');
@@ -106,13 +113,41 @@ export default function SocietiesScreen() {
     { key: 'managed' as const, label: 'Managed' },
   ];
 
-  const handleCreate = () => {
-    if (!societyName.trim() || !societyDescription.trim()) return;
-    // TODO: wire up to backend
-    console.log('Creating society:', { name: societyName, description: societyDescription });
-    setShowCreateModal(false);
+  const resetCreateForm = () => {
     setSocietyName('');
     setSocietyDescription('');
+    setCreateCategory(null);
+    setCreateLogoUri(undefined);
+  };
+
+  const handleCreate = () => {
+    if (!societyName.trim()) {
+      Alert.alert('Validation', 'Society name is required');
+      return;
+    }
+    if (!user?.university_id) {
+      Alert.alert(
+        'University Required',
+        'You must be enrolled in a university to create a society. Please complete your profile first.',
+      );
+      return;
+    }
+    submitCreate(
+      {
+        name: societyName,
+        description: societyDescription,
+        category: createCategory,
+        logoUri: createLogoUri,
+      },
+      {
+        onSuccess: (newSociety) => {
+          setShowCreateModal(false);
+          resetCreateForm();
+          router.push({ pathname: '/society/[id]', params: { id: newSociety.id } });
+        },
+        onError: (err) => Alert.alert('Error', err.message),
+      },
+    );
   };
 
   return (
@@ -493,16 +528,31 @@ export default function SocietiesScreen() {
         visible={showCreateModal}
         animationType="slide"
         presentationStyle="pageSheet"
-        onRequestClose={() => setShowCreateModal(false)}
+        onRequestClose={() => {
+          setShowCreateModal(false);
+          resetCreateForm();
+        }}
       >
         <SafeAreaView style={styles.modalContainer}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Create Society</Text>
-            <TouchableOpacity onPress={() => setShowCreateModal(false)}>
+            <TouchableOpacity onPress={() => { setShowCreateModal(false); resetCreateForm(); }}>
               <Text style={styles.cancelText}>Cancel</Text>
             </TouchableOpacity>
           </View>
-          <ScrollView style={styles.modalContent}>
+          <ScrollView style={styles.modalContent} contentContainerStyle={{ paddingBottom: 32 }}>
+            {/* Logo / Banner */}
+            <View style={styles.formSection}>
+              <Text style={styles.fieldLabel}>Banner Image</Text>
+              <ImagePicker
+                selectedImage={createLogoUri}
+                onImageSelected={setCreateLogoUri}
+                onImageRemoved={() => setCreateLogoUri(undefined)}
+                placeholder="Add Society Banner"
+              />
+            </View>
+
+            {/* Name */}
             <View style={styles.formSection}>
               <TextInputField
                 label="Society Name *"
@@ -511,9 +561,11 @@ export default function SocietiesScreen() {
                 placeholder="e.g., Photography Society"
               />
             </View>
+
+            {/* Description */}
             <View style={styles.formSection}>
               <TextInputField
-                label="Description *"
+                label="Description"
                 value={societyDescription}
                 onChangeText={setSocietyDescription}
                 placeholder="What's your society about?"
@@ -522,9 +574,27 @@ export default function SocietiesScreen() {
                 multilineHeight={120}
               />
             </View>
+
+            {/* Category */}
+            <View style={styles.formSection}>
+              <Text style={styles.fieldLabel}>Category</Text>
+              <View style={styles.categoryChips}>
+                {SOCIETY_CATEGORIES.map((cat) => (
+                  <TouchableOpacity
+                    key={cat}
+                    style={[styles.catChip, createCategory === cat && styles.catChipActive]}
+                    onPress={() => setCreateCategory(createCategory === cat ? null : cat)}
+                  >
+                    <Text style={[styles.catChipText, createCategory === cat && styles.catChipTextActive]}>
+                      {cat}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
           </ScrollView>
           <View style={styles.modalFooter}>
-            <Button label="Create Society" onPress={handleCreate} />
+            <Button label="Create Society" loading={creating} onPress={handleCreate} />
           </View>
         </SafeAreaView>
       </Modal>
@@ -686,11 +756,34 @@ const styles = StyleSheet.create({
   modalTitle: { fontSize: 20, fontWeight: '600', color: '#1A1A1A' },
   cancelText: { fontSize: 16, color: '#FF6B35', fontWeight: '600' },
   modalContent: { flex: 1, paddingHorizontal: 20 },
-  formSection: { paddingVertical: 16 },
+  formSection: { paddingVertical: 12 },
   modalFooter: {
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderTopWidth: 1,
     borderTopColor: '#F0F0F0',
   },
+  fieldLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1A1A1A',
+    marginBottom: 8,
+  },
+  categoryChips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 4,
+  },
+  catChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: '#F8F9FA',
+    borderWidth: 1,
+    borderColor: '#E9ECEF',
+  },
+  catChipActive: { backgroundColor: '#FF6B35', borderColor: '#FF6B35' },
+  catChipText: { fontSize: 13, fontWeight: '600', color: '#666' },
+  catChipTextActive: { color: '#FFFFFF' },
 });

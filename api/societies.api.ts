@@ -1,4 +1,4 @@
-import { Society, SocietyMembership, SocietyMembershipStatusEnum, SocietyRoleIdEnum } from '@/types/societies';
+import { Society, SocietyMembership, SocietyMembershipStatusEnum, SocietyRoleIdEnum, SocietyStatusEnum } from '@/types/societies';
 import { supabase } from './supabase';
 import { uploadToSupabaseBucket } from './supabase-storage.api';
 
@@ -115,6 +115,74 @@ export const deleteSocietyMembership = async (
       .eq('user_id', user_id)
       .eq('society_id', society_id);
     if (error) throw new Error(JSON.stringify(error));
+  } catch (error) {
+    throw new Error(JSON.stringify(error));
+  }
+};
+
+export const createSociety = async (
+  userId: string,
+  universityId: string,
+  input: {
+    name: string;
+    description: string;
+    category: string | null;
+    logoUri?: string;
+  },
+): Promise<Society> => {
+  try {
+    // Generate a slug-style text ID matching the existing society ID convention
+    const base = input.name
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 30);
+    const suffix = Date.now().toString(36);
+    const id = `${base}-${suffix}`;
+
+    // Insert the society row (logo added in a second pass if provided)
+    const { data, error } = await supabase
+      .from('societies')
+      .insert({
+        id,
+        name: input.name.trim(),
+        description: input.description.trim() || null,
+        category: input.category,
+        university_id: universityId,
+        created_by_user_id: userId,
+        status: SocietyStatusEnum.ACTIVE,
+        logo: null,
+      })
+      .select('*')
+      .maybeSingle();
+    if (error) throw new Error(JSON.stringify(error));
+    const society = data as Society;
+
+    // Upload logo if provided, then patch the logo URL onto the row
+    if (input.logoUri) {
+      const logoUrl = await uploadToSupabaseBucket(
+        input.logoUri,
+        `societies/${id}`,
+        'logo',
+        'images',
+      );
+      const { error: logoError } = await supabase
+        .from('societies')
+        .update({ logo: logoUrl })
+        .eq('id', id);
+      if (!logoError) society.logo = logoUrl;
+    }
+
+    // Auto-enrol the creator as OWNER
+    await supabase.from('society_memberships').insert({
+      user_id: userId,
+      society_id: id,
+      role_id: SocietyRoleIdEnum.OWNER,
+      status: SocietyMembershipStatusEnum.ACTIVE,
+    });
+
+    return society;
   } catch (error) {
     throw new Error(JSON.stringify(error));
   }
