@@ -9,6 +9,10 @@ Complete the user stories within the epic. Update the supabase db and policies a
 Make sure you pass all the acceptance criteria and requirement.
 You don't need to pass anything about pushing to github or deployment.
 
+## Look at out for edge cases and create RLS policies accordingly
+
+Create policies and logic for any edge cases that you think of.
+
 ## Only work on the epic/epic's I specify
 
 I will state which epics I want you to work on. You must only work on these epics. You feel the need to change other epics you must tell me and ask for my approval first.
@@ -25,7 +29,16 @@ You can NEVER interact with anything else.
 Always provide a summary of what you have done for each epic in an md file name epic-{number}-summary.md.
 This md file should detail how you completed each user story, the outcome and how i can test your work. Label each user story with the title I used in notion.
 Don't make it too verbose, highlight key details.
+Also have a section for policies created or modified. Mention what they affect and which user story they are related to.
+
+### Generate edge cases to test
+
+Generate a list of edges cases that you found and think I should test
 
 ## Sync Supabase to the types in this codebase if you update supabase
 
 Use the /sync-supbase skill to sync the db when you make updates to supabase
+
+## After an epic has been implemented run a audit of the policies
+
+Once an epic is implemented use the /audit-policy skill to audit the new policies you have created. Read the summary of the audit and implement the changes according.
