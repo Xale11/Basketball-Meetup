@@ -26,7 +26,7 @@ You can NEVER interact with anything else.
 
 ## Report on the work you have done
 
-Always provide a summary of what you have done for each epic in an md file name epic-{number}-summary.md.
+Always provide a summary of what you have done for each epic in an md file name epic-{number}-summary.md. In a folder called epic-summaries.
 This md file should detail how you completed each user story, the outcome and how i can test your work. Label each user story with the title I used in notion.
 Don't make it too verbose, highlight key details.
 Also have a section for policies created or modified. Mention what they affect and which user story they are related to.
