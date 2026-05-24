@@ -5,6 +5,7 @@ import {
   FlatList,
   Image,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   StyleSheet,
   ActivityIndicator,
   Alert,
@@ -49,8 +50,10 @@ export function InviteFriendsModal({ visible, eventId, onClose }: Props) {
       transparent
       onRequestClose={onClose}
     >
-      <View style={s.overlay}>
-        <View style={s.sheet}>
+      <TouchableWithoutFeedback onPress={onClose}>
+        <View style={s.overlay}>
+        <TouchableWithoutFeedback>
+          <View style={s.sheet}>
           <View style={s.header}>
             <Text style={s.title}>Invite Friends</Text>
             <TouchableOpacity style={s.closeBtn} onPress={onClose}>
@@ -113,8 +116,10 @@ export function InviteFriendsModal({ visible, eventId, onClose }: Props) {
               }}
             />
           )}
+          </View>
+        </TouchableWithoutFeedback>
         </View>
-      </View>
+      </TouchableWithoutFeedback>
     </Modal>
   );
 }
