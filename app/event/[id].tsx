@@ -1,7 +1,7 @@
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
-import { ArrowLeft, Clock, MapPin, Users, Globe, Calendar, Building2, User } from 'lucide-react-native';
+import { ArrowLeft, Clock, MapPin, Users, Globe, Calendar, Building2, User, UserPlus } from 'lucide-react-native';
 import { useFetchEvent } from '@/hooks/events/useFetchEvent';
 import useFetchSocietiesByUniId from '@/hooks/societies/useFetchSocietiesByUniId';
 import useFetchUniversities from '@/hooks/universities/useFetchUniversities';
@@ -9,9 +9,12 @@ import { useUserParticipations } from '@/hooks/events/useUserParticipations';
 import { useJoinEvent } from '@/hooks/events/useJoinEvent';
 import { useLeaveEvent } from '@/hooks/events/useLeaveEvent';
 import { useAuth } from '@/hooks/useAuth';
+import { useEventFriends } from '@/hooks/friends/useEventFriends';
+import { FriendsAttending } from '@/components/friends/FriendsAttending';
+import { InviteFriendsModal } from '@/components/friends/InviteFriendsModal';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { EventBookingMode, EventHostType, EventJoinPolicy, EventParticipantStatus, EventVisibility } from '@/types/event';
-import { useEffect, useMemo, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 
 export default function EventDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -24,6 +27,8 @@ export default function EventDetailScreen() {
 
   const { societies, fetchSocieties } = useFetchSocietiesByUniId(event?.university_id ?? null);
   const { universities, fetchUniversities } = useFetchUniversities();
+  const { friends: eventFriends } = useEventFriends(id);
+  const [showInviteModal, setShowInviteModal] = useState(false);
 
   useEffect(() => {
     if (event?.university_id) fetchSocieties();
@@ -180,6 +185,13 @@ export default function EventDetailScreen() {
             />
           </View>
 
+          {/* Friends attending */}
+          {eventFriends.length > 0 && (
+            <View style={styles.section}>
+              <FriendsAttending friends={eventFriends} />
+            </View>
+          )}
+
           {/* Description */}
           {event.description && (
             <View style={styles.section}>
@@ -192,8 +204,26 @@ export default function EventDetailScreen() {
         <View style={{ height: 100 }} />
       </ScrollView>
 
+      {/* Invite Friends modal */}
+      {id && (
+        <InviteFriendsModal
+          visible={showInviteModal}
+          eventId={id}
+          onClose={() => setShowInviteModal(false)}
+        />
+      )}
+
       {/* Join / Leave CTA */}
       <View style={styles.footer}>
+        {isJoined && (
+          <TouchableOpacity
+            style={styles.inviteBtn}
+            onPress={() => setShowInviteModal(true)}
+          >
+            <UserPlus size={18} color="#FF6B35" />
+            <Text style={styles.inviteBtnText}>Invite Friends</Text>
+          </TouchableOpacity>
+        )}
         {actionLoading ? (
           <View style={[styles.joinButton, styles.joinButtonLoading]}>
             <ActivityIndicator color="#FFFFFF" />
@@ -369,6 +399,19 @@ const styles = StyleSheet.create({
   joinButtonLoading: { backgroundColor: '#FF6B35' },
   joinButtonText: { fontSize: 16, fontWeight: '700', color: '#FFFFFF' },
   joinButtonTextDark: { color: '#444' },
+  inviteBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: '#FFF4EE',
+    borderRadius: 12,
+    paddingVertical: 10,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#FFE0D1',
+  },
+  inviteBtnText: { fontSize: 15, fontWeight: '600', color: '#FF6B35' },
 });
 
 const detail = StyleSheet.create({
