@@ -46,6 +46,8 @@ function AppNavigator({ fontsLoaded }: { fontsLoaded: boolean }) {
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="auth" />
         <Stack.Screen name="event" />
+        <Stack.Screen name="user" />
+        <Stack.Screen name="friends" />
         <Stack.Screen name="+not-found" />
       </Stack>
       <StatusBar style="dark" />
