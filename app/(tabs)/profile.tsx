@@ -1,6 +1,6 @@
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Settings, Pencil as Edit, ChevronRight, CreditCard, Bell, Shield, User, Camera, Users, UserPlus } from 'lucide-react-native';
+import { Settings, Pencil as Edit, ChevronRight, CreditCard, Bell, Shield, User, Camera, Users, UserPlus, Calendar } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { useAuth } from '@/hooks/useAuth';
 import useFetchUserSocieties from '@/hooks/societies/useFetchUserSocieties';
@@ -10,6 +10,7 @@ import { useFetchMyEvents } from '@/hooks/events/useFetchMyEvents';
 import { useFetchParticipantEvents } from '@/hooks/events/useFetchParticipantEvents';
 import { useFriends } from '@/hooks/friends/useFriends';
 import { usePendingRequests } from '@/hooks/friends/usePendingRequests';
+import { useReceivedEventInvites } from '@/hooks/events/useReceivedEventInvites';
 import { appVariant } from '@/constants/appVariant';
 import { EditProfileModal } from '@/components/profile/EditProfileModal';
 import { ActivitySection } from '@/components/profile/ActivitySection';
@@ -26,6 +27,7 @@ export default function ProfileScreen() {
   const { events: participantEvents, loading: participantEventsLoading } = useFetchParticipantEvents(user?.id);
   const { friends } = useFriends();
   const { count: requestCount } = usePendingRequests();
+  const { count: inviteCount } = useReceivedEventInvites();
 
   const [showEditModal, setShowEditModal] = useState(false);
 
@@ -130,6 +132,23 @@ export default function ProfileScreen() {
               </Text>
             </TouchableOpacity>
           </View>
+        </SectionCard>
+
+        {/* Event Invites */}
+        <SectionCard style={styles.sectionCardSpacing}>
+          <View style={styles.networkHeader}>
+            <Text style={styles.sectionTitle}>Event Invites</Text>
+            <Text style={styles.friendCount}>{inviteCount} pending</Text>
+          </View>
+          <TouchableOpacity
+            style={[styles.networkBtn, inviteCount > 0 && styles.networkBtnBadged]}
+            onPress={() => router.push('/event/invites')}
+          >
+            <Calendar size={18} color={inviteCount > 0 ? '#FFFFFF' : '#FF6B35'} />
+            <Text style={[styles.networkBtnText, inviteCount > 0 && styles.networkBtnTextWhite]}>
+              Invites{inviteCount > 0 ? ` · ${inviteCount}` : ''}
+            </Text>
+          </TouchableOpacity>
         </SectionCard>
 
         {/* Society Memberships */}

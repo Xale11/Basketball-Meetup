@@ -1,7 +1,43 @@
 import { Tabs } from 'expo-router';
-import { View } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { Chrome as Home, Map, Calendar, User, Plus, Users } from 'lucide-react-native';
 import { tabs, appVariant } from '@/constants/appVariant';
+import { usePendingRequests } from '@/hooks/friends/usePendingRequests';
+import { useReceivedEventInvites } from '@/hooks/events/useReceivedEventInvites';
+
+function ProfileTabIcon({ size, color }: { size: number; color: string }) {
+  const { count: friendRequestCount } = usePendingRequests();
+  const { count: eventInviteCount } = useReceivedEventInvites();
+  const total = friendRequestCount + eventInviteCount;
+
+  return (
+    <View style={badge.wrap}>
+      <User size={size} color={color} />
+      {total > 0 && (
+        <View style={badge.dot}>
+          <Text style={badge.dotText}>{total > 99 ? '99+' : total}</Text>
+        </View>
+      )}
+    </View>
+  );
+}
+
+const badge = StyleSheet.create({
+  wrap: { position: 'relative' },
+  dot: {
+    position: 'absolute',
+    top: -4,
+    right: -8,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: '#E53E3E',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 3,
+  },
+  dotText: { fontSize: 10, fontWeight: '700', color: '#FFFFFF' },
+});
 
 export default function TabLayout() {
   return (
@@ -106,7 +142,7 @@ export default function TabLayout() {
           title: 'Profile',
           href: tabs.profile ? undefined : null,
           tabBarIcon: ({ size, color }) => (
-            <User size={size} color={color} />
+            <ProfileTabIcon size={size} color={color} />
           ),
         }}
       />
