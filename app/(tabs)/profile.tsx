@@ -1,12 +1,15 @@
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Settings, Pencil as Edit, ChevronRight, CreditCard, Bell, Shield, User, Camera } from 'lucide-react-native';
+import { Settings, Pencil as Edit, ChevronRight, CreditCard, Bell, Shield, User, Camera, Users, UserPlus } from 'lucide-react-native';
+import { router } from 'expo-router';
 import { useAuth } from '@/hooks/useAuth';
 import useFetchUserSocieties from '@/hooks/societies/useFetchUserSocieties';
 import useUpdateProfilePhoto from '@/hooks/users/useUpdateProfilePhoto';
 import useUpdateUser from '@/hooks/users/useUpdateUser';
 import { useFetchMyEvents } from '@/hooks/events/useFetchMyEvents';
 import { useFetchParticipantEvents } from '@/hooks/events/useFetchParticipantEvents';
+import { useFriends } from '@/hooks/friends/useFriends';
+import { usePendingRequests } from '@/hooks/friends/usePendingRequests';
 import { appVariant } from '@/constants/appVariant';
 import { EditProfileModal } from '@/components/profile/EditProfileModal';
 import { ActivitySection } from '@/components/profile/ActivitySection';
@@ -21,15 +24,17 @@ export default function ProfileScreen() {
   const { saving, updateProfile } = useUpdateUser(user?.id);
   const { events: myEvents, loading: myEventsLoading } = useFetchMyEvents(user?.id);
   const { events: participantEvents, loading: participantEventsLoading } = useFetchParticipantEvents(user?.id);
+  const { friends } = useFriends();
+  const { count: requestCount } = usePendingRequests();
 
   const [showEditModal, setShowEditModal] = useState(false);
 
   const menuItems = [
     { label: 'Edit Profile', icon: Edit, onPress: () => setShowEditModal(true) },
-    { label: 'Payment Methods', icon: CreditCard, onPress: () => {} },
-    { label: 'Notifications', icon: Bell, onPress: () => {} },
-    { label: 'Privacy & Security', icon: Shield, onPress: () => {} },
-    { label: 'Settings', icon: Settings, onPress: () => {} },
+    { label: 'Payment Methods', icon: CreditCard, onPress: () => { } },
+    { label: 'Notifications', icon: Bell, onPress: () => { } },
+    { label: 'Privacy & Security', icon: Shield, onPress: () => { } },
+    { label: 'Settings', icon: Settings, onPress: () => { } },
   ];
 
   const handleSave = async (form: { first_name: string; last_name: string; bio: string; course: string }) => {
@@ -100,6 +105,32 @@ export default function ProfileScreen() {
             />
           </SectionCard>
         )}
+
+        {/* My Network (Friends) */}
+        <SectionCard style={styles.sectionCardSpacing}>
+          <View style={styles.networkHeader}>
+            <Text style={styles.sectionTitle}>My Network</Text>
+            <Text style={styles.friendCount}>{friends.length} friends</Text>
+          </View>
+          <View style={styles.networkButtons}>
+            <TouchableOpacity
+              style={styles.networkBtn}
+              onPress={() => router.push('/friends/search')}
+            >
+              <UserPlus size={18} color="#FF6B35" />
+              <Text style={styles.networkBtnText}>Find Friends</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.networkBtn, requestCount > 0 && styles.networkBtnBadged]}
+              onPress={() => router.push('/friends/requests')}
+            >
+              <Users size={18} color={requestCount > 0 ? '#FFFFFF' : '#FF6B35'} />
+              <Text style={[styles.networkBtnText, requestCount > 0 && styles.networkBtnTextWhite]}>
+                Requests{requestCount > 0 ? ` · ${requestCount}` : ''}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </SectionCard>
 
         {/* Society Memberships */}
         <SectionCard style={styles.sectionCardSpacing}>
@@ -266,4 +297,30 @@ const styles = StyleSheet.create({
     marginTop: 20,
     marginBottom: 40,
   },
+  networkHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 14,
+  },
+  friendCount: { fontSize: 14, color: '#888' },
+  networkButtons: { flexDirection: 'row', gap: 10 },
+  networkBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 10,
+    borderRadius: 12,
+    backgroundColor: '#FFF4EE',
+    borderWidth: 1,
+    borderColor: '#FFE0D1',
+  },
+  networkBtnBadged: {
+    backgroundColor: '#FF6B35',
+    borderColor: '#FF6B35',
+  },
+  networkBtnText: { fontSize: 14, fontWeight: '600', color: '#FF6B35' },
+  networkBtnTextWhite: { color: '#FFFFFF' },
 });
