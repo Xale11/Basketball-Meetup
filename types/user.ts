@@ -11,7 +11,8 @@ export enum OnboardingStatus {
  * DB default for `onboarding_status` is 'not_started'; `over_18` is NOT NULL.
  * Referenced by: events.created_by_user_id, event_participants.user_id,
  * event_invites.invited_user_id / invited_by_user_id,
- * university_memberships.user_id, society_memberships.user_id.
+ * university_memberships.user_id, society_memberships.user_id,
+ * friendships.requester_id / friendships.addressee_id.
  */
 export interface User {
   id: string;
