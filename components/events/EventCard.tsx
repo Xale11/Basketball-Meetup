@@ -35,10 +35,12 @@ interface EventCardProps {
   societyNameMap?: Map<string, string>;
   universityNameMap?: Map<string, string>;
   participantStatus?: EventParticipantStatus | null;
+  /** Number of the current user's friends attending this event */
+  friendsAttendingCount?: number;
   onPress?: () => void;
 }
 
-export function EventCard({ event, societyNameMap, universityNameMap, participantStatus, onPress }: EventCardProps) {
+export function EventCard({ event, societyNameMap, universityNameMap, participantStatus, friendsAttendingCount, onPress }: EventCardProps) {
   const isFree = event.booking_mode === EventBookingMode.FREE;
   const startDate = new Date(event.start_date);
   const endDate = new Date(event.end_date);
@@ -169,7 +171,13 @@ export function EventCard({ event, societyNameMap, universityNameMap, participan
         </View>
       </View>
       <View style={s.cardBottom}>
-        <View style={s.attendeesRow} />
+        <View style={s.attendeesRow}>
+          {friendsAttendingCount != null && friendsAttendingCount > 0 && (
+            <Text style={s.friendsCount}>
+              👥 {friendsAttendingCount} friend{friendsAttendingCount > 1 ? 's' : ''} going
+            </Text>
+          )}
+        </View>
         {renderJoinButton()}
       </View>
     </TouchableOpacity>
@@ -208,7 +216,8 @@ const s = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#F0F0F0',
   },
-  attendeesRow: { flex: 1 },
+  attendeesRow: { flex: 1, justifyContent: 'center' },
+  friendsCount: { fontSize: 12, color: '#888', fontWeight: '500' },
   joinButton: { backgroundColor: '#FF6B35', borderRadius: 20, paddingHorizontal: 18, paddingVertical: 8, minWidth: 90, alignItems: 'center' },
   joinButtonJoined: { backgroundColor: '#16A34A' },
   joinButtonPending: { backgroundColor: '#E9ECEF' },
