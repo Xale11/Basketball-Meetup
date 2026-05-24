@@ -171,6 +171,21 @@ export interface EventInvite {
   updated_at: string | null
 }
 
+/**
+ * Not a Supabase table — query result type.
+ * EventInvite row joined with minimal event and inviter profile data.
+ * Returned by getReceivedEventInvites().
+ */
+export interface ReceivedEventInvite extends EventInvite {
+  event: Pick<Event, 'id' | 'name' | 'start_date' | 'end_date' | 'address'>;
+  invited_by: {
+    id: string;
+    first_name: string | null;
+    last_name: string | null;
+    photo_url: string | null;
+  };
+}
+
 /** Form type — not a Supabase table. Used when creating a new event. */
 export interface CreateEventForm {
   name: string

@@ -7,6 +7,7 @@ import {
   FriendProfile,
 } from '@/types/friends';
 import { User } from '@/types/user';
+import { EventInvite, EventInviteStatus, ReceivedEventInvite } from '@/types/event';
 
 // ─── User Search ──────────────────────────────────────────────────────────────
 
@@ -290,4 +291,53 @@ export const getExistingInviteeIds = async (
   } catch (error) {
     throw new Error(JSON.stringify(error));
   }
+};
+
+/**
+ * Fetch all PENDING event invites received by userId, with event details and inviter profile.
+ */
+export const getReceivedEventInvites = async (userId: string): Promise<ReceivedEventInvite[]> => {
+  const { data, error } = await supabase
+    .from('event_invites')
+    .select(`
+      *,
+      event:events!event_invites_event_id_fkey (id, name, start_date, end_date, address),
+      invited_by:profiles!event_invites_invited_by_user_id_fkey (id, first_name, last_name, photo_url)
+    `)
+    .eq('invited_user_id', userId)
+    .eq('status', 'PENDING');
+  if (error) throw new Error(JSON.stringify(error));
+  return (data ?? []) as ReceivedEventInvite[];
+};
+
+/**
+ * Returns the PENDING event invite for the current user on a specific event, or null if none.
+ */
+export const getUserEventInvite = async (
+  eventId: string,
+  userId: string,
+): Promise<EventInvite | null> => {
+  const { data, error } = await supabase
+    .from('event_invites')
+    .select('*')
+    .eq('event_id', eventId)
+    .eq('invited_user_id', userId)
+    .eq('status', 'PENDING')
+    .maybeSingle();
+  if (error) throw new Error(JSON.stringify(error));
+  return data as EventInvite | null;
+};
+
+/**
+ * Accept or decline an event invite. Status must be ACCEPTED or DECLINED.
+ */
+export const respondToEventInvite = async (
+  inviteId: string,
+  status: EventInviteStatus,
+): Promise<void> => {
+  const { error } = await supabase
+    .from('event_invites')
+    .update({ status, updated_at: new Date().toISOString() })
+    .eq('id', inviteId);
+  if (error) throw new Error(JSON.stringify(error));
 };
