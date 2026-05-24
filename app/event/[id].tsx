@@ -10,10 +10,12 @@ import { useJoinEvent } from '@/hooks/events/useJoinEvent';
 import { useLeaveEvent } from '@/hooks/events/useLeaveEvent';
 import { useAuth } from '@/hooks/useAuth';
 import { useEventFriends } from '@/hooks/friends/useEventFriends';
+import { useUserEventInvite } from '@/hooks/events/useUserEventInvite';
+import { useRespondEventInvite } from '@/hooks/events/useRespondEventInvite';
 import { FriendsAttending } from '@/components/friends/FriendsAttending';
 import { InviteFriendsModal } from '@/components/friends/InviteFriendsModal';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
-import { EventBookingMode, EventHostType, EventJoinPolicy, EventParticipantStatus, EventVisibility } from '@/types/event';
+import { EventBookingMode, EventHostType, EventInviteStatus, EventJoinPolicy, EventParticipantStatus, EventVisibility } from '@/types/event';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 
 export default function EventDetailScreen() {
@@ -28,6 +30,8 @@ export default function EventDetailScreen() {
   const { societies, fetchSocieties } = useFetchSocietiesByUniId(event?.university_id ?? null);
   const { universities, fetchUniversities } = useFetchUniversities();
   const { friends: eventFriends } = useEventFriends(id);
+  const { invite: userInvite } = useUserEventInvite(id);
+  const { respond: respondEventInvite } = useRespondEventInvite();
   const [showInviteModal, setShowInviteModal] = useState(false);
 
   useEffect(() => {
@@ -79,6 +83,14 @@ export default function EventDetailScreen() {
       { eventId: event.id, joinPolicy: event.join_policy },
       {
         onSuccess: (participant) => {
+          // If user joined via an event invite, mark the invite as accepted
+          if (userInvite) {
+            respondEventInvite({
+              inviteId: userInvite.id,
+              eventId: event.id,
+              status: EventInviteStatus.ACCEPTED,
+            });
+          }
           const msg = participant.status === EventParticipantStatus.REQUESTED
             ? "Your request has been sent. You'll be notified when approved."
             : "You're going! See you there.";
@@ -229,9 +241,15 @@ export default function EventDetailScreen() {
             <ActivityIndicator color="#FFFFFF" />
           </View>
         ) : isInviteOnly && !participantStatus ? (
-          <View style={[styles.joinButton, styles.joinButtonDisabled]}>
-            <Text style={styles.joinButtonText}>Invite Only</Text>
-          </View>
+          userInvite ? (
+            <TouchableOpacity style={styles.joinButton} onPress={handleJoin}>
+              <Text style={styles.joinButtonText}>Accept & Join</Text>
+            </TouchableOpacity>
+          ) : (
+            <View style={[styles.joinButton, styles.joinButtonDisabled]}>
+              <Text style={styles.joinButtonText}>Invite Only</Text>
+            </View>
+          )
         ) : isJoined ? (
           <TouchableOpacity style={[styles.joinButton, styles.joinButtonJoined]} onPress={handleLeave}>
             <Text style={styles.joinButtonText}>Joined ✓  ·  Leave</Text>
