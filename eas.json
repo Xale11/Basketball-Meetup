@@ -4,18 +4,54 @@
     "appVersionSource": "remote"
   },
   "build": {
-    "development": {
+    "base": {
+      "node": "20.18.0"
+    },
+    "development-basketball": {
+      "extends": "base",
       "developmentClient": true,
-      "distribution": "internal"
+      "distribution": "internal",
+      "environment": "development",
+      "env": { "EXPO_PUBLIC_APP_VARIANT": "basketball", "APP_ENV": "development" },
+      "android": { "buildType": "apk" }
     },
-    "preview": {
-      "distribution": "internal"
+    "development-activcampus": {
+      "extends": "base",
+      "developmentClient": true,
+      "distribution": "internal",
+      "environment": "development",
+      "env": { "EXPO_PUBLIC_APP_VARIANT": "activCampus", "APP_ENV": "development" },
+      "android": { "buildType": "apk" }
     },
-    "production": {
-      "autoIncrement": true
+    "preview-basketball": {
+      "extends": "base",
+      "distribution": "internal",
+      "environment": "preview",
+      "env": { "EXPO_PUBLIC_APP_VARIANT": "basketball", "APP_ENV": "preview" },
+      "android": { "buildType": "apk" }
+    },
+    "preview-activcampus": {
+      "extends": "base",
+      "distribution": "internal",
+      "environment": "preview",
+      "env": { "EXPO_PUBLIC_APP_VARIANT": "activCampus", "APP_ENV": "preview" },
+      "android": { "buildType": "apk" }
+    },
+    "production-basketball": {
+      "extends": "base",
+      "autoIncrement": true,
+      "environment": "production",
+      "env": { "EXPO_PUBLIC_APP_VARIANT": "basketball", "APP_ENV": "production" }
+    },
+    "production-activcampus": {
+      "extends": "base",
+      "autoIncrement": true,
+      "environment": "production",
+      "env": { "EXPO_PUBLIC_APP_VARIANT": "activCampus", "APP_ENV": "production" }
     }
   },
   "submit": {
-    "production": {}
+    "production-basketball": {},
+    "production-activcampus": {}
   }
 }

@@ -1,75 +1,129 @@
 import 'dotenv/config';
 
+/**
+ * Two apps are built from this codebase, selected by EXPO_PUBLIC_APP_VARIANT.
+ * Each needs its own identity: name, slug, bundle/package id, and EAS project.
+ * See .claude/CLAUDE.md and constants/appVariant.ts.
+ */
+const VARIANTS = {
+  basketball: {
+    name: 'bball',
+    slug: 'basketball-meetup-app',
+    scheme: 'basketballmeetup',
+    applicationId: 'com.xale11.basketballmeetupapp',
+    easProjectId: '8a11d484-17b7-4a98-8803-2f8b72c5166c',
+    locationPermission:
+      'This app uses location to show nearby basketball courts and help you find courts near you.',
+    photosPermission:
+      'This app needs access to your photos so you can upload and share basketball event or court images.',
+  },
+  activCampus: {
+    name: 'A-Campus',
+    slug: 'activ-campus',
+    scheme: 'activcampus',
+    applicationId: 'com.xale11.activcampus',
+    // TODO: run `eas init` with EXPO_PUBLIC_APP_VARIANT=activCampus and paste the id it prints.
+    easProjectId: process.env.EAS_PROJECT_ID_ACTIVCAMPUS ?? null,
+    locationPermission:
+      'This app uses location to show events happening near you on campus.',
+    photosPermission:
+      'This app needs access to your photos so you can upload and share event images.',
+  },
+};
+
+/**
+ * Build environment, set per profile in eas.json. Only affects the display name,
+ * so it stays a plain (non-EXPO_PUBLIC) var — read here at config time, never at runtime.
+ * Production carries no suffix so the store listing shows the bare name.
+ */
+const NAME_SUFFIXES = {
+  development: ' (Dev)',
+  preview: ' (Preview)',
+  production: '',
+};
+
+const variantName = process.env.EXPO_PUBLIC_APP_VARIANT ?? 'activCampus';
+const variant = VARIANTS[variantName];
+
+if (!variant) {
+  throw new Error(
+    `Unknown EXPO_PUBLIC_APP_VARIANT "${variantName}". Expected one of: ${Object.keys(VARIANTS).join(', ')}`
+  );
+}
+
+const appEnv = process.env.APP_ENV ?? 'development';
+const nameSuffix = NAME_SUFFIXES[appEnv];
+
+if (nameSuffix === undefined) {
+  throw new Error(
+    `Unknown APP_ENV "${appEnv}". Expected one of: ${Object.keys(NAME_SUFFIXES).join(', ')}`
+  );
+}
+
+const googleMapsApiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
+
 export default {
   expo: {
-    name: "basketball-meetup-app",
-    slug: "basketball-meetup-app",
-    version: "1.0.0",
-    orientation: "portrait",
-    icon: "./assets/images/icon.png",
-    scheme: "myapp",
-    userInterfaceStyle: "automatic",
+    name: `${variant.name}${nameSuffix}`,
+    slug: variant.slug,
+    scheme: variant.scheme,
+    version: '1.0.0',
+    orientation: 'portrait',
+    icon: './assets/images/icon.png',
+    userInterfaceStyle: 'automatic',
     newArchEnabled: true,
     ios: {
+      bundleIdentifier: variant.applicationId,
       supportsTablet: true,
-      bundleIdentifier: "com.xale11.basketballmeetupapp",
+      config: {
+        googleMapsApiKey,
+      },
       infoPlist: {
         ITSAppUsesNonExemptEncryption: false,
-        NSLocationWhenInUseUsageDescription: "This app uses location to show nearby basketball courts and help you find courts near you.",
-        NSLocationAlwaysAndWhenInUseUsageDescription: "This app uses location to show nearby basketball courts and help you find courts near you."
-      }
+        NSLocationWhenInUseUsageDescription: variant.locationPermission,
+        NSLocationAlwaysAndWhenInUseUsageDescription: variant.locationPermission,
+      },
+    },
+    android: {
+      package: variant.applicationId,
+      permissions: ['ACCESS_FINE_LOCATION', 'ACCESS_COARSE_LOCATION'],
+      config: {
+        googleMaps: {
+          apiKey: googleMapsApiKey,
+        },
+      },
     },
     web: {
-      bundler: "metro",
-      output: "single",
-      favicon: "./assets/images/favicon.png"
+      bundler: 'metro',
+      output: 'single',
+      favicon: './assets/images/favicon.png',
     },
     plugins: [
-      "expo-router",
-      "expo-font",
-      "expo-web-browser",
+      'expo-router',
+      'expo-font',
+      'expo-web-browser',
       [
-        "expo-location",
+        'expo-location',
         {
-          locationAlwaysAndWhenInUsePermission:
-            "Allow $(PRODUCT_NAME) to use your location to show nearby basketball courts."
-        }
+          locationAlwaysAndWhenInUsePermission: variant.locationPermission,
+        },
       ],
       [
-        "expo-image-picker",
+        'expo-image-picker',
         {
-          photosPermission:
-            "This app needs access to your photos so you can upload and share basketball event or court images."
-        }
-      ]
+          photosPermission: variant.photosPermission,
+        },
+      ],
     ],
     experiments: {
-      typedRoutes: true
+      typedRoutes: true,
     },
     extra: {
       router: {},
       eas: {
-        projectId: "8a11d484-17b7-4a98-8803-2f8b72c5166c"
+        projectId: variant.easProjectId,
       },
-      googleMapsApiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY
+      googleMapsApiKey,
     },
-    android: {
-      package: "com.xale11.basketballmeetupapp",
-      permissions: [
-        "ACCESS_FINE_LOCATION",
-        "ACCESS_COARSE_LOCATION"
-      ],
-      config: {
-        googleMaps: {
-          apiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY
-        }
-      }
-    },
-    "ios": {
-      bundleIdentifier: "com.xale11.basketballmeetupapp",
-      config: {
-        googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY,
-      },
-    }
-  }
-}; 
+  },
+};
