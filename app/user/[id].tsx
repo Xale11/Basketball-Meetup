@@ -13,6 +13,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { ArrowLeft, User, UserPlus, UserCheck, UserX, Clock } from 'lucide-react-native';
 import { useQuery } from '@tanstack/react-query';
 import { getUserById } from '@/api/users.api';
+import { qk } from '@/lib/queryKeys';
 import { useFriendship } from '@/hooks/friends/useFriendship';
 import { useSendFriendRequest } from '@/hooks/friends/useSendFriendRequest';
 import { useRespondFriendRequest } from '@/hooks/friends/useRespondFriendRequest';
@@ -25,11 +26,12 @@ export default function UserProfileScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user: currentUser } = useAuth();
 
-  const { data: profile, isLoading: profileLoading } = useQuery({
-    queryKey: ['userProfile', id],
+  // Shares a key with useFetchById so a profile edit refreshes this screen too;
+  // it previously used its own `userProfile` key that nothing ever invalidated.
+  const { data: profile, isPending: profileLoading } = useQuery({
+    queryKey: qk.users.detail(id),
     queryFn: () => getUserById(id),
     enabled: !!id,
-    staleTime: 1000 * 60 * 5,
   });
 
   const { friendship, loading: friendshipLoading } = useFriendship(id);

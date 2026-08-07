@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { updateSociety } from '@/api/societies.api';
 import { Society } from '@/types/societies';
+import { qk } from '@/lib/queryKeys';
 
 export const useUpdateSociety = () => {
   const queryClient = useQueryClient();
@@ -11,9 +12,8 @@ export const useUpdateSociety = () => {
     { id: string; name: string; description: string; category: string | null; logoUri?: string }
   >({
     mutationFn: ({ id, ...updates }) => updateSociety(id, updates),
-    onSuccess: (_, { id }) => {
-      queryClient.invalidateQueries({ queryKey: ['society', id] });
-      queryClient.invalidateQueries({ queryKey: ['societies'] });
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: qk.societies.all });
     },
   });
 

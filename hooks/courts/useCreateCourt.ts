@@ -1,11 +1,13 @@
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { createCourt } from '@/api/courts.api';
 import { CreateCourtForm, Court } from '@/types/courts';
 import { useAuth } from '@/hooks/useAuth';
 import { router } from 'expo-router';
+import { qk } from '@/lib/queryKeys';
 
 export const useCreateCourt = () => {
   const { user, loading: authLoading, isAuth } = useAuth();
+  const queryClient = useQueryClient();
 
   const mutation = useMutation<Court, Error, CreateCourtForm>({
     mutationFn: async (court: CreateCourtForm) => {
@@ -17,6 +19,11 @@ export const useCreateCourt = () => {
       }
 
       return await createCourt(court);
+    },
+    onSuccess: () => {
+      // Previously this invalidated nothing at all, so a newly created court
+      // never appeared until the app was restarted.
+      queryClient.invalidateQueries({ queryKey: qk.courts.all });
     },
   });
 
@@ -35,4 +42,3 @@ export const useCreateCourt = () => {
     user,
   };
 };
-

@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
@@ -10,10 +11,10 @@ import {
   Inter_700Bold,
 } from '@expo-google-fonts/inter';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from '@/providers/AuthProvider';
-
-const queryClient = new QueryClient();
+import { queryClient } from '@/lib/queryClient';
+import { setupReactQueryFocus } from '@/lib/reactQueryFocus';
 
 function AppNavigator({ fontsLoaded }: { fontsLoaded: boolean }) {
   const { session, initialising, profileLoaded, needsOnboarding } = useAuth();
@@ -63,6 +64,10 @@ function AppNavigator({ fontsLoaded }: { fontsLoaded: boolean }) {
 
 export default function RootLayout() {
   useFrameworkReady();
+
+  // Without this, `refetchOnWindowFocus` never fires on native and nothing
+  // refreshes when the app returns to the foreground.
+  useEffect(() => setupReactQueryFocus(), []);
 
   const [fontsLoaded] = useFonts({
     'Inter-Regular': Inter_400Regular,

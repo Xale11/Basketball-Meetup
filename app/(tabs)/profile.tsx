@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, ActivityIndicator, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Settings, Pencil as Edit, ChevronRight, CreditCard, Bell, Shield, User, Camera, Users, UserPlus, Calendar } from 'lucide-react-native';
 import { router } from 'expo-router';
@@ -17,6 +17,8 @@ import { ActivitySection } from '@/components/profile/ActivitySection';
 import { Button } from '@/components/ui/Button';
 import { SectionCard } from '@/components/ui/SectionCard';
 import { useState } from 'react';
+import { useRefreshQueries } from '@/hooks/useRefreshQueries';
+import { qk } from '@/lib/queryKeys';
 
 export default function ProfileScreen() {
   const { user, session, logout } = useAuth();
@@ -28,6 +30,13 @@ export default function ProfileScreen() {
   const { friends } = useFriends();
   const { count: requestCount } = usePendingRequests();
   const { count: inviteCount } = useReceivedEventInvites();
+  const { refreshing, onRefresh } = useRefreshQueries([
+    qk.users.detail(user?.id),
+    qk.events.all,
+    qk.friends.all,
+    qk.eventInvites.all,
+    qk.societies.mine(user?.id),
+  ]);
 
   const [showEditModal, setShowEditModal] = useState(false);
 
@@ -62,7 +71,13 @@ export default function ProfileScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.content}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FF6B35" />
+        }
+      >
         {/* Profile Header */}
         <View style={styles.profileSection}>
           <View style={styles.profileHeader}>

@@ -3,6 +3,7 @@ import { joinEvent } from '@/api/events.api'
 import { EventParticipant, EventJoinPolicy, EventParticipantStatus } from '@/types/event'
 import { useAuth } from '@/hooks/useAuth'
 import { router } from 'expo-router'
+import { qk } from '@/lib/queryKeys'
 
 export const useJoinEvent = () => {
   const { user, isAuth } = useAuth()
@@ -24,13 +25,15 @@ export const useJoinEvent = () => {
     },
     onMutate: async ({ eventId, joinPolicy }) => {
       if (!user?.id) return { previousParticipations: undefined }
-      await queryClient.cancelQueries({ queryKey: ['userParticipations', user.id] })
-      const previousParticipations = queryClient.getQueryData<EventParticipant[]>(['userParticipations', user.id])
+      await queryClient.cancelQueries({ queryKey: qk.events.participations(user.id) })
+      const previousParticipations = queryClient.getQueryData<EventParticipant[]>(
+        qk.events.participations(user.id),
+      )
       const status =
         joinPolicy === EventJoinPolicy.APPROVAL_REQUIRED
           ? EventParticipantStatus.REQUESTED
           : EventParticipantStatus.GOING
-      queryClient.setQueryData<EventParticipant[]>(['userParticipations', user.id], (old) => [
+      queryClient.setQueryData<EventParticipant[]>(qk.events.participations(user.id), (old) => [
         ...(old ?? []),
         { event_id: eventId, user_id: user.id, status, joined_at: new Date().toISOString() },
       ])
@@ -38,12 +41,17 @@ export const useJoinEvent = () => {
     },
     onError: (_, __, context) => {
       if (user?.id && context?.previousParticipations !== undefined) {
-        queryClient.setQueryData(['userParticipations', user.id], context.previousParticipations)
+        queryClient.setQueryData(qk.events.participations(user.id), context.previousParticipations)
       }
     },
     onSuccess: (_, { eventId }) => {
-      queryClient.invalidateQueries({ queryKey: ['userParticipations', user?.id] })
-      queryClient.invalidateQueries({ queryKey: ['event', eventId] })
+      queryClient.invalidateQueries({ queryKey: qk.events.participations(user?.id) })
+      queryClient.invalidateQueries({ queryKey: qk.events.detail(eventId) })
+      // Joining changes the participant count on list rows and adds the event
+      // to "events I'm attending" — neither was refreshed before.
+      queryClient.invalidateQueries({ queryKey: qk.events.participating(user?.id) })
+      queryClient.invalidateQueries({ queryKey: qk.events.lists })
+      queryClient.invalidateQueries({ queryKey: qk.friends.forEvent(eventId, user?.id) })
     },
   })
 

@@ -1,26 +1,23 @@
 import { useQuery } from '@tanstack/react-query';
 import { getSocietyById } from '@/api/societies.api';
 import { Society } from '@/types/societies';
+import { qk } from '@/lib/queryKeys';
 
 const useFetchSocietyById = (societyId: string | null | undefined) => {
-  const { data, error, isLoading, isError, refetch } = useQuery<{
-    society: Society;
-    memberCount: number;
-  } | null>({
-    queryKey: ['society', societyId],
+  const query = useQuery<{ society: Society; memberCount: number } | null>({
+    queryKey: qk.societies.detail(societyId),
     queryFn: () => getSocietyById(societyId!),
     enabled: !!societyId,
-    staleTime: 1000 * 60 * 5,
-    refetchOnWindowFocus: false,
   });
 
   return {
-    society: data?.society ?? null,
-    memberCount: data?.memberCount ?? 0,
-    loading: isLoading,
-    isError,
-    error,
-    refetch,
+    society: query.data?.society ?? null,
+    memberCount: query.data?.memberCount ?? 0,
+    loading: !!societyId && query.isPending,
+    fetching: query.isFetching,
+    isError: query.isError,
+    error: query.error,
+    refetch: query.refetch,
   };
 };
 

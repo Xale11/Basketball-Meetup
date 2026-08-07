@@ -48,8 +48,8 @@ export default function OnboardingScreen() {
     societies: [],
   });
 
-  const { universities, isLoading: universitiesLoading, isError: universitiesError, fetchUniversities } = useFetchUniversities();
-  const { societies, isLoading: societiesLoading, isError: societiesError, fetchSocieties } = useFetchSocietiesByUniId(form.university_id ?? '');
+  const { universities, isLoading: universitiesLoading, isError: universitiesError } = useFetchUniversities();
+  const { societies, isLoading: societiesLoading, isError: societiesError } = useFetchSocietiesByUniId(form.university_id ?? '');
 
   const isLastStep = step === 4;
 
@@ -117,7 +117,6 @@ export default function OnboardingScreen() {
 
   const openUniversityPicker = () => {
     setShowUniversityPicker(true);
-    fetchUniversities();
   }
 
   const handleUniversitySelect = (university_id: string) => {
@@ -164,12 +163,6 @@ export default function OnboardingScreen() {
       societies: selectedSocieties,
     }));
   }, [selectedSocieties]);
-
-  useEffect(() => {
-    if (step === 4 && form.university_id) {
-      fetchSocieties();
-    }
-  }, [step, form.university_id]);
 
   if (loading || submitting || onboardingLoading) {
     return <LoadingSpinner />;

@@ -1,21 +1,23 @@
 import { useQuery } from '@tanstack/react-query';
 import { searchUsers } from '@/api/friends.api';
 import { useAuth } from '@/hooks/useAuth';
+import { qk } from '@/lib/queryKeys';
 
 export const useSearchUsers = (query: string) => {
   const { user } = useAuth();
+  const enabled = !!user?.id && query.trim().length > 0;
 
   const result = useQuery({
-    queryKey: ['userSearch', query],
+    queryKey: qk.friends.search(query),
     queryFn: () => searchUsers(query, user?.id ?? ''),
-    enabled: !!user?.id && query.trim().length > 0,
+    enabled,
     staleTime: 1000 * 30, // 30 s — search results can go stale quickly
-    refetchOnWindowFocus: false,
   });
 
   return {
     results: result.data ?? [],
-    loading: result.isPending,
+    loading: enabled && result.isPending,
+    fetching: result.isFetching,
     error: result.error,
   };
 };

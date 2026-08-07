@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { inviteFriendToEvent } from '@/api/friends.api';
 import { useAuth } from '@/hooks/useAuth';
 import { router } from 'expo-router';
+import { qk } from '@/lib/queryKeys';
 
 interface InviteInput {
   eventId: string;
@@ -22,7 +23,8 @@ export const useInviteFriendToEvent = () => {
       return inviteFriendToEvent(eventId, invitedUserId, user.id);
     },
     onSuccess: (_, { eventId }) => {
-      queryClient.invalidateQueries({ queryKey: ['eventInvitees', eventId, user?.id] });
+      queryClient.invalidateQueries({ queryKey: qk.eventInvites.invitees(eventId, user?.id) });
+      queryClient.invalidateQueries({ queryKey: qk.friends.forEvent(eventId, user?.id) });
     },
   });
 

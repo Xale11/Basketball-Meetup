@@ -16,7 +16,7 @@ import { FriendsAttending } from '@/components/friends/FriendsAttending';
 import { InviteFriendsModal } from '@/components/friends/InviteFriendsModal';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { EventBookingMode, EventHostType, EventInviteStatus, EventJoinPolicy, EventParticipantStatus, EventVisibility } from '@/types/event';
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 
 export default function EventDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -27,17 +27,12 @@ export default function EventDetailScreen() {
   const { joinEvent, loading: joining } = useJoinEvent();
   const { leaveEvent, loading: leaving } = useLeaveEvent();
 
-  const { societies, fetchSocieties } = useFetchSocietiesByUniId(event?.university_id ?? null);
-  const { universities, fetchUniversities } = useFetchUniversities();
+  const { societies } = useFetchSocietiesByUniId(event?.university_id ?? null);
+  const { universities } = useFetchUniversities();
   const { friends: eventFriends } = useEventFriends(id);
   const { invite: userInvite } = useUserEventInvite(id);
   const { respond: respondEventInvite } = useRespondEventInvite();
   const [showInviteModal, setShowInviteModal] = useState(false);
-
-  useEffect(() => {
-    if (event?.university_id) fetchSocieties();
-    fetchUniversities();
-  }, [event?.university_id]);
 
   const societyName = useMemo(() => {
     if (!event?.society_id) return null;

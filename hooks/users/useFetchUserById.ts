@@ -1,6 +1,7 @@
 import { getUserById } from "@/api/users.api"
 import { User } from "@/types/user"
 import { useQuery } from "@tanstack/react-query"
+import { qk } from "@/lib/queryKeys"
 
 /**
  * Fetches a profile row. Resolves to `null` when the user has not onboarded yet.
@@ -13,11 +14,8 @@ import { useQuery } from "@tanstack/react-query"
  */
 export const useFetchById = (id: string | undefined | null) => {
     const query = useQuery<User | null, Error>({
-        queryKey: ["userFetchById", id],
+        queryKey: qk.users.detail(id),
         enabled: !!id,
-        staleTime: 1000 * 60 * 5,
-        refetchOnWindowFocus: false,
-        retry: 2,
         queryFn: () => getUserById(id),
     })
 

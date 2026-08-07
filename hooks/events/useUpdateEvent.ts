@@ -3,6 +3,7 @@ import { updateEvent } from '@/api/events.api'
 import { CreateEventForm, Event } from '@/types/event'
 import { useAuth } from '@/hooks/useAuth'
 import { router } from 'expo-router'
+import { qk } from '@/lib/queryKeys'
 
 interface UpdateEventVariables {
   eventId: string
@@ -22,9 +23,11 @@ export const useUpdateEvent = () => {
       }
       return await updateEvent(eventId, form, user.id)
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['events'] })
-      queryClient.invalidateQueries({ queryKey: ['myEvents', user?.id] })
+    onSuccess: (_, { eventId }) => {
+      // Previously only the lists were invalidated, so the detail screen you
+      // had just edited kept showing the old event.
+      queryClient.invalidateQueries({ queryKey: qk.events.all })
+      queryClient.invalidateQueries({ queryKey: qk.events.detail(eventId) })
     },
   })
 

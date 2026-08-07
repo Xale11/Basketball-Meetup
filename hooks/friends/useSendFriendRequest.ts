@@ -3,6 +3,7 @@ import { sendFriendRequest } from '@/api/friends.api';
 import { Friendship } from '@/types/friends';
 import { useAuth } from '@/hooks/useAuth';
 import { router } from 'expo-router';
+import { qk } from '@/lib/queryKeys';
 
 export const useSendFriendRequest = () => {
   const { user, isAuth } = useAuth();
@@ -18,8 +19,10 @@ export const useSendFriendRequest = () => {
       return sendFriendRequest(user.id, addresseeId);
     },
     onSuccess: (_, { addresseeId }) => {
-      queryClient.invalidateQueries({ queryKey: ['friendship', user?.id, addresseeId] });
-      queryClient.invalidateQueries({ queryKey: ['friends', user?.id] });
+      queryClient.invalidateQueries({ queryKey: qk.friends.friendship(user?.id, addresseeId) });
+      queryClient.invalidateQueries({ queryKey: qk.friends.list(user?.id) });
+      // Search results carry per-row friendship state, so they go stale too.
+      queryClient.invalidateQueries({ queryKey: [...qk.friends.all, 'search'] });
     },
   });
 

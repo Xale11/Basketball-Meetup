@@ -1,45 +1,38 @@
-import { useState } from 'react';
 import { Alert } from 'react-native';
 import * as ImagePickerExpo from 'expo-image-picker';
-import { useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { uploadToSupabaseBucket } from '@/api/supabase-storage.api';
 import { updateUser } from '@/api/users.api';
+import { User } from '@/types/user';
+import { qk } from '@/lib/queryKeys';
 
+/**
+ * Was a hand-rolled `useState` + try/catch. Now a mutation, so upload and
+ * removal share one pending flag and one cache-update path.
+ */
 export default function useUpdateProfilePhoto(userId: string | undefined) {
   const queryClient = useQueryClient();
-  const [photoUploading, setPhotoUploading] = useState(false);
 
-  const uploadPhoto = async (uri: string) => {
-    if (!userId) return;
-    try {
-      setPhotoUploading(true);
-      console.log('[useUpdateProfilePhoto] uploading photo');
-      const photoUrl = await uploadToSupabaseBucket(uri, `profilePhotos/${userId}`, 'profile');
-      await updateUser(userId, { photo_url: photoUrl });
-      await queryClient.invalidateQueries({ queryKey: ['userFetchById', userId] });
-      console.log('[useUpdateProfilePhoto] photo updated');
-    } catch (e) {
-      console.error('[useUpdateProfilePhoto] upload failed', e);
+  const mutation = useMutation<User, Error, { uri: string | null }>({
+    mutationFn: async ({ uri }) => {
+      if (!userId) throw new Error('No user id available to update the photo');
+
+      // `uri === null` means "remove the current photo".
+      const photoUrl = uri
+        ? await uploadToSupabaseBucket(uri, `profilePhotos/${userId}`, 'profile')
+        : null;
+
+      return updateUser(userId, { photo_url: photoUrl } as Partial<User>);
+    },
+    onSuccess: (updated) => {
+      if (updated) queryClient.setQueryData(qk.users.detail(userId), updated);
+      queryClient.invalidateQueries({ queryKey: qk.users.detail(userId) });
+    },
+    onError: (e) => {
+      console.error('[useUpdateProfilePhoto] failed', e);
       Alert.alert('Error', 'Failed to update photo. Please try again.');
-    } finally {
-      setPhotoUploading(false);
-    }
-  };
-
-  const removePhoto = async () => {
-    if (!userId) return;
-    try {
-      setPhotoUploading(true);
-      console.log('[useUpdateProfilePhoto] removing photo');
-      await updateUser(userId, { photo_url: null as any });
-      await queryClient.invalidateQueries({ queryKey: ['userFetchById', userId] });
-      console.log('[useUpdateProfilePhoto] photo removed');
-    } catch (e) {
-      console.error('[useUpdateProfilePhoto] remove failed', e);
-    } finally {
-      setPhotoUploading(false);
-    }
-  };
+    },
+  });
 
   const pickPhoto = async () => {
     const { status } = await ImagePickerExpo.requestMediaLibraryPermissionsAsync();
@@ -52,7 +45,7 @@ export default function useUpdateProfilePhoto(userId: string | undefined) {
       allowsEditing: false,
       quality: 0.8,
     });
-    if (!result.canceled && result.assets[0]) await uploadPhoto(result.assets[0].uri);
+    if (!result.canceled && result.assets[0]) mutation.mutate({ uri: result.assets[0].uri });
   };
 
   const takePhoto = async () => {
@@ -65,17 +58,19 @@ export default function useUpdateProfilePhoto(userId: string | undefined) {
       allowsEditing: false,
       quality: 0.8,
     });
-    if (!result.canceled && result.assets[0]) await uploadPhoto(result.assets[0].uri);
+    if (!result.canceled && result.assets[0]) mutation.mutate({ uri: result.assets[0].uri });
   };
 
   const handlePhotoPress = (hasPhoto: boolean) => {
     Alert.alert('Profile Photo', 'Choose an option', [
       { text: 'Photo Library', onPress: pickPhoto },
       { text: 'Take Photo', onPress: takePhoto },
-      ...(hasPhoto ? [{ text: 'Remove Photo', style: 'destructive' as const, onPress: removePhoto }] : []),
+      ...(hasPhoto
+        ? [{ text: 'Remove Photo', style: 'destructive' as const, onPress: () => mutation.mutate({ uri: null }) }]
+        : []),
       { text: 'Cancel', style: 'cancel' as const },
     ]);
   };
 
-  return { photoUploading, handlePhotoPress };
+  return { photoUploading: mutation.isPending, handlePhotoPress };
 }

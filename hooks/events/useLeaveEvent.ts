@@ -3,6 +3,7 @@ import { leaveEvent } from '@/api/events.api'
 import { EventParticipant } from '@/types/event'
 import { useAuth } from '@/hooks/useAuth'
 import { router } from 'expo-router'
+import { qk } from '@/lib/queryKeys'
 
 export const useLeaveEvent = () => {
   const { user, isAuth } = useAuth()
@@ -24,21 +25,26 @@ export const useLeaveEvent = () => {
     },
     onMutate: async ({ eventId }) => {
       if (!user?.id) return { previousParticipations: undefined }
-      await queryClient.cancelQueries({ queryKey: ['userParticipations', user.id] })
-      const previousParticipations = queryClient.getQueryData<EventParticipant[]>(['userParticipations', user.id])
-      queryClient.setQueryData<EventParticipant[]>(['userParticipations', user.id], (old) =>
+      await queryClient.cancelQueries({ queryKey: qk.events.participations(user.id) })
+      const previousParticipations = queryClient.getQueryData<EventParticipant[]>(
+        qk.events.participations(user.id),
+      )
+      queryClient.setQueryData<EventParticipant[]>(qk.events.participations(user.id), (old) =>
         (old ?? []).filter((p) => p.event_id !== eventId),
       )
       return { previousParticipations }
     },
     onError: (_, __, context) => {
       if (user?.id && context?.previousParticipations !== undefined) {
-        queryClient.setQueryData(['userParticipations', user.id], context.previousParticipations)
+        queryClient.setQueryData(qk.events.participations(user.id), context.previousParticipations)
       }
     },
     onSuccess: (_, { eventId }) => {
-      queryClient.invalidateQueries({ queryKey: ['userParticipations', user?.id] })
-      queryClient.invalidateQueries({ queryKey: ['event', eventId] })
+      queryClient.invalidateQueries({ queryKey: qk.events.participations(user?.id) })
+      queryClient.invalidateQueries({ queryKey: qk.events.detail(eventId) })
+      queryClient.invalidateQueries({ queryKey: qk.events.participating(user?.id) })
+      queryClient.invalidateQueries({ queryKey: qk.events.lists })
+      queryClient.invalidateQueries({ queryKey: qk.friends.forEvent(eventId, user?.id) })
     },
   })
 

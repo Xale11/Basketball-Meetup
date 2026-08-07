@@ -1,21 +1,22 @@
 import { useQuery } from '@tanstack/react-query';
 import { fetchEventsBySocietyId } from '@/api/events.api';
 import { Event } from '@/types/event';
+import { qk } from '@/lib/queryKeys';
 
 const useFetchEventsBySociety = (societyId: string | null | undefined) => {
-  const { data, error, isLoading, isError } = useQuery<Event[]>({
-    queryKey: ['societyEvents', societyId],
+  const query = useQuery<Event[]>({
+    queryKey: qk.events.bySociety(societyId),
     queryFn: () => fetchEventsBySocietyId(societyId!),
     enabled: !!societyId,
-    staleTime: 1000 * 60 * 5,
-    refetchOnWindowFocus: false,
   });
 
   return {
-    events: data ?? [],
-    loading: isLoading,
-    isError,
-    error,
+    events: query.data ?? [],
+    loading: !!societyId && query.isPending,
+    fetching: query.isFetching,
+    isError: query.isError,
+    error: query.error,
+    refetch: query.refetch,
   };
 };
 

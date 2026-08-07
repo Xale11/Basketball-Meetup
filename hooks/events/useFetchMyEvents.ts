@@ -1,19 +1,19 @@
 import { useQuery } from '@tanstack/react-query'
 import { fetchEventsByUserId } from '@/api/events.api'
 import { Event } from '@/types/event'
+import { qk } from '@/lib/queryKeys'
 
 export const useFetchMyEvents = (userId: string | undefined | null) => {
   const query = useQuery<Event[], Error>({
-    queryKey: ['myEvents', userId],
+    queryKey: qk.events.mine(userId),
     enabled: !!userId,
-    staleTime: 1000 * 60 * 5,
-    refetchOnWindowFocus: false,
     queryFn: () => fetchEventsByUserId(userId!),
   })
 
   return {
     ...query,
-    loading: !!userId && (query.isPending || query.isFetching),
+    loading: !!userId && query.isPending,
+    fetching: query.isFetching,
     error: query.error,
     isSuccess: query.isSuccess,
     isError: query.isError,

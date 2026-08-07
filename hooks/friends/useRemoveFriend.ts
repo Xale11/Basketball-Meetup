@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { removeFriend } from '@/api/friends.api';
 import { useAuth } from '@/hooks/useAuth';
+import { qk } from '@/lib/queryKeys';
 
 export const useRemoveFriend = () => {
   const { user } = useAuth();
@@ -12,9 +13,10 @@ export const useRemoveFriend = () => {
       return removeFriend(user.id, targetId);
     },
     onSuccess: (_, { targetId }) => {
-      queryClient.invalidateQueries({ queryKey: ['friends', user?.id] });
-      queryClient.invalidateQueries({ queryKey: ['friendship', user?.id, targetId] });
-      queryClient.invalidateQueries({ queryKey: ['pendingFriendRequests', user?.id] });
+      queryClient.invalidateQueries({ queryKey: qk.friends.list(user?.id) });
+      queryClient.invalidateQueries({ queryKey: qk.friends.friendship(user?.id, targetId) });
+      queryClient.invalidateQueries({ queryKey: qk.friends.pending(user?.id) });
+      queryClient.invalidateQueries({ queryKey: [...qk.friends.all, 'search'] });
     },
   });
 

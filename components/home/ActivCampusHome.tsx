@@ -1,7 +1,7 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Search, Bell, ChevronRight, Plus, Sparkles } from 'lucide-react-native';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/hooks/useAuth';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -13,6 +13,8 @@ import useFetchUniversities from '@/hooks/universities/useFetchUniversities';
 import { useUserParticipations } from '@/hooks/events/useUserParticipations';
 import { Event, EventBookingMode } from '@/types/event';
 import { EventCard } from '@/components/events/EventCard';
+import { useRefreshQueries } from '@/hooks/useRefreshQueries';
+import { qk } from '@/lib/queryKeys';
 
 type TimeFilter = 'Now' | 'Today' | 'This Week';
 type CostFilter = 'All' | 'Free' | 'Paid';
@@ -35,13 +37,9 @@ export default function ActivCampusHome() {
   const { events, loading: eventsLoading } = useFetchEvents(user?.university_id, societyIds);
   const { participationMap } = useUserParticipations(user?.id);
 
-  const { societies, fetchSocieties } = useFetchSocietiesByUniId(user?.university_id ?? null);
-  const { universities, fetchUniversities } = useFetchUniversities();
-
-  useEffect(() => {
-    if (user?.university_id) fetchSocieties();
-    fetchUniversities();
-  }, [user?.university_id]);
+  const { societies } = useFetchSocietiesByUniId(user?.university_id ?? null);
+  const { universities } = useFetchUniversities();
+  const { refreshing, onRefresh } = useRefreshQueries([qk.events.all, qk.societies.all]);
 
   const societyNameMap = useMemo(
     () => new Map(societies.map((s) => [s.id, s.name])),
@@ -99,7 +97,13 @@ export default function ActivCampusHome() {
         </View>
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.content}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FF6B35" />
+        }
+      >
 
         {/* Filters */}
         <ScrollView

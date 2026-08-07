@@ -7,9 +7,10 @@ import {
   Modal,
   TextInput,
   Alert,
+  RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { Search, Plus, Users, Crown, ChevronRight, Calendar, X } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { useAuth } from '@/hooks/useAuth';
@@ -18,6 +19,8 @@ import useFetchSocietiesByUniId from '@/hooks/societies/useFetchSocietiesByUniId
 import { useFetchEvents } from '@/hooks/events/useFetchEvents';
 import useFetchUniversities from '@/hooks/universities/useFetchUniversities';
 import { useUserParticipations } from '@/hooks/events/useUserParticipations';
+import { useRefreshQueries } from '@/hooks/useRefreshQueries';
+import { qk } from '@/lib/queryKeys';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { EventCard } from '@/components/events/EventCard';
 import { Button } from '@/components/ui/Button';
@@ -55,10 +58,8 @@ export default function SocietiesScreen() {
   const { events, loading: eventsLoading } = useFetchEvents(user?.university_id, societyIds);
   const { participationMap } = useUserParticipations(user?.id);
 
-  const { universities, fetchUniversities } = useFetchUniversities();
-  useEffect(() => {
-    fetchUniversities();
-  }, []);
+  const { universities } = useFetchUniversities();
+  const { refreshing, onRefresh } = useRefreshQueries([qk.societies.all, qk.events.all]);
   const universityNameMap = useMemo(
     () => new Map(universities.map((u) => [u.id, u.name])),
     [universities],
@@ -180,7 +181,13 @@ export default function SocietiesScreen() {
         ))}
       </ScrollView>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.content}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FF6B35" />
+        }
+      >
 
         {/* ── Society Events ───────────────────────────────────────────── */}
         {selectedTab === 'events' && (

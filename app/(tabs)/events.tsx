@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState } from 'react';
 import { Search, Filter, Plus } from 'lucide-react-native';
@@ -16,6 +16,8 @@ import { useUserParticipations } from '@/hooks/events/useUserParticipations';
 import { useFetchUserSocieties } from '@/hooks/societies/useFetchUserSocieties';
 import { useFetchUniversityMembership } from '@/hooks/universities/useFetchUniversityMembership';
 import { useAuth } from '@/hooks/useAuth';
+import { useRefreshQueries } from '@/hooks/useRefreshQueries';
+import { qk } from '@/lib/queryKeys';
 import { SocietyRoleIdEnum } from '@/types/societies';
 import { UniversityRole } from '@/types/universities';
 import { Alert } from 'react-native';
@@ -58,6 +60,7 @@ export default function EventsScreen() {
   const { updateEvent, loading: updateLoading } = useUpdateEvent();
   const { membership: uniMembership } = useFetchUniversityMembership(user?.id);
   const { participationMap } = useUserParticipations(user?.id);
+  const { refreshing, onRefresh } = useRefreshQueries([qk.events.all, qk.societies.mine(user?.id)]);
 
   const privilegedSocietyIds = new Set(
     memberships
@@ -133,7 +136,13 @@ export default function EventsScreen() {
 
       <TabBar tabs={TABS} activeTab={selectedTab} onTabChange={setSelectedTab} />
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.content}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FF6B35" />
+        }
+      >
         {eventsLoading ? (
           <LoadingSpinner />
         ) : visibleEvents.length === 0 ? (

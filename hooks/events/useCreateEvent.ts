@@ -3,6 +3,7 @@ import { createEvent } from '@/api/events.api'
 import { CreateEventForm, Event } from '@/types/event'
 import { useAuth } from '@/hooks/useAuth'
 import { router } from 'expo-router'
+import { qk } from '@/lib/queryKeys'
 
 export const useCreateEvent = () => {
   const { user, loading: authLoading, isAuth } = useAuth()
@@ -17,9 +18,13 @@ export const useCreateEvent = () => {
       }
       return await createEvent(form, user.id)
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['events'] })
-      queryClient.invalidateQueries({ queryKey: ['myEvents', user?.id] })
+    onSuccess: (event) => {
+      // Invalidating the `events` root covers every list, detail, mine and
+      // bySociety query in one go.
+      queryClient.invalidateQueries({ queryKey: qk.events.all })
+      if (event?.society_id) {
+        queryClient.invalidateQueries({ queryKey: qk.events.bySociety(event.society_id) })
+      }
     },
   })
 

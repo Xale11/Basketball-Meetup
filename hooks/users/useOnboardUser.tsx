@@ -5,6 +5,7 @@ import { createUser } from "@/api/users.api";
 import { useAuth } from "@/hooks/useAuth";
 import { createSocietyMembership } from "@/api/societies.api";
 import { uploadToSupabaseBucket } from "@/api/supabase-storage.api";
+import { qk } from "@/lib/queryKeys";
 
 type OnboardUserArgs = {
   form: OnboardingUserForm;
@@ -96,9 +97,11 @@ export default function useOnboardUser(): UseOnboardUserReturn {
       // guard releases immediately, then invalidate to reconcile with the
       // server. Without this the user is stuck on the onboarding screen.
       if (createdUser?.id) {
-        queryClient.setQueryData(["userFetchById", createdUser.id], createdUser);
+        queryClient.setQueryData(qk.users.detail(createdUser.id), createdUser);
       }
-      queryClient.invalidateQueries({ queryKey: ["userFetchById"] });
+      queryClient.invalidateQueries({ queryKey: qk.users.all });
+      // Society memberships were just created for this user.
+      queryClient.invalidateQueries({ queryKey: qk.societies.mine(createdUser?.id) });
     },
   });
 

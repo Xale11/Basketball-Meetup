@@ -3,6 +3,7 @@ import { createSociety } from '@/api/societies.api';
 import { Society } from '@/types/societies';
 import { useAuth } from '@/hooks/useAuth';
 import { router } from 'expo-router';
+import { qk } from '@/lib/queryKeys';
 
 interface CreateSocietyInput {
   name: string;
@@ -28,8 +29,7 @@ export const useCreateSociety = () => {
       return createSociety(user.id, user.university_id, input);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['societies'] });
-      queryClient.invalidateQueries({ queryKey: ['userSocieties', user?.id] });
+      queryClient.invalidateQueries({ queryKey: qk.societies.all });
     },
   });
 
