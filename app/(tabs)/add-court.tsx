@@ -51,7 +51,6 @@ export default function AddCourtScreen() {
     images: [],
     tags: [],
     opening_hours: INITIAL_OPENING_HOURS,
-    created_by: '',
   });
 
   const addLocationToForm = (loc: GooglePlaceDetail | null) => {

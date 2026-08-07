@@ -13,12 +13,15 @@ export const useCreateCourt = () => {
     mutationFn: async (court: CreateCourtForm) => {
       // Check authentication
       const isAuthenticated = await isAuth()
-      if (!isAuthenticated) {
+      if (!isAuthenticated || !user?.id) {
         router.replace('/auth/login');
         throw new Error('You must be logged in to create a court');
       }
 
-      return await createCourt(court);
+      // Ownership comes from the session, not the form. The screen used to send
+      // `created_by: ''`, which the Firestore write accepted silently but the
+      // Supabase FK to profiles(id) would reject.
+      return await createCourt(court, user.id);
     },
     onSuccess: () => {
       // Previously this invalidated nothing at all, so a newly created court

@@ -1,8 +1,9 @@
 /**
- * Not a Supabase table — Basketball Meetup (BM_) app only.
- * No `courts` table exists in Supabase; court data is currently managed
- * client-side or via a future migration. These types model basketball court
- * records including location, amenities, reviews, and opening hours.
+ * Basketball Meetup (BM_) app only.
+ * `Court` maps to the Supabase table `public.courts` — note the DB stores
+ * location flattened (address/latitude/longitude/geohash columns) and
+ * `opening_hours` as jsonb; api/courts.api.ts maps between the two shapes.
+ * `CourtVisit` and `Review` are not yet tables.
  */
 
 /** Not a Supabase table — BM_ only. A single visit/check-in record for a court. */
@@ -12,7 +13,7 @@ export interface CourtVisit {
   checked_in: boolean;
 }
 
-/** Not a Supabase table — BM_ only. Full court record including location, images, and metadata. */
+/** Supabase table: courts (shape is nested here, flat in the DB). BM_ only. */
 export interface Court {
   id: string;
   name: string;
@@ -94,6 +95,7 @@ export interface CreateCourtForm {
   geohash: string;
   images: string[]; // Array of local image URIs
   tags: string[]; // amenities - extensive list of options
-  created_by: string;
   opening_hours: OpeningHours;
+  // No `created_by`: ownership is taken from the session in useCreateCourt and
+  // enforced by the courts RLS insert policy (auth.uid() = created_by).
 }

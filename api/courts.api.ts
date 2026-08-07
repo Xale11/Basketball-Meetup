@@ -1,55 +1,145 @@
-import { Court, CreateCourtForm } from '@/types/courts';
-import { db, storage } from './firebase';
-import { addDoc, collection, updateDoc, doc, setDoc } from 'firebase/firestore';
-import { uploadImagesToStorage } from './utils.api';
-import * as Crypto from 'expo-crypto';
+import { Court, CreateCourtForm, OpeningHours } from '@/types/courts';
+import { supabase } from './supabase';
+import { uploadToSupabaseBucket } from './supabase-storage.api';
 
+const COURT_IMAGES_BUCKET = 'court_images';
 
-export const createCourt = async (court: CreateCourtForm): Promise<Court> => {
-  // I need to create my own court id first so that I can create a like between the court 
-  // images and the actuall court itself. The image files are stored stored seperate to the
-  // json data
-  const courtId = Crypto.randomUUID()
-  try {
-    
-    // STEP 1: Upload images to storage and fetch the firebase download urls
-    const imageUrls: string[] =
-      await uploadImagesToStorage(court.images, 'courts', courtId);
+/** Shape of a row in public.courts. Location is flattened in the DB. */
+type CourtRow = {
+  id: string;
+  name: string;
+  description: string;
+  address: string;
+  latitude: number;
+  longitude: number;
+  geohash: string;
+  images: string[];
+  tags: string[];
+  checked_in_users: string[];
+  followers: string[];
+  opening_hours: OpeningHours;
+  created_by: string;
+  rating: number | null;
+  verified: boolean;
+  created_at: string;
+};
 
-    // STEP 2: Create and upload court document to firebase
-    const courtData: Omit<Court, 'id'> = {
+/** Maps a flat DB row onto the nested `Court` shape the UI expects. */
+const toCourt = (row: CourtRow): Court => ({
+  id: row.id,
+  name: row.name,
+  description: row.description,
+  location: {
+    address: row.address,
+    latitude: row.latitude,
+    longitude: row.longitude,
+    geohash: row.geohash,
+  },
+  images: row.images,
+  tags: row.tags,
+  checked_in_users: row.checked_in_users,
+  followers: row.followers,
+  created_by: row.created_by,
+  created_at: row.created_at,
+  rating: row.rating ?? undefined,
+  opening_hours: row.opening_hours,
+  verified: row.verified,
+});
+
+function logSupabaseError(context: string, error: any) {
+  console.error(`[courts.api] ${context} — Supabase error:`, {
+    message: error?.message,
+    code: error?.code, // '42501' = RLS violation
+    details: error?.details,
+    hint: error?.hint,
+  });
+}
+
+/**
+ * Creates a court owned by `userId`.
+ *
+ * The row is inserted first so the images can be filed under the real court id;
+ * the upload path is `<user_id>/<court_id>/<n>.<ext>`, which is what the storage
+ * policy checks against auth.uid().
+ */
+export const createCourt = async (court: CreateCourtForm, userId: string): Promise<Court> => {
+  const { data, error } = await supabase
+    .from('courts')
+    .insert({
       name: court.name,
       description: court.description,
-      location: {
-        address: court.address,
-        latitude: court.latitude,
-        longitude: court.longitude,
-        geohash: court.geohash,
-      },
+      address: court.address,
+      latitude: court.latitude,
+      longitude: court.longitude,
+      geohash: court.geohash,
       tags: court.tags,
-      created_by: court.created_by,
       opening_hours: court.opening_hours,
-      images: imageUrls, // sets the firebase donwload urls
-      checked_in_users: [],
-      followers: [],
-      created_at: new Date().toISOString(),
-      verified: false,
-    };
+      created_by: userId,
+      images: [],
+    })
+    .select('*')
+    .maybeSingle();
 
-    await setDoc(doc(db, 'courts', courtId), courtData)
+  if (error) {
+    logSupabaseError('createCourt insert', error);
+    throw new Error(error.message);
+  }
 
-    return {id: courtId, ...courtData}
-  } catch (error) {
-    throw new Error(`Failed to create a court, ${JSON.stringify(error)}`);
+  const row = data as CourtRow;
+
+  if (!court.images?.length) return toCourt(row);
+
+  // Upload images, then attach them. A failed upload must not leave a court
+  // with half a gallery, so the whole batch resolves before the update.
+  try {
+    const imageUrls = await Promise.all(
+      court.images.map((uri, index) =>
+        uploadToSupabaseBucket(uri, `${userId}/${row.id}`, `${index + 1}`, COURT_IMAGES_BUCKET),
+      ),
+    );
+
+    const { data: updated, error: updateError } = await supabase
+      .from('courts')
+      .update({ images: imageUrls })
+      .eq('id', row.id)
+      .select('*')
+      .maybeSingle();
+
+    if (updateError) {
+      logSupabaseError('createCourt image update', updateError);
+      throw new Error(updateError.message);
+    }
+
+    return toCourt(updated as CourtRow);
+  } catch (uploadError: any) {
+    // Roll the court back rather than leaving an imageless orphan behind.
+    await supabase.from('courts').delete().eq('id', row.id);
+    console.error('[courts.api] createCourt images failed, court rolled back');
+    throw new Error(uploadError?.message ?? 'Failed to upload court images');
   }
 };
 
-// fetch all - with paginaton, filtering and sort
+export const fetchCourts = async (): Promise<Court[]> => {
+  const { data, error } = await supabase
+    .from('courts')
+    .select('*')
+    .order('created_at', { ascending: false });
 
-// fetch by id
+  if (error) {
+    logSupabaseError('fetchCourts', error);
+    throw new Error(error.message);
+  }
 
-// fetch by search
+  return ((data ?? []) as CourtRow[]).map(toCourt);
+};
 
-// update by id
+export const fetchCourtById = async (id: string): Promise<Court | null> => {
+  const { data, error } = await supabase.from('courts').select('*').eq('id', id).maybeSingle();
 
-// delete by id
+  if (error) {
+    logSupabaseError('fetchCourtById', error);
+    throw new Error(error.message);
+  }
+
+  return data ? toCourt(data as CourtRow) : null;
+};
