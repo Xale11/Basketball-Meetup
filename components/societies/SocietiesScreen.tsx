@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState, useMemo } from 'react';
-import { Search, Plus, Users, Crown, ChevronRight, Calendar, X } from 'lucide-react-native';
+import { Search, Plus, Users, Crown, ChevronRight, Calendar, X, Filter } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { useAuth } from '@/hooks/useAuth';
 import { useFetchUserSocieties } from '@/hooks/societies/useFetchUserSocieties';
@@ -22,6 +22,8 @@ import { useUserParticipations } from '@/hooks/events/useUserParticipations';
 import { useRefreshQueries } from '@/hooks/useRefreshQueries';
 import { qk } from '@/lib/queryKeys';
 import { AC_AppHeader } from '@/components/activCampus/AC_AppHeader';
+import { useTheme, useThemedStyles, Theme } from '@/hooks/useTheme';
+import { LinearGradient } from 'expo-linear-gradient';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { EventCard } from '@/components/events/EventCard';
 import { Button } from '@/components/ui/Button';
@@ -29,10 +31,10 @@ import { TextInputField } from '@/components/ui/TextInputField';
 import { ImagePicker } from '@/components/ImagePicker';
 import { SOCIETY_CATEGORIES } from '@/types/societies';
 import { useCreateSociety } from '@/hooks/societies/useCreateSociety';
+import { useJoinSociety } from '@/hooks/societies/useJoinSociety';
+import { useLeaveSociety } from '@/hooks/societies/useLeaveSociety';
+import { AC_SocietyCard } from '@/components/societies/AC_SocietyCard';
 
-import { theme } from '@/constants/theme';
-
-const { colors } = theme;
 
 const CATEGORY_COLORS: Record<string, string> = {
   Arts: '#FFF4E8',
@@ -54,6 +56,8 @@ const CATEGORY_TEXT: Record<string, string> = {
 
 export default function SocietiesScreen() {
   const { user } = useAuth();
+  const { theme } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const { memberships, isLoading: societiesLoading } = useFetchUserSocieties(user?.id);
   const { societies: discoverSocieties, loading: discoverLoading } = useFetchSocietiesByUniId(
     user?.university_id,
@@ -65,8 +69,10 @@ export default function SocietiesScreen() {
 
   const { universities } = useFetchUniversities();
   const { refreshing, onRefresh } = useRefreshQueries([qk.societies.all, qk.events.all]);
+  // Names are nullable in the DB; drop the nulls rather than render "null".
   const universityNameMap = useMemo(
-    () => new Map(universities.map((u) => [u.id, u.name])),
+    () =>
+      new Map(universities.flatMap((u) => (u.name ? [[u.id, u.name] as [string, string]] : []))),
     [universities],
   );
 
@@ -79,15 +85,55 @@ export default function SocietiesScreen() {
   const [createLogoUri, setCreateLogoUri] = useState<string | undefined>(undefined);
 
   const { createSociety: submitCreate, loading: creating } = useCreateSociety();
+  const { joinSociety, loading: joining } = useJoinSociety();
+  const { leaveSociety, loading: leaving } = useLeaveSociety();
 
   // Discover tab state
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
 
   const societyNameMap = useMemo(
-    () => new Map(memberships.map((m) => [m.society_id, m.societies.name])),
+    () =>
+      new Map(
+        memberships.flatMap((m) =>
+          m.societies.name ? [[m.society_id, m.societies.name] as [string, string]] : [],
+        ),
+      ),
     [memberships],
   );
+
+  /** Societies the viewer holds a leadership role in — drives the Managed tab count. */
+  const managedMemberships = useMemo(
+    () =>
+      memberships.filter(
+        (m) => m.role_id === 'OWNER' || m.role_id === 'PRESIDENT' || m.role_id === 'EXEC',
+      ),
+    [memberships],
+  );
+
+  /** Membership lookup so a Discover row knows whether the viewer has joined. */
+  const membershipBySocietyId = useMemo(
+    () => new Map(memberships.map((m) => [m.society_id, m])),
+    [memberships],
+  );
+
+  /**
+   * Soonest upcoming activity per society, for the card's "Next activity" box.
+   * Derived from the events already loaded — no extra query.
+   */
+  const nextActivityBySociety = useMemo(() => {
+    const now = Date.now();
+    const next = new Map<string, (typeof events)[number]>();
+    for (const e of events) {
+      if (!e.society_id) continue;
+      if (new Date(e.start_date).getTime() < now) continue;
+      const current = next.get(e.society_id);
+      if (!current || new Date(e.start_date) < new Date(current.start_date)) {
+        next.set(e.society_id, e);
+      }
+    }
+    return next;
+  }, [events]);
 
   const filteredEvents = useMemo(() => {
     if (!selectedSocietyFilter) return events;
@@ -160,32 +206,79 @@ export default function SocietiesScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right']}>
       <AC_AppHeader />
-      <View style={styles.header}>
-        <Text style={styles.title}>Societies</Text>
-        <View style={styles.headerActions}>
-          <TouchableOpacity style={styles.addButton} onPress={() => setShowCreateModal(true)}>
-            <Plus size={20} color="#FFFFFF" />
-          </TouchableOpacity>
+      {/* Hero banner, per the redesign: eyebrow pill, title, blurb, gradient CTA. */}
+      <LinearGradient
+        colors={theme.gradient.hero}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.hero}
+      >
+        <View style={styles.heroEyebrow}>
+          <Users size={13} color={theme.colors.accentHi} />
+          <Text style={styles.heroEyebrowText}>Campus Student Guilds &amp; Societies</Text>
         </View>
-      </View>
 
+        <Text style={styles.title}>Societies Hub</Text>
+        <Text style={styles.heroSubtitle}>
+          Join official university societies, organise member-led kickabouts, post society
+          updates, or launch a brand new society!
+        </Text>
+
+        <TouchableOpacity
+          onPress={() => setShowCreateModal(true)}
+          style={styles.heroCtaWrap}
+          activeOpacity={0.85}
+        >
+          <LinearGradient
+            colors={theme.gradient.primary}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.heroCta}
+          >
+            <Plus size={16} color={theme.colors.textOnAccent} strokeWidth={3} />
+            <Text style={styles.heroCtaText}>Create Society</Text>
+          </LinearGradient>
+        </TouchableOpacity>
+      </LinearGradient>
+
+      {/* Four tabs retained by decision; horizontal scroll keeps them on one line. */}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
         style={styles.tabScroll}
         contentContainerStyle={styles.tabContainer}
       >
-        {tabs.map((tab) => (
-          <TouchableOpacity
-            key={tab.key}
-            style={[styles.tab, selectedTab === tab.key && styles.activeTab]}
-            onPress={() => setSelectedTab(tab.key)}
-          >
-            <Text style={[styles.tabText, selectedTab === tab.key && styles.activeTabText]}>
-              {tab.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
+        {tabs.map((tab) => {
+          const count =
+            tab.key === 'my-societies'
+              ? memberships.length
+              : tab.key === 'discover'
+              ? filteredDiscoverSocieties.length
+              : tab.key === 'events'
+              ? filteredEvents.length
+              : managedMemberships.length;
+          return (
+            <TouchableOpacity
+              key={tab.key}
+              style={[styles.tab, selectedTab === tab.key && styles.activeTab]}
+              onPress={() => setSelectedTab(tab.key)}
+            >
+              <Text style={[styles.tabText, selectedTab === tab.key && styles.activeTabText]}>
+                {tab.label}
+              </Text>
+              <View style={[styles.tabCount, selectedTab === tab.key && styles.tabCountActive]}>
+                <Text
+                  style={[
+                    styles.tabCountText,
+                    selectedTab === tab.key && styles.tabCountTextActive,
+                  ]}
+                >
+                  {count}
+                </Text>
+              </View>
+            </TouchableOpacity>
+          );
+        })}
       </ScrollView>
 
       <ScrollView
@@ -194,7 +287,7 @@ export default function SocietiesScreen() {
         style={styles.content}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.colors.accent} />
         }
       >
 
@@ -207,7 +300,7 @@ export default function SocietiesScreen() {
               </View>
             ) : memberships.length === 0 ? (
               <View style={styles.emptyState}>
-                <Calendar size={48} color={colors.textFaint} />
+                <Calendar size={48} color={theme.colors.textFaint} />
                 <Text style={styles.emptyTitle}>No societies, no events</Text>
                 <Text style={styles.emptyDescription}>
                   Join a society to start seeing their events here
@@ -276,7 +369,7 @@ export default function SocietiesScreen() {
                     </View>
                   ) : filteredEvents.length === 0 ? (
                     <View style={styles.emptyState}>
-                      <Calendar size={40} color={colors.textFaint} />
+                      <Calendar size={40} color={theme.colors.textFaint} />
                       <Text style={styles.emptyTitle}>No upcoming events</Text>
                       <Text style={styles.emptyDescription}>
                         {selectedSocietyFilter
@@ -306,11 +399,11 @@ export default function SocietiesScreen() {
           <View>
             {/* Search input */}
             <View style={styles.searchBox}>
-              <Search size={16} color={colors.textMuted} />
+              <Search size={16} color={theme.colors.textMuted} />
               <TextInput
                 style={styles.searchInput}
                 placeholder="Search societies..."
-                placeholderTextColor={colors.textFaint}
+                placeholderTextColor={theme.colors.textFaint}
                 value={searchQuery}
                 onChangeText={setSearchQuery}
                 clearButtonMode="while-editing"
@@ -318,38 +411,60 @@ export default function SocietiesScreen() {
               />
               {searchQuery.length > 0 && (
                 <TouchableOpacity onPress={() => setSearchQuery('')}>
-                  <X size={16} color={colors.textFaint} />
+                  <X size={16} color={theme.colors.textFaint} />
                 </TouchableOpacity>
               )}
             </View>
 
-            {/* Category filter chips */}
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              style={styles.filterRow}
-              contentContainerStyle={styles.filterRowContent}
-            >
-              {SOCIETY_CATEGORIES.map((cat) => (
+            {/* Category filters: pinned label, options scroll on one line. */}
+            <View style={styles.categoryRow}>
+              <View style={styles.categoryLabelWrap}>
+                <Filter size={13} color={theme.colors.accentHi} />
+                <Text style={styles.categoryLabel}>Category:</Text>
+              </View>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+                contentContainerStyle={styles.categoryScroll}
+              >
                 <TouchableOpacity
-                  key={cat}
                   style={[
                     styles.filterChip,
-                    selectedCategories.includes(cat) && styles.filterChipActive,
+                    selectedCategories.length === 0 && styles.filterChipActive,
                   ]}
-                  onPress={() => toggleCategory(cat)}
+                  onPress={() => setSelectedCategories([])}
                 >
                   <Text
                     style={[
                       styles.filterChipText,
-                      selectedCategories.includes(cat) && styles.filterChipTextActive,
+                      selectedCategories.length === 0 && styles.filterChipTextActive,
                     ]}
                   >
-                    {cat}
+                    All
                   </Text>
                 </TouchableOpacity>
-              ))}
-            </ScrollView>
+                {SOCIETY_CATEGORIES.map((cat) => (
+                  <TouchableOpacity
+                    key={cat}
+                    style={[
+                      styles.filterChip,
+                      selectedCategories.includes(cat) && styles.filterChipActive,
+                    ]}
+                    onPress={() => toggleCategory(cat)}
+                  >
+                    <Text
+                      style={[
+                        styles.filterChipText,
+                        selectedCategories.includes(cat) && styles.filterChipTextActive,
+                      ]}
+                    >
+                      {cat}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
 
             <View style={styles.sectionHeaderRow}>
               <Text style={styles.sectionTitle}>Browse Societies</Text>
@@ -362,7 +477,7 @@ export default function SocietiesScreen() {
               </View>
             ) : filteredDiscoverSocieties.length === 0 ? (
               <View style={styles.emptyState}>
-                <Users size={48} color={colors.textFaint} />
+                <Users size={48} color={theme.colors.textFaint} />
                 <Text style={styles.emptyTitle}>No societies found</Text>
                 <Text style={styles.emptyDescription}>
                   {searchQuery || selectedCategories.length > 0
@@ -382,60 +497,29 @@ export default function SocietiesScreen() {
                 )}
               </View>
             ) : (
-              filteredDiscoverSocieties.map((society) => (
-                <TouchableOpacity
-                  key={society.id}
-                  style={styles.societyCard}
-                  onPress={() =>
-                    router.push({ pathname: '/society/[id]', params: { id: society.id } })
-                  }
-                >
-                  <View style={styles.societyCardLeft}>
-                    <View style={styles.societyLogo}>
-                      <Text style={styles.societyInitial}>
-                        {society.name?.charAt(0).toUpperCase() ?? '?'}
-                      </Text>
-                    </View>
-                    <View style={styles.societyInfo}>
-                      <View style={styles.societyTitleRow}>
-                        <Text style={styles.societyName} numberOfLines={1}>
-                          {society.name}
-                        </Text>
-                        {society.category && (
-                          <View
-                            style={[
-                              styles.categoryBadge,
-                              {
-                                backgroundColor:
-                                  CATEGORY_COLORS[society.category] ?? '#F0F0F0',
-                              },
-                            ]}
-                          >
-                            <Text
-                              style={[
-                                styles.categoryText,
-                                { color: CATEGORY_TEXT[society.category] ?? '#666' },
-                              ]}
-                            >
-                              {society.category}
-                            </Text>
-                          </View>
-                        )}
-                      </View>
-                      {society.description ? (
-                        <Text style={styles.societyDescription} numberOfLines={2}>
-                          {society.description}
-                        </Text>
-                      ) : null}
-                      <View style={styles.membersRow}>
-                        <Users size={13} color={colors.textMuted} />
-                        <Text style={styles.membersText}>{society.memberCount} members</Text>
-                      </View>
-                    </View>
-                  </View>
-                  <ChevronRight size={18} color={colors.textFaint} />
-                </TouchableOpacity>
-              ))
+              filteredDiscoverSocieties.map((society) => {
+                const membership = membershipBySocietyId.get(society.id);
+                return (
+                  <AC_SocietyCard
+                    key={society.id}
+                    society={society}
+                    memberCount={society.memberCount}
+                    roleId={membership?.role_id ?? null}
+                    isJoined={!!membership}
+                    nextActivity={nextActivityBySociety.get(society.id) ?? null}
+                    onPress={() =>
+                      router.push({ pathname: '/society/[id]', params: { id: society.id } })
+                    }
+                    onViewActivities={() => {
+                      setSelectedSocietyFilter(society.id);
+                      setSelectedTab('events');
+                    }}
+                    onJoin={() => joinSociety({ societyId: society.id })}
+                    onLeave={() => leaveSociety({ societyId: society.id })}
+                    actionLoading={joining || leaving}
+                  />
+                );
+              })
             )}
           </View>
         )}
@@ -450,7 +534,7 @@ export default function SocietiesScreen() {
               </View>
             ) : memberships.length === 0 ? (
               <View style={styles.emptyState}>
-                <Users size={48} color={colors.textFaint} />
+                <Users size={48} color={theme.colors.textFaint} />
                 <Text style={styles.emptyTitle}>No societies yet</Text>
                 <Text style={styles.emptyDescription}>
                   Discover and join societies to see them here
@@ -463,24 +547,25 @@ export default function SocietiesScreen() {
               </View>
             ) : (
               memberships.map((m) => (
-                <TouchableOpacity
+                <AC_SocietyCard
                   key={m.society_id}
-                  style={styles.membershipCard}
+                  society={m.societies}
+                  memberCount={
+                    discoverSocieties.find((d) => d.id === m.society_id)?.memberCount ?? 0
+                  }
+                  roleId={m.role_id}
+                  isJoined
+                  nextActivity={nextActivityBySociety.get(m.society_id) ?? null}
                   onPress={() =>
                     router.push({ pathname: '/society/[id]', params: { id: m.society_id } })
                   }
-                >
-                  <View style={styles.societyLogo}>
-                    <Text style={styles.societyInitial}>
-                      {m.societies.name?.charAt(0).toUpperCase() ?? '?'}
-                    </Text>
-                  </View>
-                  <View style={styles.membershipInfo}>
-                    <Text style={styles.societyName}>{m.societies.name}</Text>
-                    <Text style={styles.membershipRole}>{m.role_id}</Text>
-                  </View>
-                  <ChevronRight size={20} color={colors.textFaint} />
-                </TouchableOpacity>
+                  onViewActivities={() => {
+                    setSelectedSocietyFilter(m.society_id);
+                    setSelectedTab('events');
+                  }}
+                  onLeave={() => leaveSociety({ societyId: m.society_id })}
+                  actionLoading={leaving}
+                />
               ))
             )}
           </View>
@@ -495,7 +580,7 @@ export default function SocietiesScreen() {
                 m.role_id === 'OWNER' || m.role_id === 'PRESIDENT' || m.role_id === 'EXEC',
             ).length === 0 ? (
               <View style={styles.emptyState}>
-                <Crown size={48} color={colors.textFaint} />
+                <Crown size={48} color={theme.colors.textFaint} />
                 <Text style={styles.emptyTitle}>No societies managed</Text>
                 <Text style={styles.emptyDescription}>
                   Create a society to bring your community together
@@ -507,31 +592,27 @@ export default function SocietiesScreen() {
                 />
               </View>
             ) : (
-              memberships
-                .filter(
-                  (m) =>
-                    m.role_id === 'OWNER' || m.role_id === 'PRESIDENT' || m.role_id === 'EXEC',
-                )
-                .map((m) => (
-                  <TouchableOpacity
-                    key={m.society_id}
-                    style={styles.membershipCard}
-                    onPress={() =>
-                      router.push({ pathname: '/society/[id]', params: { id: m.society_id } })
-                    }
-                  >
-                    <View style={styles.societyLogo}>
-                      <Text style={styles.societyInitial}>
-                        {m.societies.name?.charAt(0).toUpperCase() ?? '?'}
-                      </Text>
-                    </View>
-                    <View style={styles.membershipInfo}>
-                      <Text style={styles.societyName}>{m.societies.name}</Text>
-                      <Text style={styles.membershipRole}>{m.role_id}</Text>
-                    </View>
-                    <ChevronRight size={20} color={colors.textFaint} />
-                  </TouchableOpacity>
-                ))
+              managedMemberships.map((m) => (
+                <AC_SocietyCard
+                  key={m.society_id}
+                  society={m.societies}
+                  memberCount={
+                    discoverSocieties.find((d) => d.id === m.society_id)?.memberCount ?? 0
+                  }
+                  roleId={m.role_id}
+                  isJoined
+                  nextActivity={nextActivityBySociety.get(m.society_id) ?? null}
+                  onPress={() =>
+                    router.push({ pathname: '/society/[id]', params: { id: m.society_id } })
+                  }
+                  onViewActivities={() => {
+                    setSelectedSocietyFilter(m.society_id);
+                    setSelectedTab('events');
+                  }}
+                  onLeave={() => leaveSociety({ societyId: m.society_id })}
+                  actionLoading={leaving}
+                />
+              ))
             )}
           </View>
         )}
@@ -621,62 +702,139 @@ export default function SocietiesScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.canvas },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+const makeStyles = (t: Theme) =>
+  StyleSheet.create({
+  container: { flex: 1, backgroundColor: t.colors.canvas },
+  // A rounded, bordered banner inset from the screen edges — not full-bleed.
+  hero: {
+    margin: 20,
+    marginBottom: t.spacing.lg,
+    padding: t.spacing.xl,
+    borderRadius: t.radius.hero,
+    borderWidth: 1,
+    borderColor: t.colors.chromeBorder,
+    gap: t.spacing.sm,
+    ...t.shadow.lg,
   },
-  title: { fontSize: 24, fontWeight: '700', color: colors.textPrimary },
-  headerActions: { flexDirection: 'row', gap: 12 },
-  addButton: { padding: 8, borderRadius: 12, backgroundColor: colors.accent },
+  heroEyebrow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 6,
+    paddingHorizontal: t.spacing.md,
+    paddingVertical: 4,
+    borderRadius: t.radius.pill,
+    backgroundColor: t.colors.accentTone.bg,
+    borderWidth: 1,
+    borderColor: t.colors.accentTone.border,
+  },
+  heroEyebrowText: {
+    ...t.typography.caption,
+    fontSize: 11,
+    color: t.colors.accentTone.text,
+  },
+  title: { ...t.typography.h1, color: t.colors.textPrimary },
+  heroSubtitle: { ...t.typography.caption, color: t.colors.textBody, lineHeight: 19 },
+  heroCtaWrap: { alignSelf: 'stretch', marginTop: t.spacing.xs },
+  heroCta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: t.spacing.md,
+    borderRadius: t.radius.card,
+    ...t.shadow.accentGlow,
+  },
+  heroCtaText: { ...t.typography.button, color: t.colors.textOnAccent },
   tabScroll: {
-    backgroundColor: colors.surface,
+    backgroundColor: t.colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: t.colors.border,
     flexGrow: 0,
   },
   tabContainer: { paddingHorizontal: 20, paddingVertical: 12, gap: 8 },
-  tab: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20 },
-  activeTab: { backgroundColor: colors.accent },
-  tabText: { fontSize: 14, fontWeight: '600', color: colors.textMuted },
-  activeTabText: { color: '#FFFFFF' },
+  tab: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: t.radius.pill,
+    borderWidth: 1,
+    borderColor: t.colors.border,
+    backgroundColor: t.colors.surfaceAlt,
+  },
+  activeTab: { backgroundColor: t.colors.accentTone.bg, borderColor: t.colors.accentTone.border },
+  tabText: { ...t.typography.badge, fontSize: 12, color: t.colors.textMuted },
+  activeTabText: { color: t.colors.accentTone.text },
+  tabCount: {
+    minWidth: 18,
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    borderRadius: t.radius.pill,
+    backgroundColor: t.colors.surfaceInset,
+    alignItems: 'center',
+  },
+  tabCountActive: { backgroundColor: t.colors.accentTone.border },
+  tabCountText: { ...t.typography.badge, fontSize: 10, color: t.colors.textFaint },
+  tabCountTextActive: { color: t.colors.accentTone.text },
   content: { flex: 1, paddingHorizontal: 20, paddingTop: 20 },
   searchBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    gap: 10,
-    marginBottom: 12,
+    backgroundColor: t.colors.surface,
+    borderRadius: t.radius.chip,
+    paddingHorizontal: t.spacing.md,
+    paddingVertical: t.spacing.sm,
+    gap: t.spacing.sm,
+    marginBottom: t.spacing.md,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: t.colors.border,
   },
   searchInput: {
     flex: 1,
-    fontSize: 14,
-    color: colors.textPrimary,
+    ...t.typography.caption,
+    color: t.colors.textPrimary,
+    // Android adds vertical padding that misaligns the row.
     paddingVertical: 0,
   },
-  filterRow: { marginHorizontal: -20, backgroundColor: colors.canvas },
-  filterRowContent: { paddingHorizontal: 20, paddingVertical: 12, gap: 8 },
-  filterChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: 16,
-    backgroundColor: colors.surfaceAlt,
+  categoryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: t.spacing.md,
   },
-  filterChipActive: { backgroundColor: colors.accent },
-  filterChipText: { fontSize: 13, fontWeight: '600', color: colors.textBody },
-  filterChipTextActive: { color: '#FFFFFF' },
+  categoryLabelWrap: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  categoryLabel: {
+    ...t.typography.microLabel,
+    fontSize: 11,
+    color: t.colors.textMuted,
+  },
+  categoryScroll: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingRight: t.spacing.sm,
+  },
+  // Society filter on the Events tab. Bleeds to the screen edge so the row can
+  // scroll past the content padding; shares the chip styles below.
+  filterRow: { marginHorizontal: -20 },
+  filterRowContent: { paddingHorizontal: 20, paddingBottom: t.spacing.md, gap: 6 },
+  // Inactive is a surface chip with a hairline; active takes the accent tint.
+  filterChip: {
+    paddingHorizontal: t.spacing.md,
+    paddingVertical: 6,
+    borderRadius: t.radius.chip,
+    backgroundColor: t.colors.surface,
+    borderWidth: 1,
+    borderColor: t.colors.border,
+  },
+  filterChipActive: {
+    backgroundColor: t.colors.accentTone.bg,
+    borderColor: t.colors.accentTone.border,
+  },
+  filterChipText: { ...t.typography.badge, fontSize: 12, color: t.colors.textMuted },
+  filterChipTextActive: { color: t.colors.accentTone.text },
   eventsSection: { marginTop: 4 },
   sectionHeaderRow: {
     flexDirection: 'row',
@@ -685,11 +843,11 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     marginTop: 8,
   },
-  resultCount: { fontSize: 13, color: colors.textMuted },
+  resultCount: { fontSize: 13, color: t.colors.textMuted },
   loadingContainer: { paddingTop: 60, alignItems: 'center' },
-  sectionTitle: { fontSize: 20, fontWeight: '600', color: colors.textPrimary, marginBottom: 16 },
+  sectionTitle: { fontSize: 20, fontWeight: '600', color: t.colors.textPrimary, marginBottom: 16 },
   societyCard: {
-    backgroundColor: colors.surface,
+    backgroundColor: t.colors.surface,
     borderRadius: 16,
     padding: 16,
     marginBottom: 12,
@@ -706,7 +864,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: colors.accent,
+    backgroundColor: t.colors.accent,
     justifyContent: 'center',
     alignItems: 'center',
     flexShrink: 0,
@@ -720,14 +878,14 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     flexWrap: 'wrap',
   },
-  societyName: { fontSize: 16, fontWeight: '600', color: colors.textPrimary, flexShrink: 1 },
+  societyName: { fontSize: 16, fontWeight: '600', color: t.colors.textPrimary, flexShrink: 1 },
   categoryBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 },
   categoryText: { fontSize: 11, fontWeight: '600' },
-  societyDescription: { fontSize: 13, color: colors.textMuted, marginBottom: 6 },
+  societyDescription: { fontSize: 13, color: t.colors.textMuted, marginBottom: 6 },
   membersRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  membersText: { fontSize: 12, color: colors.textMuted },
+  membersText: { fontSize: 12, color: t.colors.textMuted },
   membershipCard: {
-    backgroundColor: colors.surface,
+    backgroundColor: t.colors.surface,
     borderRadius: 16,
     padding: 16,
     marginBottom: 12,
@@ -741,7 +899,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   membershipInfo: { flex: 1 },
-  membershipRole: { fontSize: 13, color: colors.textMuted, marginTop: 2 },
+  membershipRole: { fontSize: 13, color: t.colors.textMuted, marginTop: 2 },
   emptyState: {
     alignItems: 'center',
     paddingVertical: 60,
@@ -750,19 +908,19 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: colors.textPrimary,
+    color: t.colors.textPrimary,
     marginTop: 16,
     marginBottom: 8,
   },
   emptyDescription: {
     fontSize: 15,
-    color: colors.textMuted,
+    color: t.colors.textMuted,
     textAlign: 'center',
     lineHeight: 22,
     marginBottom: 24,
   },
   discoverButton: { paddingHorizontal: 24 },
-  modalContainer: { flex: 1, backgroundColor: colors.surface },
+  modalContainer: { flex: 1, backgroundColor: t.colors.surface },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -770,22 +928,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: t.colors.border,
   },
-  modalTitle: { fontSize: 20, fontWeight: '600', color: colors.textPrimary },
-  cancelText: { fontSize: 16, color: colors.accent, fontWeight: '600' },
+  modalTitle: { fontSize: 20, fontWeight: '600', color: t.colors.textPrimary },
+  cancelText: { fontSize: 16, color: t.colors.accent, fontWeight: '600' },
   modalContent: { flex: 1, paddingHorizontal: 20 },
   formSection: { paddingVertical: 12 },
   modalFooter: {
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderTopWidth: 1,
-    borderTopColor: colors.border,
+    borderTopColor: t.colors.border,
   },
   fieldLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: colors.textPrimary,
+    color: t.colors.textPrimary,
     marginBottom: 8,
   },
   categoryChips: {
@@ -798,11 +956,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: colors.canvas,
+    backgroundColor: t.colors.canvas,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: t.colors.border,
   },
-  catChipActive: { backgroundColor: colors.accent, borderColor: colors.accent },
-  catChipText: { fontSize: 13, fontWeight: '600', color: colors.textMuted },
+  catChipActive: { backgroundColor: t.colors.accent, borderColor: t.colors.accent },
+  catChipText: { fontSize: 13, fontWeight: '600', color: t.colors.textMuted },
   catChipTextActive: { color: '#FFFFFF' },
-});
+  });
