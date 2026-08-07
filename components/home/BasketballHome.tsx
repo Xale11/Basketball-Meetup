@@ -1,7 +1,7 @@
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Search, Bell, Plus, MapPin, Calendar, Users } from 'lucide-react-native';
-import { CourtCard } from '@/components/CourtCard';
+import { CourtCard } from '@/components/BM_CourtCard';
 import { EventCard } from '@/components/events/EventCard';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { mockCourts, mockEvents } from '@/utils/mockData';

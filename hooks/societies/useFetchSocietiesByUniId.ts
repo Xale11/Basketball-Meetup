@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { getSocietiesByUniversityId, SocietyWithCount } from '@/api/societies.api';
 import { qk } from '@/lib/queryKeys';
 
-const useFetchSocietiesByUniId = (universityId: string | null | undefined) => {
+export const useFetchSocietiesByUniId = (universityId: string | null | undefined) => {
   const query = useQuery<SocietyWithCount[]>({
     queryKey: qk.societies.byUniversity(universityId),
     queryFn: () => getSocietiesByUniversityId(universityId!),
@@ -20,5 +20,3 @@ const useFetchSocietiesByUniId = (universityId: string | null | undefined) => {
     fetchSocieties: query.refetch, // backwards-compat alias
   };
 };
-
-export default useFetchSocietiesByUniId;

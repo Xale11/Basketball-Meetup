@@ -3,7 +3,7 @@ import { fetchEventsBySocietyId } from '@/api/events.api';
 import { Event } from '@/types/event';
 import { qk } from '@/lib/queryKeys';
 
-const useFetchEventsBySociety = (societyId: string | null | undefined) => {
+export const useFetchEventsBySociety = (societyId: string | null | undefined) => {
   const query = useQuery<Event[]>({
     queryKey: qk.events.bySociety(societyId),
     queryFn: () => fetchEventsBySocietyId(societyId!),
@@ -19,5 +19,3 @@ const useFetchEventsBySociety = (societyId: string | null | undefined) => {
     refetch: query.refetch,
   };
 };
-
-export default useFetchEventsBySociety;

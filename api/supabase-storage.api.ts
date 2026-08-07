@@ -21,7 +21,6 @@ export const uploadToSupabaseBucket = async (
   const { ext, mimeType: inferredMimeType } = mimeTypeFromUri(uri);
   const mimeType = assetMimeType ?? inferredMimeType;
   const filePath = `${folder}/${fileName}.${ext}`;
-  console.log(`[uploadToSupabaseBucket] uploading ${filePath} (${mimeType}) to bucket: ${bucket}`);
 
   // expo-file-system v19 (SDK 54) reads bytes directly — no base64 round-trip.
   // The old readAsStringAsync/EncodingType path now throws by design.
@@ -40,7 +39,6 @@ export const uploadToSupabaseBucket = async (
   }
 
   const { data } = supabase.storage.from(bucket).getPublicUrl(filePath);
-  console.log(`[uploadToSupabaseBucket] success`);
 
   return data.publicUrl;
 };

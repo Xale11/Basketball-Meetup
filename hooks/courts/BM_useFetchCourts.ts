@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { fetchCourts } from '@/api/courts.api';
+import { fetchCourts } from '@/api/BM_courts.api';
 import { Court } from '@/types/courts';
 import { qk } from '@/lib/queryKeys';
 

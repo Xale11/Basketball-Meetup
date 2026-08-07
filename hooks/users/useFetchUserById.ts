@@ -27,9 +27,6 @@ export const useFetchById = (id: string | undefined | null) => {
         loading: !!id && query.isPending,
         // Exposed separately for subtle in-place indicators.
         fetching: query.isFetching,
-        error: query.error,
-        isSuccess: query.isSuccess,
-        isError: query.isError,
         fetchUserById: query.refetch,
     };
 }

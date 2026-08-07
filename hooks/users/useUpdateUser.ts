@@ -7,7 +7,7 @@ import { qk } from '@/lib/queryKeys';
  * Was a hand-rolled `useState` + try/catch, which lost retry, error typing and
  * concurrent-call protection and diverged from the pattern used everywhere else.
  */
-export default function useUpdateUser(userId: string | undefined) {
+export function useUpdateUser(userId: string | undefined) {
   const queryClient = useQueryClient();
 
   const mutation = useMutation<User, Error, Partial<User>>({
@@ -30,7 +30,6 @@ export default function useUpdateUser(userId: string | undefined) {
   return {
     ...mutation,
     saving: mutation.isPending,
-    error: mutation.error,
     updateProfile,
   };
 }

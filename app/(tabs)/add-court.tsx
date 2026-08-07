@@ -22,7 +22,7 @@ import {
 } from 'react-native-google-places-autocomplete';
 import { useGooglePlacesRequest } from '@/hooks/useGooglePlacesRequest';
 import ngeohash from 'ngeohash';
-import { useCreateCourt } from '@/hooks/courts/useCreateCourt';
+import { useCreateCourt } from '@/hooks/courts/BM_useCreateCourt';
 import { Button } from '@/components/ui/Button';
 
 const INITIAL_OPENING_HOURS: OpeningHours = {

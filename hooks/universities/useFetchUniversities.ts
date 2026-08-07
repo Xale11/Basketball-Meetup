@@ -11,7 +11,7 @@ import { qk } from "@/lib/queryKeys"
  * effect. It is now an ordinary query with a long staleTime; the
  * `fetchUniversities` alias is kept so existing call sites keep working.
  */
-const useFetchUniversities = () => {
+export const useFetchUniversities = () => {
     const query = useQuery<University[]>({
         queryKey: qk.universities.list(),
         queryFn: getUniversities,
@@ -28,5 +28,3 @@ const useFetchUniversities = () => {
         fetchUniversities: query.refetch,
     }
 }
-
-export default useFetchUniversities

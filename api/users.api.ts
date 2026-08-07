@@ -1,5 +1,6 @@
 import { User } from "@/types/user"
 import { supabase } from "./supabase"
+import { throwSupabaseError } from "@/lib/supabaseError"
 
 /**
  * Returns the profile row for `id`, or `null` when the user has no profile yet
@@ -18,72 +19,46 @@ export const getUserById = async (id: string | undefined | null): Promise<User |
         .eq("id", id)
         .maybeSingle()
 
-    if (error) {
-        console.error("[users.api] getUserById failed:", {
-            message: error.message,
-            code: error.code,
-            details: error.details,
-            hint: error.hint,
-        })
-        throw new Error(error.message)
-    }
+    if (error) throwSupabaseError('users.api getUserById', error)
 
     return (data as User) ?? null
 }
 
 export const createUser = async (user: Partial<User>): Promise<User> => {
-    try {
-        if (!user.id) throw new Error("No Id provided to create user - Function: createUser")
-            
-            const insertObject = {
-                id: user.id,
-                first_name: user.first_name,
-                last_name: user.last_name,
-                bio: user.bio,
-                over_18: user.over_18,
-                photo_url: user.photo_url,
-                university_id: user.university_id,
-                course: user.course,
-                onboarding_status: user.onboarding_status,
-            }
-        
-            const { data, error }: { data: User | null; error: any } = await supabase
-            .from("profiles")
-            .insert(insertObject)
-            .select("*")
-            .maybeSingle()
+    if (!user.id) throw new Error("No Id provided to create user - Function: createUser")
 
-            
-        if (error) {
-            throw new Error(JSON.stringify(error))
-        }
+    const { data, error } = await supabase
+        .from("profiles")
+        .insert({
+            id: user.id,
+            first_name: user.first_name,
+            last_name: user.last_name,
+            bio: user.bio,
+            over_18: user.over_18,
+            photo_url: user.photo_url,
+            university_id: user.university_id,
+            course: user.course,
+            onboarding_status: user.onboarding_status,
+        })
+        .select("*")
+        .maybeSingle()
 
-        return data as User
-    } catch (error: any) {
-        console.error("error", error);
-        throw new Error(error.message)
-    }
+    if (error) throwSupabaseError('users.api createUser', error)
+
+    return data as User
 }
 
 export const updateUser = async (id: string, updates: Partial<User>): Promise<User> => {
-    try {
-        if (!id) throw new Error("No Id provided to update user - Function: updateUser")
+    if (!id) throw new Error("No Id provided to update user - Function: updateUser")
 
-        const { data, error } = await supabase
-            .from("profiles")
-            .update(updates)
-            .eq("id", id)
-            .select("*")
-            .maybeSingle()
+    const { data, error } = await supabase
+        .from("profiles")
+        .update(updates)
+        .eq("id", id)
+        .select("*")
+        .maybeSingle()
 
-        if (error) {
-            throw new Error(JSON.stringify(error))
-        }
+    if (error) throwSupabaseError('users.api updateUser', error)
 
-        return data as User
-    } catch (error: any) {
-        console.error("error", error);
-        throw new Error(error.message)
-    }
+    return data as User
 }
-

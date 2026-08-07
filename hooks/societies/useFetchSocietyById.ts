@@ -3,7 +3,7 @@ import { getSocietyById } from '@/api/societies.api';
 import { Society } from '@/types/societies';
 import { qk } from '@/lib/queryKeys';
 
-const useFetchSocietyById = (societyId: string | null | undefined) => {
+export const useFetchSocietyById = (societyId: string | null | undefined) => {
   const query = useQuery<{ society: Society; memberCount: number } | null>({
     queryKey: qk.societies.detail(societyId),
     queryFn: () => getSocietyById(societyId!),
@@ -20,5 +20,3 @@ const useFetchSocietyById = (societyId: string | null | undefined) => {
     refetch: query.refetch,
   };
 };
-
-export default useFetchSocietyById;

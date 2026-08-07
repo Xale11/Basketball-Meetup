@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { createCourt } from '@/api/courts.api';
+import { createCourt } from '@/api/BM_courts.api';
 import { CreateCourtForm, Court } from '@/types/courts';
 import { useAuth } from '@/hooks/useAuth';
 import { router } from 'expo-router';
@@ -34,9 +34,6 @@ export const useCreateCourt = () => {
     ...mutation,
     // Explicit state properties for easier access
     loading: mutation.isPending || authLoading,
-    error: mutation.error,
-    isSuccess: mutation.isSuccess,
-    isError: mutation.isError,
     // Alias mutate for convenience
     createCourt: mutation.mutate,
     createCourtAsync: mutation.mutateAsync,

@@ -31,9 +31,6 @@ export const useCreateEvent = () => {
   return {
     ...mutation,
     loading: mutation.isPending || authLoading,
-    error: mutation.error,
-    isSuccess: mutation.isSuccess,
-    isError: mutation.isError,
     createEvent: mutation.mutate,
     createEventAsync: mutation.mutateAsync,
     isAuthenticated: !!user,

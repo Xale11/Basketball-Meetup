@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { getSocietyMembershipsByUserId, SocietyMembershipWithSociety } from "@/api/societies.api";
 import { qk } from "@/lib/queryKeys";
 
-const useFetchUserSocieties = (userId: string | undefined | null) => {
+export const useFetchUserSocieties = (userId: string | undefined | null) => {
     // staleTime now comes from the shared client defaults; this query used to
     // omit it entirely and so refetched far more eagerly than every other screen.
     const query = useQuery<SocietyMembershipWithSociety[]>({
@@ -21,6 +21,3 @@ const useFetchUserSocieties = (userId: string | undefined | null) => {
         refetch: query.refetch,
     };
 };
-
-export { useFetchUserSocieties };
-export default useFetchUserSocieties;

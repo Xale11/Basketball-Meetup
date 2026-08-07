@@ -23,35 +23,31 @@ type UseOnboardUserReturn = {
   [key: string]: any;
 };
 
-export default function useOnboardUser(): UseOnboardUserReturn {
+export function useOnboardUser(): UseOnboardUserReturn {
   const { session } = useAuth();
   const queryClient = useQueryClient();
 
   const mutation = useMutation({
     mutationFn: async ({ form, photoUri }: OnboardUserArgs) => {
-      console.log("[useOnboardUser] start onboarding");
-
       const userId = form.id || session?.user?.id;
 
       if (!userId) {
-        console.error("[useOnboardUser] onboarding failed: missing userId");
         throw new Error("No user id available for onboarding");
       }
 
       let photoUrl: string | undefined = undefined;
       if (photoUri) {
-        console.log("[useOnboardUser] uploading profile photo");
-        try {
-          photoUrl = await uploadToSupabaseBucket(photoUri, `profilePhotos/${userId}`, 'profile');
-          console.log("[useOnboardUser] photo upload success");
-        } catch (uploadError) {
-          console.error("[useOnboardUser] photo upload failed", uploadError);
-          throw new Error(JSON.stringify(uploadError));
-        }
+        // Let the upload error propagate as-is; it already carries a usable
+        // message. It used to be re-thrown as JSON.stringify(err), which for an
+        // Error instance is the string "{}".
+        photoUrl = await uploadToSupabaseBucket(photoUri, `profilePhotos/${userId}`, 'profile');
       }
 
       const updates: Partial<User> = {
-        id: session?.user?.id,
+        // Was `session?.user?.id`, which disagreed with the `userId` validated
+        // above — if form.id was the one set, the insert went in with id
+        // undefined.
+        id: userId,
         first_name: form.first_name?.trim(),
         last_name: form.last_name?.trim(),
         bio: form.bio?.trim() || undefined,
@@ -62,34 +58,15 @@ export default function useOnboardUser(): UseOnboardUserReturn {
         onboarding_status: OnboardingStatus.COMPLETED,
       };
 
-      console.log(`[useOnboardUser] creating user for userId=${userId}`);
+      const updatedUser = await createUser(updates);
 
-      const updatedUser = await (async () => {
-        try {
-          const user = await createUser(updates);
-          console.log(`[useOnboardUser] user created (id=${user?.id})`);
-          return user;
-        } catch (err) {
-          console.error("[useOnboardUser] createUser failed", err);
-          throw err;
-        }
-      })();
-
+      // Was `societies.forEach(async ...)`, which returns immediately: the
+      // memberships were still in flight when onboarding reported success and
+      // any failure was swallowed. Awaited together now, so a failed membership
+      // fails the mutation.
       const societies = form.societies ?? [];
-      console.log(`[useOnboardUser] creating ${societies.length} society memberships`);
+      await Promise.all(societies.map((societyId) => createSocietyMembership(userId, societyId)));
 
-      societies.forEach(async (societyId) => {
-        console.log(`[useOnboardUser] creating membership for societyId=${societyId}`);
-
-        const societyMembership = await createSocietyMembership(userId, societyId);
-        if (societyMembership) {
-          console.log(`[useOnboardUser] membership created for societyId=${societyId}`);
-        } else {
-          console.error(`[useOnboardUser] membership failed for societyId=${societyId}`);
-        }
-      });
-
-      console.log(`[useOnboardUser] onboarding done (userId=${updatedUser?.id})`);
       return updatedUser;
     },
     onSuccess: (createdUser) => {
@@ -118,8 +95,5 @@ export default function useOnboardUser(): UseOnboardUserReturn {
     // Explicit, convenient aliases mirroring useFetchById pattern
     loading: mutation.isPending,
     error: (mutation.error as Error) ?? null,
-    isSuccess: mutation.isSuccess,
-    isError: mutation.isError,
   };
 }
-

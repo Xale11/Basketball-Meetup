@@ -14,9 +14,6 @@ export const useFetchEvents = (universityId?: string | null, societyIds?: string
     // `loading` = no data yet. A background refetch must not blank the list.
     loading: query.isPending,
     fetching: query.isFetching,
-    error: query.error,
-    isSuccess: query.isSuccess,
-    isError: query.isError,
     events: query.data ?? [],
     refetchEvents: query.refetch,
   }

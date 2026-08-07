@@ -4,10 +4,10 @@ import { useState, useMemo } from 'react';
 import { Maximize2, Minimize2 } from 'lucide-react-native';
 import { useAuth } from '@/hooks/useAuth';
 import { useFetchEvents } from '@/hooks/events/useFetchEvents';
-import useFetchUserSocieties from '@/hooks/societies/useFetchUserSocieties';
+import { useFetchUserSocieties } from '@/hooks/societies/useFetchUserSocieties';
 import { useUserParticipations } from '@/hooks/events/useUserParticipations';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
-import InteractiveMap from '@/components/InteractiveMap';
+import InteractiveMap from '@/components/BM_InteractiveMap';
 import { EventCard } from '@/components/events/EventCard';
 import { Event, EventBookingMode, EventHostType } from '@/types/event';
 

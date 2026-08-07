@@ -14,9 +14,6 @@ export const useFetchMyEvents = (userId: string | undefined | null) => {
     ...query,
     loading: !!userId && query.isPending,
     fetching: query.isFetching,
-    error: query.error,
-    isSuccess: query.isSuccess,
-    isError: query.isError,
     events: query.data ?? [],
     refetchMyEvents: query.refetch,
   }

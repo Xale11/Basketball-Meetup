@@ -10,7 +10,7 @@ import { qk } from '@/lib/queryKeys';
  * Was a hand-rolled `useState` + try/catch. Now a mutation, so upload and
  * removal share one pending flag and one cache-update path.
  */
-export default function useUpdateProfilePhoto(userId: string | undefined) {
+export function useUpdateProfilePhoto(userId: string | undefined) {
   const queryClient = useQueryClient();
 
   const mutation = useMutation<User, Error, { uri: string | null }>({
