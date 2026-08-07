@@ -1,4 +1,5 @@
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import { theme } from '@/constants/theme';
 
 export interface TabItem {
   key: string;
@@ -13,14 +14,17 @@ interface TabBarProps {
   style?: object;
 }
 
+const { colors, radius, typography } = theme;
+
 export function TabBar({ tabs, activeTab, onTabChange, scrollable, style }: TabBarProps) {
   const buttons = tabs.map((tab) => (
     <TouchableOpacity
       key={tab.key}
       style={[styles.tab, activeTab === tab.key && styles.activeTab]}
       onPress={() => onTabChange(tab.key)}
+      activeOpacity={0.8}
     >
-      <Text style={[styles.tabText, activeTab === tab.key && styles.activeTabText]}>
+      <Text style={[typography.label, styles.tabText, activeTab === tab.key && styles.activeTabText]}>
         {tab.label}
       </Text>
     </TouchableOpacity>
@@ -45,11 +49,11 @@ export function TabBar({ tabs, activeTab, onTabChange, scrollable, style }: TabB
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: colors.border,
   },
   scrollContent: {
     paddingHorizontal: 20,
@@ -59,17 +63,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     marginRight: 16,
-    borderRadius: 20,
+    borderRadius: radius.pill,
   },
   activeTab: {
-    backgroundColor: '#FF6B35',
+    backgroundColor: colors.accent,
   },
   tabText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#666',
+    color: colors.textMuted,
   },
   activeTabText: {
-    color: '#FFFFFF',
+    color: colors.textOnAccent,
   },
 });

@@ -1,5 +1,6 @@
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { LucideIcon } from 'lucide-react-native';
+import { theme } from '@/constants/theme';
 
 export interface OptionCardItem<T = string> {
   label: string;
@@ -14,6 +15,8 @@ interface OptionCardListProps<T = string> {
   onSelect: (value: T) => void;
 }
 
+const { colors, radius, typography } = theme;
+
 export function OptionCardList<T>({ options, selected, onSelect }: OptionCardListProps<T>) {
   return (
     <View style={styles.list}>
@@ -24,13 +27,16 @@ export function OptionCardList<T>({ options, selected, onSelect }: OptionCardLis
             key={String(value)}
             style={[styles.card, active && styles.cardActive]}
             onPress={() => onSelect(value)}
+            activeOpacity={0.85}
           >
             <View style={[styles.iconWrapper, active && styles.iconWrapperActive]}>
-              <Icon size={20} color={active ? '#FFFFFF' : '#666'} />
+              <Icon size={20} color={active ? colors.textOnAccent : colors.textMuted} />
             </View>
             <View style={styles.textWrapper}>
-              <Text style={[styles.label, active && styles.labelActive]}>{label}</Text>
-              <Text style={styles.description}>{description}</Text>
+              <Text style={[typography.bodyStrong, styles.label, active && styles.labelActive]}>
+                {label}
+              </Text>
+              <Text style={[typography.caption, styles.description]}>{description}</Text>
             </View>
             <View style={[styles.radio, active && styles.radioActive]}>
               {active && <View style={styles.radioInner} />}
@@ -49,42 +55,39 @@ const styles = StyleSheet.create({
   card: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
+    backgroundColor: colors.surface,
+    borderRadius: radius.chip,
     padding: 14,
     borderWidth: 1,
-    borderColor: '#E9ECEF',
+    borderColor: colors.border,
     gap: 12,
   },
   cardActive: {
-    borderColor: '#FF6B35',
-    backgroundColor: '#FFF4F0',
+    borderColor: colors.accent,
+    backgroundColor: colors.accentTone.bg,
   },
   iconWrapper: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#F0F0F0',
+    backgroundColor: colors.surfaceAlt,
     justifyContent: 'center',
     alignItems: 'center',
   },
   iconWrapperActive: {
-    backgroundColor: '#FF6B35',
+    backgroundColor: colors.accent,
   },
   textWrapper: {
     flex: 1,
   },
   label: {
     fontSize: 15,
-    fontWeight: '600',
-    color: '#1A1A1A',
+    color: colors.textPrimary,
   },
   labelActive: {
-    color: '#FF6B35',
+    color: colors.accentText,
   },
   description: {
-    fontSize: 13,
-    color: '#888',
     marginTop: 2,
   },
   radio: {
@@ -92,17 +95,17 @@ const styles = StyleSheet.create({
     height: 20,
     borderRadius: 10,
     borderWidth: 2,
-    borderColor: '#CCC',
+    borderColor: colors.borderStrong,
     justifyContent: 'center',
     alignItems: 'center',
   },
   radioActive: {
-    borderColor: '#FF6B35',
+    borderColor: colors.accent,
   },
   radioInner: {
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: '#FF6B35',
+    backgroundColor: colors.accent,
   },
 });

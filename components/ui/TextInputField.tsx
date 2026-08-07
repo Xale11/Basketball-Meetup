@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import { ReactNode } from 'react';
 import { LucideIcon } from 'lucide-react-native';
+import { theme } from '@/constants/theme';
 
 interface TextInputFieldProps {
   value: string;
@@ -31,6 +32,8 @@ interface TextInputFieldProps {
   style?: ViewStyle;
 }
 
+const { colors, radius, typography, dark } = theme;
+
 export function TextInputField({
   value,
   onChangeText,
@@ -38,7 +41,7 @@ export function TextInputField({
   icon: Icon,
   rightElement,
   placeholder,
-  placeholderTextColor = '#999',
+  placeholderTextColor = colors.textFaint,
   error,
   multiline,
   multilineHeight,
@@ -55,7 +58,7 @@ export function TextInputField({
 
   return (
     <View style={style}>
-      {label && <Text style={styles.label}>{label}</Text>}
+      {label && <Text style={[typography.label, styles.label]}>{label}</Text>}
       <View
         style={[
           styles.container,
@@ -64,7 +67,7 @@ export function TextInputField({
           error ? styles.containerError : null,
         ]}
       >
-        {Icon && <Icon size={20} color="#666" style={styles.iconLeft} />}
+        {Icon && <Icon size={20} color={colors.textMuted} style={styles.iconLeft} />}
         <TextInput
           style={[
             styles.input,
@@ -84,35 +87,33 @@ export function TextInputField({
           multiline={multiline}
           numberOfLines={numberOfLines}
           textAlignVertical={multiline ? 'top' : undefined}
+          keyboardAppearance={dark ? 'dark' : 'light'}
         />
         {rightElement}
       </View>
-      {error ? <Text style={styles.errorText}>{error}</Text> : null}
+      {error ? <Text style={[typography.caption, styles.errorText]}>{error}</Text> : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   label: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#444',
     marginBottom: 6,
   },
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F8F9FA',
+    backgroundColor: colors.surfaceInset,
     borderWidth: 1,
-    borderColor: '#E9ECEF',
+    borderColor: colors.borderStrong,
   },
   containerLarge: {
-    borderRadius: 16,
+    borderRadius: radius.card,
     paddingHorizontal: 16,
     paddingVertical: 4,
   },
   containerDefault: {
-    borderRadius: 12,
+    borderRadius: radius.chip,
     paddingHorizontal: 14,
     paddingVertical: 14,
   },
@@ -120,11 +121,12 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   containerError: {
-    borderColor: '#DC3545',
+    borderColor: colors.dangerTone.solid,
   },
   input: {
     flex: 1,
-    color: '#1A1A1A',
+    color: colors.textPrimary,
+    fontFamily: typography.body.fontFamily,
   },
   inputLarge: {
     fontSize: 16,
@@ -140,8 +142,7 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   errorText: {
-    fontSize: 13,
-    color: '#DC3545',
+    color: colors.dangerTone.text,
     marginTop: 4,
   },
 });

@@ -1,4 +1,5 @@
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { theme } from '@/constants/theme';
 
 export interface PillOption<T = string> {
   label: string;
@@ -11,6 +12,8 @@ interface PillSelectorProps<T = string> {
   onSelect: (value: T) => void;
 }
 
+const { colors, radius, typography } = theme;
+
 export function PillSelector<T>({ options, selected, onSelect }: PillSelectorProps<T>) {
   return (
     <View style={styles.row}>
@@ -21,8 +24,9 @@ export function PillSelector<T>({ options, selected, onSelect }: PillSelectorPro
             key={String(opt.value)}
             style={[styles.pill, active && styles.pillActive]}
             onPress={() => onSelect(opt.value)}
+            activeOpacity={0.8}
           >
-            <Text style={[styles.pillText, active && styles.pillTextActive]}>
+            <Text style={[typography.label, styles.pillText, active && styles.pillTextActive]}>
               {opt.label}
             </Text>
           </TouchableOpacity>
@@ -42,21 +46,19 @@ const styles = StyleSheet.create({
   pill: {
     paddingHorizontal: 14,
     paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: '#F8F9FA',
+    borderRadius: radius.pill,
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: '#E9ECEF',
+    borderColor: colors.border,
   },
   pillActive: {
-    backgroundColor: '#FF6B35',
-    borderColor: '#FF6B35',
+    backgroundColor: colors.accentTone.bg,
+    borderColor: colors.accentTone.border,
   },
   pillText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#666',
+    color: colors.textMuted,
   },
   pillTextActive: {
-    color: '#FFFFFF',
+    color: colors.accentTone.text,
   },
 });

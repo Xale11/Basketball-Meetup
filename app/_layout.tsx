@@ -9,7 +9,10 @@ import {
   Inter_500Medium,
   Inter_600SemiBold,
   Inter_700Bold,
+  Inter_800ExtraBold,
+  Inter_900Black,
 } from '@expo-google-fonts/inter';
+import { theme } from '@/constants/theme';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from '@/providers/AuthProvider';
@@ -57,7 +60,7 @@ function AppNavigator({ fontsLoaded }: { fontsLoaded: boolean }) {
 
         <Stack.Screen name="+not-found" />
       </Stack>
-      <StatusBar style="dark" />
+      <StatusBar style={theme.dark ? 'light' : 'dark'} />
     </>
   );
 }
@@ -69,11 +72,16 @@ export default function RootLayout() {
   // refreshes when the app returns to the foreground.
   useEffect(() => setupReactQueryFocus(), []);
 
+  // Family names here must match `fontFamily` in constants/theme/types.ts —
+  // the typography tokens select a face by family name rather than by
+  // fontWeight, which Android does not map reliably onto loaded variants.
   const [fontsLoaded] = useFonts({
     'Inter-Regular': Inter_400Regular,
     'Inter-Medium': Inter_500Medium,
     'Inter-SemiBold': Inter_600SemiBold,
     'Inter-Bold': Inter_700Bold,
+    'Inter-ExtraBold': Inter_800ExtraBold,
+    'Inter-Black': Inter_900Black,
   });
 
   return (

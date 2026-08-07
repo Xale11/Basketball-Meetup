@@ -1,4 +1,5 @@
 import { View, Text, Switch, StyleSheet, ViewStyle } from 'react-native';
+import { theme } from '@/constants/theme';
 
 interface ToggleRowProps {
   label: string;
@@ -8,18 +9,21 @@ interface ToggleRowProps {
   style?: ViewStyle;
 }
 
+const { colors, typography } = theme;
+
 export function ToggleRow({ label, value, onValueChange, sublabel, style }: ToggleRowProps) {
   return (
     <View style={[styles.row, style]}>
       <View style={styles.labelGroup}>
-        <Text style={styles.label}>{label}</Text>
-        {sublabel ? <Text style={styles.sublabel}>{sublabel}</Text> : null}
+        <Text style={typography.label}>{label}</Text>
+        {sublabel ? <Text style={[typography.caption, styles.sublabel]}>{sublabel}</Text> : null}
       </View>
       <Switch
         value={value}
         onValueChange={onValueChange}
-        trackColor={{ false: '#E9ECEF', true: '#FF6B35' }}
-        thumbColor="#FFFFFF"
+        trackColor={{ false: colors.surfaceAlt, true: colors.accent }}
+        thumbColor={colors.surface}
+        ios_backgroundColor={colors.surfaceAlt}
       />
     </View>
   );
@@ -35,14 +39,7 @@ const styles = StyleSheet.create({
     flex: 1,
     marginRight: 12,
   },
-  label: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#444',
-  },
   sublabel: {
-    fontSize: 12,
-    color: '#888',
     marginTop: 2,
   },
 });

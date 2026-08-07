@@ -6,7 +6,9 @@ import {
   ViewStyle,
   View,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { LucideIcon } from 'lucide-react-native';
+import { theme } from '@/constants/theme';
 
 export type ButtonVariant = 'primary' | 'secondary' | 'destructive' | 'ghost';
 
@@ -20,49 +22,47 @@ interface ButtonProps {
   style?: ViewStyle;
 }
 
-const VARIANT_STYLES = {
+const { colors, radius, shadow, typography, gradient } = theme;
+
+/**
+ * `primary` fills with the theme gradient rather than a flat colour — that is
+ * the redesign's signature CTA. Every other variant is a flat surface.
+ */
+const VARIANT_STYLES: Record<
+  ButtonVariant,
+  { button: ViewStyle; textColor: string; spinnerColor: string }
+> = {
   primary: {
-    button: {
-      backgroundColor: '#FF6B35',
-      shadowColor: '#FF6B35',
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.3,
-      shadowRadius: 8,
-      elevation: 8,
-    },
-    text: { color: '#FFFFFF' },
-    spinnerColor: '#FFFFFF',
-    borderWidth: 0,
-    borderColor: 'transparent',
+    // Solid fill matching the gradient's first stop: iOS needs an opaque
+    // backing to cast a shadow from, and the gradient covers it visually.
+    button: { backgroundColor: gradient.primary[0], ...shadow.accentGlow },
+    textColor: colors.textOnAccent,
+    spinnerColor: colors.textOnAccent,
   },
   secondary: {
     button: {
-      backgroundColor: '#FFFFFF',
+      backgroundColor: colors.accentTone.bg,
+      borderWidth: 1,
+      borderColor: colors.accentTone.border,
     },
-    text: { color: '#FF6B35' },
-    spinnerColor: '#FF6B35',
-    borderWidth: 1,
-    borderColor: '#FFE0D1',
+    textColor: colors.accentTone.text,
+    spinnerColor: colors.accentTone.text,
   },
   destructive: {
     button: {
-      backgroundColor: '#FFFFFF',
+      backgroundColor: colors.dangerTone.bg,
+      borderWidth: 1,
+      borderColor: colors.dangerTone.border,
     },
-    text: { color: '#DC3545' },
-    spinnerColor: '#DC3545',
-    borderWidth: 1,
-    borderColor: '#FECACA',
+    textColor: colors.dangerTone.text,
+    spinnerColor: colors.dangerTone.text,
   },
   ghost: {
-    button: {
-      backgroundColor: 'transparent',
-    },
-    text: { color: '#9CA3AF', textDecorationLine: 'underline' as const },
-    spinnerColor: '#9CA3AF',
-    borderWidth: 0,
-    borderColor: 'transparent',
+    button: { backgroundColor: 'transparent' },
+    textColor: colors.textMuted,
+    spinnerColor: colors.textMuted,
   },
-} as const;
+};
 
 export function Button({
   label,
@@ -77,25 +77,34 @@ export function Button({
 
   return (
     <TouchableOpacity
-      style={[
-        styles.base,
-        v.button,
-        { borderWidth: v.borderWidth, borderColor: v.borderColor },
-        (disabled || loading) && styles.disabled,
-        style,
-      ]}
+      style={[styles.base, v.button, (disabled || loading) && styles.disabled, style]}
       onPress={onPress}
       disabled={disabled || loading}
-      activeOpacity={0.8}
+      activeOpacity={0.85}
     >
+      {variant === 'primary' && (
+        <LinearGradient
+          colors={gradient.primary}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={[StyleSheet.absoluteFill, { borderRadius: radius.card }]}
+        />
+      )}
+
       {loading ? (
         <ActivityIndicator color={v.spinnerColor} />
       ) : (
         <View style={styles.inner}>
-          {LeftIcon && (
-            <LeftIcon size={18} color={v.text.color} style={styles.leftIcon} />
-          )}
-          <Text style={[styles.label, v.text]}>{label}</Text>
+          {LeftIcon && <LeftIcon size={18} color={v.textColor} style={styles.leftIcon} />}
+          <Text
+            style={[
+              typography.button,
+              { color: v.textColor },
+              variant === 'ghost' && styles.ghostLabel,
+            ]}
+          >
+            {label}
+          </Text>
         </View>
       )}
     </TouchableOpacity>
@@ -104,11 +113,14 @@ export function Button({
 
 const styles = StyleSheet.create({
   base: {
-    borderRadius: 16,
+    borderRadius: radius.card,
     paddingVertical: 16,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
+    // Deliberately no `overflow: 'hidden'` — on iOS it sets masksToBounds,
+    // which clips the view's own shadow. The gradient is clipped by matching
+    // its borderRadius to the container's instead.
   },
   disabled: {
     opacity: 0.5,
@@ -121,8 +133,7 @@ const styles = StyleSheet.create({
   leftIcon: {
     marginRight: 8,
   },
-  label: {
-    fontSize: 16,
-    fontWeight: '600',
+  ghostLabel: {
+    textDecorationLine: 'underline',
   },
 });

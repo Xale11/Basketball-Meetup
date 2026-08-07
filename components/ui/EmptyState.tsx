@@ -1,6 +1,7 @@
 import { View, Text, StyleSheet } from 'react-native';
 import { Button, ButtonVariant } from './Button';
 import { LucideIcon } from 'lucide-react-native';
+import { theme } from '@/constants/theme';
 
 interface EmptyStateAction {
   label: string;
@@ -17,6 +18,8 @@ interface EmptyStateProps {
   secondaryAction?: EmptyStateAction;
 }
 
+const { typography, colors } = theme;
+
 export function EmptyState({
   emoji,
   title,
@@ -27,8 +30,8 @@ export function EmptyState({
   return (
     <View style={styles.container}>
       <Text style={styles.emoji}>{emoji}</Text>
-      <Text style={styles.title}>{title}</Text>
-      <Text style={styles.subtitle}>{subtitle}</Text>
+      <Text style={[typography.h3, styles.title]}>{title}</Text>
+      <Text style={[typography.body, styles.subtitle]}>{subtitle}</Text>
       {(primaryAction || secondaryAction) && (
         <View style={styles.actions}>
           {primaryAction && (
@@ -67,15 +70,11 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   title: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1A1A1A',
     textAlign: 'center',
     marginBottom: 8,
   },
   subtitle: {
-    fontSize: 14,
-    color: '#888',
+    color: colors.textMuted,
     textAlign: 'center',
     lineHeight: 22,
   },

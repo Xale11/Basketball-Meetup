@@ -1,4 +1,5 @@
 import { View, Text, StyleSheet, ViewStyle } from 'react-native';
+import { theme } from '@/constants/theme';
 
 interface FormAlertProps {
   message: string;
@@ -6,38 +7,27 @@ interface FormAlertProps {
   style?: ViewStyle;
 }
 
+const { colors, radius, typography } = theme;
+
 export function FormAlert({ message, variant = 'error', style }: FormAlertProps) {
+  const tone = variant === 'success' ? colors.successTone : colors.dangerTone;
+
   return (
-    <View style={[styles.container, variant === 'success' ? styles.success : styles.error, style]}>
-      <Text style={[styles.text, variant === 'success' ? styles.successText : styles.errorText]}>
-        {message}
-      </Text>
+    <View
+      style={[styles.container, { backgroundColor: tone.bg, borderColor: tone.border }, style]}
+    >
+      <Text style={[typography.body, styles.text, { color: tone.text }]}>{message}</Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    borderRadius: 12,
+    borderRadius: radius.chip,
     padding: 16,
     borderWidth: 1,
   },
-  error: {
-    backgroundColor: '#FEF2F2',
-    borderColor: '#FECACA',
-  },
-  success: {
-    backgroundColor: '#ECFDF3',
-    borderColor: '#BBF7D0',
-  },
   text: {
-    fontSize: 14,
     textAlign: 'center',
-  },
-  errorText: {
-    color: '#DC2626',
-  },
-  successText: {
-    color: '#166534',
   },
 });
