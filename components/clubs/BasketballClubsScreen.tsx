@@ -59,7 +59,10 @@ export default function BasketballClubsScreen() {
         ))}
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        style={styles.content} showsVerticalScrollIndicator={false}>
         {selectedTab === 'discover' && (
           <View>
             <Text style={styles.sectionTitle}>Featured Clubs</Text>
@@ -103,7 +106,10 @@ export default function BasketballClubsScreen() {
               <Text style={styles.closeButton}>Cancel</Text>
             </TouchableOpacity>
           </View>
-          <ScrollView style={styles.modalContent}>
+          <ScrollView
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        style={styles.modalContent}>
             <View style={styles.formSection}>
               <Text style={styles.formLabel}>Club Information</Text>
               <TextInputField label="Club Name *" value={clubName} onChangeText={setClubName} placeholder="e.g., Downtown Ballers" style={styles.inputGroup} />

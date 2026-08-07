@@ -3,6 +3,7 @@ import { X } from 'lucide-react-native';
 import { useState, useEffect } from 'react';
 import { User } from '@/types/user';
 import { TextInputField } from '@/components/ui/TextInputField';
+import { DismissKeyboardView } from '@/components/ui/DismissKeyboardView';
 import { Button } from '@/components/ui/Button';
 
 interface EditProfileForm {
@@ -41,7 +42,7 @@ export function EditProfileModal({ visible, user, saving, onClose, onSave }: Edi
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <View style={styles.overlay}>
+      <DismissKeyboardView style={styles.overlay}>
         <View style={styles.content}>
           <View style={styles.header}>
             <Text style={styles.title}>Edit Profile</Text>
@@ -85,7 +86,7 @@ export function EditProfileModal({ visible, user, saving, onClose, onSave }: Edi
 
           <Button label={saving ? 'Saving…' : 'Save Changes'} onPress={() => onSave(form)} disabled={saving} style={styles.saveButton} />
         </View>
-      </View>
+      </DismissKeyboardView>
     </Modal>
   );
 }

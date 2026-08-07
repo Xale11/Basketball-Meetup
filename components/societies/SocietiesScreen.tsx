@@ -182,6 +182,8 @@ export default function SocietiesScreen() {
       </ScrollView>
 
       <ScrollView
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
         style={styles.content}
         showsVerticalScrollIndicator={false}
         refreshControl={
@@ -547,7 +549,10 @@ export default function SocietiesScreen() {
               <Text style={styles.cancelText}>Cancel</Text>
             </TouchableOpacity>
           </View>
-          <ScrollView style={styles.modalContent} contentContainerStyle={{ paddingBottom: 32 }}>
+          <ScrollView
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        style={styles.modalContent} contentContainerStyle={{ paddingBottom: 32 }}>
             {/* Logo / Banner */}
             <View style={styles.formSection}>
               <Text style={styles.fieldLabel}>Banner Image</Text>

@@ -77,6 +77,8 @@ export default function FriendSearchScreen() {
           renderItem={renderUser}
           contentContainerStyle={s.list}
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
         />
       )}
     </SafeAreaView>

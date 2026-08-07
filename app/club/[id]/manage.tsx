@@ -98,7 +98,10 @@ export default function ClubManageScreen() {
         ))}
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        style={styles.content} showsVerticalScrollIndicator={false}>
         {selectedTab === 'players' && (
           <View>
             <View style={styles.sectionHeader}>

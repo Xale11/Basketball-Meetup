@@ -8,6 +8,7 @@ import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { Button } from '@/components/ui/Button';
 import { TextInputField } from '@/components/ui/TextInputField';
 import { FormAlert } from '@/components/ui/FormAlert';
+import { DismissKeyboardView } from '@/components/ui/DismissKeyboardView';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -41,7 +42,7 @@ export default function LoginScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
       >
-        <View style={styles.content}>
+        <DismissKeyboardView style={styles.content}>
           <View style={styles.header}>
             <View style={styles.logo}>
               <Text style={styles.logoText}>🏀</Text>
@@ -94,7 +95,7 @@ export default function LoginScreen() {
               </TouchableOpacity>
             </Link>
           </View>
-        </View>
+        </DismissKeyboardView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

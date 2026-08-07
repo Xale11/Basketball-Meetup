@@ -193,7 +193,10 @@ export default function SocietyProfileScreen() {
         )}
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        showsVerticalScrollIndicator={false}>
         {/* Banner / Logo */}
         {society.logo ? (
           <Image source={{ uri: society.logo }} style={s.banner} resizeMode="cover" />
@@ -301,7 +304,10 @@ export default function SocietyProfileScreen() {
             <View style={{ width: 60 }} />
           </View>
 
-          <ScrollView style={s.modalBody} contentContainerStyle={{ paddingBottom: 40 }}>
+          <ScrollView
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        style={s.modalBody} contentContainerStyle={{ paddingBottom: 40 }}>
             {/* Logo image picker */}
             <Text style={s.fieldLabel}>Banner Image</Text>
             <ImagePicker

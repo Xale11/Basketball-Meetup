@@ -3,7 +3,6 @@ import {
   Platform,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -33,10 +32,15 @@ const DateTimeInput = ({
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [pickerMode, setPickerMode] = useState<'date' | 'time'>('date');
 
+  // Bumped on every open so the iOS picker is re-created from scratch. See the
+  // comment on the picker itself for why that matters under the New Arch.
+  const [pickerSession, setPickerSession] = useState(0);
+
   const openPicker = () => {
     setTempDate(dateTime || new Date());
     setSelectedDate(null);
     setPickerMode('date');
+    setPickerSession((n) => n + 1);
     setShowPicker(true);
   };
 
@@ -110,20 +114,16 @@ const DateTimeInput = ({
 
   return (
     <View style={styles.timeInputGroup}>
-      <TouchableOpacity onPress={openPicker}>
+      <TouchableOpacity onPress={openPicker} activeOpacity={0.7}>
         <Text style={styles.timeLabel}>{label}</Text>
-        <TextInput
-          style={styles.timeInput}
-          value={
-            !dateTime
-              ? defaultValue
-              : formatDateTime(dateTime)
-          }
-          editable={false}
-          onPress={openPicker}
-          placeholder={defaultValue}
-          placeholderTextColor="#999"
-        />
+        {/* A read-only display, so it must not be a TextInput. A TextInput here
+            can still take focus and raise the soft keyboard even with
+            editable={false}, which is what put a number pad over the picker. */}
+        <View style={styles.timeInput}>
+          <Text style={dateTime ? styles.timeValue : styles.timePlaceholder}>
+            {dateTime ? formatDateTime(dateTime) : defaultValue}
+          </Text>
+        </View>
       </TouchableOpacity>
       {showPicker && Platform.OS === 'android' && (
         <DateTimePicker
@@ -131,7 +131,10 @@ const DateTimeInput = ({
             ? (dateTime || new Date())
             : (selectedDate || dateTime || new Date())}
           mode={pickerMode}
-          display="default"
+          // 'spinner' for time: the Material clock has a keyboard-entry toggle
+          // that pops a number pad. The wheel has no such affordance.
+          display={pickerMode === 'time' ? 'spinner' : 'default'}
+          is24Hour={true}
           onChange={(e, selectedValue) => {
             if (pickerMode === 'date') {
               handleDatePickerChange(e, selectedValue);
@@ -146,6 +149,7 @@ const DateTimeInput = ({
         visible={showPicker && Platform.OS === 'ios'}
         transparent
         animationType="slide"
+        onRequestClose={() => setShowPicker(false)}
       >
         <View style={styles.iosModalOverlay}>
           <View style={styles.iosPickerContainer}>
@@ -163,15 +167,32 @@ const DateTimeInput = ({
                 <Text style={styles.iosPickerDone}>Done</Text>
               </TouchableOpacity>
             </View>
-            <DateTimePicker
-              value={tempDate}
-              mode="datetime"
-              display="spinner"
-              onChange={handleTimePickerChange}
-              style={styles.iosPicker}
-              themeVariant="light"
-              textColor="#1A1A1A"
-            />
+            {/*
+              Mounted only while open, with a key that changes per open.
+
+              Under the New Architecture the Fabric picker applies
+              `preferredDatePickerStyle` ONLY inside an
+              `if (oldProps.displayIOS != newProps.displayIOS)` diff. A picker
+              that stays mounted (as this one did, because the Modal is always
+              rendered and only toggles `visible`) never sees that prop change,
+              so the style is never applied and iOS falls back to `.automatic`
+              — which for `datetime` is the compact style whose time pill opens
+              a number pad. Re-creating the view guarantees the diff runs and we
+              actually get UIDatePickerStyleWheels.
+            */}
+            {showPicker && (
+              <DateTimePicker
+                key={pickerSession}
+                value={tempDate}
+                mode="datetime"
+                display="spinner"
+                is24Hour={true}
+                onChange={handleTimePickerChange}
+                style={styles.iosPicker}
+                themeVariant="light"
+                textColor="#1A1A1A"
+              />
+            )}
           </View>
         </View>
       </Modal>
@@ -195,10 +216,19 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    fontSize: 14,
-    color: '#1A1A1A',
     borderWidth: 1,
     borderColor: '#E9ECEF',
+    // Matches the height a single-line TextInput used to occupy.
+    justifyContent: 'center',
+    minHeight: 38,
+  },
+  timeValue: {
+    fontSize: 14,
+    color: '#1A1A1A',
+  },
+  timePlaceholder: {
+    fontSize: 14,
+    color: '#999',
   },
   iosModalOverlay: {
     flex: 1,

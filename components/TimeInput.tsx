@@ -3,7 +3,6 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  TextInput,
   Platform,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -47,24 +46,22 @@ const TimeInput = ({
 
   return (
     <View style={styles.timeInputGroup}>
-      <TouchableOpacity onPress={() => setShowPicker(true)}>
+      <TouchableOpacity onPress={() => setShowPicker(true)} activeOpacity={0.7}>
         <Text style={styles.timeLabel}>{label}</Text>
-        <TextInput
-          style={styles.timeInput}
-          value={
-            !time
-              ? defaultValue
-              : time.toLocaleTimeString([], {
+        {/* A read-only display, so it must not be a TextInput. A TextInput here
+            can still take focus and raise the soft keyboard even with
+            editable={false}, which is what put a number pad over the picker. */}
+        <View style={styles.timeInput}>
+          <Text style={time ? styles.timeValue : styles.timePlaceholder}>
+            {time
+              ? time.toLocaleTimeString([], {
                   hour: '2-digit',
                   minute: '2-digit',
                   hour12: false,
                 })
-          }
-          editable={false}
-          onPress={() => setShowPicker(true)}
-          placeholder={defaultValue}
-          placeholderTextColor="#999"
-        />
+              : defaultValue}
+          </Text>
+        </View>
       </TouchableOpacity>
       {showPicker &&
         (Platform.OS === 'android' && mode === 'datetime' ? (
@@ -82,7 +79,9 @@ const TimeInput = ({
             value={time || new Date()}
             mode={mode}
             is24Hour={true}
-            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+            // 'spinner' for time on both platforms: Android's Material clock has
+            // a keyboard-entry toggle that pops a number pad over the dial.
+            display={Platform.OS === 'ios' || mode === 'time' ? 'spinner' : 'default'}
             onChange={(e) =>
               handleTimePickerChange(e, new Date(e.nativeEvent.timestamp))
             }
@@ -110,9 +109,18 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    fontSize: 14,
-    color: '#1A1A1A',
     borderWidth: 1,
     borderColor: '#E9ECEF',
+    // Matches the height a single-line TextInput used to occupy.
+    justifyContent: 'center',
+    minHeight: 38,
+  },
+  timeValue: {
+    fontSize: 14,
+    color: '#1A1A1A',
+  },
+  timePlaceholder: {
+    fontSize: 14,
+    color: '#999',
   },
 });
