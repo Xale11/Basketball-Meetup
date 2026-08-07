@@ -1,5 +1,7 @@
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ViewStyle } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { appVariant } from '@/constants/appVariant';
+import { AC_AppHeader } from '@/components/activCampus/AC_AppHeader';
 import { useState, useMemo } from 'react';
 import { Maximize2, Minimize2 } from 'lucide-react-native';
 import { useAuth } from '@/hooks/useAuth';
@@ -66,8 +68,14 @@ export default function MapScreen() {
     position: 'relative',
   };
 
+    // ActivCampus renders the shared app header, which owns the top inset.
+  // Basketball Meetup keeps its own header and the default safe area.
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView
+      style={styles.container}
+      edges={appVariant === 'activCampus' ? ['left', 'right'] : undefined}
+    >
+      {appVariant === 'activCampus' && <AC_AppHeader />}
       <View style={styles.header}>
         <Text style={styles.title}>Events Map</Text>
         <TouchableOpacity onPress={() => setShowFullScreen((p) => !p)} style={styles.expandButton}>

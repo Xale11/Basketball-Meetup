@@ -17,6 +17,8 @@ export const basketballTheme: Theme = {
 
     border: '#F0F0F0',
     borderStrong: '#E9ECEF',
+    // BM keeps a neutral hairline — the teal tint is ActivCampus branding.
+    chromeBorder: '#F0F0F0',
 
     textPrimary: '#1A1A1A',
     textBody: '#444444',

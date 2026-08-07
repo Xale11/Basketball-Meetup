@@ -24,6 +24,12 @@ export interface ColorTokens {
 
   border: string;
   borderStrong: string;
+  /**
+   * Divider on app chrome — the header's bottom edge and the tab bar's top
+   * edge. Tinted rather than neutral: the redesign uses teal-900/40 here so the
+   * chrome reads as part of the brand rather than a plain hairline.
+   */
+  chromeBorder: string;
 
   /** Headings. */
   textPrimary: string;

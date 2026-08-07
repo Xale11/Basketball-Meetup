@@ -1,6 +1,7 @@
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Search, Bell, ChevronRight, Plus, Sparkles } from 'lucide-react-native';
+// Search and Bell moved into AC_AppHeader.
+import { ChevronRight, Plus, Sparkles } from 'lucide-react-native';
 import { useState, useMemo } from 'react';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/hooks/useAuth';
@@ -15,6 +16,7 @@ import { Event, EventBookingMode } from '@/types/event';
 import { EventCard } from '@/components/events/EventCard';
 import { useRefreshQueries } from '@/hooks/useRefreshQueries';
 import { qk } from '@/lib/queryKeys';
+import { AC_AppHeader } from '@/components/activCampus/AC_AppHeader';
 
 type TimeFilter = 'Now' | 'Today' | 'This Week';
 type CostFilter = 'All' | 'Free' | 'Paid';
@@ -30,7 +32,7 @@ export default function ActivCampusHome() {
     setTimeFilter('This Week');
     setCostFilter('All');
   };
-  const goToCreate = () => router.push('/(tabs)/create');
+  const goToCreate = () => router.push('/create');
 
   const { memberships } = useFetchUserSocieties(user?.id);
   const societyIds = memberships.map((m) => m.society_id);
@@ -80,20 +82,14 @@ export default function ActivCampusHome() {
 
   if (authLoading) return <LoadingSpinner />;
 
+    // `edges` omits the top: AC_AppHeader applies the top inset itself.
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['left', 'right']}>
+      <AC_AppHeader />
       <View style={styles.header}>
         <View>
           <Text style={styles.greeting}>Hey {user?.first_name || 'there'},</Text>
           <Text style={styles.subtitle}>What's on today?</Text>
-        </View>
-        <View style={styles.headerActions}>
-          <TouchableOpacity style={styles.iconButton}>
-            <Search size={24} color="#1A1A1A" />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.iconButton}>
-            <Bell size={24} color="#1A1A1A" />
-          </TouchableOpacity>
         </View>
       </View>
 

@@ -43,6 +43,9 @@ function AppNavigator({ fontsLoaded }: { fontsLoaded: boolean }) {
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Protected guard={signedIn && !needsOnboarding}>
           <Stack.Screen name="(tabs)" />
+          {/* Create was an empty-titled tab; it is now a dismissible modal
+              pushed by the tab bar's floating (+). */}
+          <Stack.Screen name="create" options={{ presentation: 'modal' }} />
           <Stack.Screen name="event" />
           <Stack.Screen name="user" />
           <Stack.Screen name="friends" />

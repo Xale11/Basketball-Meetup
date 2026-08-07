@@ -1,12 +1,16 @@
 export type AppVariant = 'basketball' | 'activCampus';
 
+/**
+ * Note there is no `create` entry: creating an activity is no longer a tab. It
+ * is a modal route (`app/create.tsx`) opened by the tab bar's floating (+),
+ * which is shown for ActivCampus only.
+ */
 export type TabVisibility = {
   home: boolean;
   map: boolean;
   events: boolean;
   clubs: boolean;
   addCourt: boolean;
-  create: boolean;
   profile: boolean;
 };
 
@@ -17,7 +21,6 @@ const TAB_CONFIG: Record<AppVariant, TabVisibility> = {
     events: true,
     clubs: true,
     addCourt: true,
-    create: false,
     profile: true,
   },
   activCampus: {
@@ -26,7 +29,6 @@ const TAB_CONFIG: Record<AppVariant, TabVisibility> = {
     events: false,
     clubs: true,
     addCourt: false,
-    create: true,
     profile: true,
   },
 };

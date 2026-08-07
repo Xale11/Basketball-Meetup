@@ -17,6 +17,7 @@ export const activCampusTheme: Theme = {
 
     border: '#1E293B', // slate-800
     borderStrong: '#334155', // slate-700
+    chromeBorder: 'rgba(19, 78, 74, 0.4)', // teal-900 @ 40%
 
     textPrimary: '#FFFFFF',
     textBody: '#CBD5E1', // slate-300

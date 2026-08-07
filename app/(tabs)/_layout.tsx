@@ -1,150 +1,56 @@
 import { Tabs } from 'expo-router';
-import { View, Text, StyleSheet } from 'react-native';
-import { Chrome as Home, Map, Calendar, User, Plus, Users } from 'lucide-react-native';
 import { tabs, appVariant } from '@/constants/appVariant';
-import { usePendingRequests } from '@/hooks/friends/usePendingRequests';
-import { useReceivedEventInvites } from '@/hooks/events/useReceivedEventInvites';
+import { AppTabBar } from '@/components/navigation/AppTabBar';
+import { theme } from '@/constants/theme';
 
-function ProfileTabIcon({ size, color }: { size: number; color: string }) {
-  const { count: friendRequestCount } = usePendingRequests();
-  const { count: eventInviteCount } = useReceivedEventInvites();
-  const total = friendRequestCount + eventInviteCount;
-
-  return (
-    <View style={badge.wrap}>
-      <User size={size} color={color} />
-      {total > 0 && (
-        <View style={badge.dot}>
-          <Text style={badge.dotText}>{total > 99 ? '99+' : total}</Text>
-        </View>
-      )}
-    </View>
-  );
-}
-
-const badge = StyleSheet.create({
-  wrap: { position: 'relative' },
-  dot: {
-    position: 'absolute',
-    top: -4,
-    right: -8,
-    minWidth: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: '#E53E3E',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 3,
-  },
-  dotText: { fontSize: 10, fontWeight: '700', color: '#FFFFFF' },
-});
-
+/**
+ * The bar itself lives in `components/navigation/AppTabBar` — labels, icons and
+ * the floating create button are all resolved there. This file only declares
+ * which routes exist and which are visible for the current app variant.
+ *
+ * Create is deliberately NOT a tab: it is a modal route at `app/create.tsx`
+ * that the bar's floating (+) pushes.
+ */
 export default function TabLayout() {
   return (
     <Tabs
+      tabBar={(props) => <AppTabBar {...props} />}
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: '#FF6B35',
-        tabBarInactiveTintColor: '#666',
-        tabBarStyle: {
-          backgroundColor: '#FFFFFF',
-          borderTopColor: '#F0F0F0',
-          borderTopWidth: 1,
-          paddingTop: 8,
-          paddingBottom: 8,
-          height: 80,
-        },
-        tabBarLabelStyle: {
-          fontSize: 12,
-          fontWeight: '600',
-          marginTop: 4,
-        },
+        // The bar is absolutely positioned so the FAB can overflow it; give
+        // screens room so their last row isn't hidden underneath.
+        sceneStyle: { backgroundColor: theme.colors.canvas },
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
+          title: appVariant === 'activCampus' ? 'Discover' : 'Home',
           href: tabs.home ? undefined : null,
-          tabBarIcon: ({ size, color }) => (
-            <Home size={size} color={color} />
-          ),
         }}
       />
       <Tabs.Screen
         name="map"
-        options={{
-          title: 'Map',
-          href: tabs.map ? undefined : null,
-          tabBarIcon: ({ size, color }) => (
-            <Map size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="create"
-        options={{
-          title: '',
-          href: tabs.create ? undefined : null,
-          tabBarIcon: () => (
-            <View style={{
-              backgroundColor: '#FF6B35',
-              borderRadius: 32,
-              width: 52,
-              height: 52,
-              justifyContent: 'center',
-              alignItems: 'center',
-              marginBottom: 8,
-              shadowColor: '#FF6B35',
-              shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: 0.4,
-              shadowRadius: 8,
-              elevation: 8,
-            }}>
-              <Plus size={26} color="#FFFFFF" />
-            </View>
-          ),
-        }}
+        options={{ title: 'Map', href: tabs.map ? undefined : null }}
       />
       <Tabs.Screen
         name="events"
-        options={{
-          title: 'Events',
-          href: tabs.events ? undefined : null,
-          tabBarIcon: ({ size, color }) => (
-            <Calendar size={size} color={color} />
-          ),
-        }}
+        options={{ title: 'Events', href: tabs.events ? undefined : null }}
       />
       <Tabs.Screen
         name="clubs"
         options={{
           title: appVariant === 'activCampus' ? 'Societies' : 'Clubs',
           href: tabs.clubs ? undefined : null,
-          tabBarIcon: ({ size, color }) => (
-            <Users size={size} color={color} />
-          ),
         }}
       />
       <Tabs.Screen
         name="add-court"
-        options={{
-          title: 'Add Court',
-          href: tabs.addCourt ? undefined : null,
-          tabBarIcon: ({ size, color }) => (
-            <Plus size={size} color={color} />
-          ),
-        }}
+        options={{ title: 'Add Court', href: tabs.addCourt ? undefined : null }}
       />
       <Tabs.Screen
         name="profile"
-        options={{
-          title: 'Profile',
-          href: tabs.profile ? undefined : null,
-          tabBarIcon: ({ size, color }) => (
-            <ProfileTabIcon size={size} color={color} />
-          ),
-        }}
+        options={{ title: 'Profile', href: tabs.profile ? undefined : null }}
       />
     </Tabs>
   );

@@ -21,6 +21,7 @@ import { useFetchUniversities } from '@/hooks/universities/useFetchUniversities'
 import { useUserParticipations } from '@/hooks/events/useUserParticipations';
 import { useRefreshQueries } from '@/hooks/useRefreshQueries';
 import { qk } from '@/lib/queryKeys';
+import { AC_AppHeader } from '@/components/activCampus/AC_AppHeader';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { EventCard } from '@/components/events/EventCard';
 import { Button } from '@/components/ui/Button';
@@ -151,8 +152,10 @@ export default function SocietiesScreen() {
     );
   };
 
+    // `edges` omits the top: AC_AppHeader applies the top inset itself.
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['left', 'right']}>
+      <AC_AppHeader />
       <View style={styles.header}>
         <Text style={styles.title}>Societies</Text>
         <View style={styles.headerActions}>

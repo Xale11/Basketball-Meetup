@@ -12,6 +12,7 @@ import { useFriends } from '@/hooks/friends/useFriends';
 import { usePendingRequests } from '@/hooks/friends/usePendingRequests';
 import { useReceivedEventInvites } from '@/hooks/events/useReceivedEventInvites';
 import { appVariant } from '@/constants/appVariant';
+import { AC_AppHeader } from '@/components/activCampus/AC_AppHeader';
 import { EditProfileModal } from '@/components/profile/EditProfileModal';
 import { ActivitySection } from '@/components/profile/ActivitySection';
 import { Button } from '@/components/ui/Button';
@@ -62,8 +63,14 @@ export default function ProfileScreen() {
     }
   };
 
+    // ActivCampus renders the shared app header, which owns the top inset.
+  // Basketball Meetup keeps its own header and the default safe area.
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView
+      style={styles.container}
+      edges={appVariant === 'activCampus' ? ['left', 'right'] : undefined}
+    >
+      {appVariant === 'activCampus' && <AC_AppHeader />}
       <View style={styles.header}>
         <Text style={styles.title}>Profile</Text>
         <TouchableOpacity style={styles.settingsButton}>
