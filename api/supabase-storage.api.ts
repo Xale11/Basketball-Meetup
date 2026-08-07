@@ -1,4 +1,4 @@
-import * as FileSystem from 'expo-file-system';
+import { File } from 'expo-file-system';
 import { supabase } from './supabase';
 
 const DEFAULT_bucket = 'images';
@@ -23,15 +23,9 @@ export const uploadToSupabaseBucket = async (
   const filePath = `${folder}/${fileName}.${ext}`;
   console.log(`[uploadToSupabaseBucket] uploading ${filePath} (${mimeType}) to bucket: ${bucket}`);
 
-  const base64 = await FileSystem.readAsStringAsync(uri, {
-    encoding: FileSystem.EncodingType.Base64,
-  });
-
-  const binaryString = atob(base64);
-  const bytes = new Uint8Array(binaryString.length);
-  for (let i = 0; i < binaryString.length; i++) {
-    bytes[i] = binaryString.charCodeAt(i);
-  }
+  // expo-file-system v19 (SDK 54) reads bytes directly — no base64 round-trip.
+  // The old readAsStringAsync/EncodingType path now throws by design.
+  const bytes = await new File(uri).bytes();
 
   const { error } = await supabase.storage
     .from(bucket)

@@ -86,6 +86,8 @@ const TimeInput = ({
             onChange={(e) =>
               handleTimePickerChange(e, new Date(e.nativeEvent.timestamp))
             }
+            themeVariant="light"
+            textColor="#1A1A1A"
           />
         ))}
     </View>

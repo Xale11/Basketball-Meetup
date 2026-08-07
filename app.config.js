@@ -22,8 +22,7 @@ const VARIANTS = {
     slug: 'activ-campus',
     scheme: 'activcampus',
     applicationId: 'com.xale11.activcampus',
-    // TODO: run `eas init` with EXPO_PUBLIC_APP_VARIANT=activCampus and paste the id it prints.
-    easProjectId: process.env.EAS_PROJECT_ID_ACTIVCAMPUS ?? null,
+    easProjectId: '65428b97-c675-43a5-8d52-56fd9191e5d3',
     locationPermission:
       'This app uses location to show events happening near you on campus.',
     photosPermission:
@@ -70,7 +69,9 @@ export default {
     version: '1.0.0',
     orientation: 'portrait',
     icon: './assets/images/icon.png',
-    userInterfaceStyle: 'automatic',
+    // The UI is hardcoded light (white surfaces, dark text). 'automatic' lets iOS
+    // render native controls in dark appearance over them — white text on white.
+    userInterfaceStyle: 'light',
     newArchEnabled: true,
     ios: {
       bundleIdentifier: variant.applicationId,
@@ -102,6 +103,8 @@ export default {
       'expo-router',
       'expo-font',
       'expo-web-browser',
+      '@react-native-community/datetimepicker',
+      'expo-sqlite',
       [
         'expo-location',
         {
@@ -120,9 +123,11 @@ export default {
     },
     extra: {
       router: {},
-      eas: {
-        projectId: variant.easProjectId,
-      },
+      // Omitted entirely when unset — EAS rejects a null projectId and will
+      // link/create the project on the next CLI run when the key is absent.
+      ...(variant.easProjectId
+        ? { eas: { projectId: variant.easProjectId } }
+        : {}),
       googleMapsApiKey,
     },
   },

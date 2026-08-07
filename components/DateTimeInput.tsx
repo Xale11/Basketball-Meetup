@@ -169,6 +169,8 @@ const DateTimeInput = ({
               display="spinner"
               onChange={handleTimePickerChange}
               style={styles.iosPicker}
+              themeVariant="light"
+              textColor="#1A1A1A"
             />
           </View>
         </View>

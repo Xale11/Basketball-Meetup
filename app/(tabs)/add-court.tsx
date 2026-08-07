@@ -20,7 +20,7 @@ import {
   GooglePlaceDetail,
   GooglePlacesAutocomplete,
 } from 'react-native-google-places-autocomplete';
-import Constants from 'expo-constants';
+import { useGooglePlacesRequest } from '@/hooks/useGooglePlacesRequest';
 import ngeohash from 'ngeohash';
 import { useCreateCourt } from '@/hooks/courts/useCreateCourt';
 import { Button } from '@/components/ui/Button';
@@ -38,6 +38,7 @@ const INITIAL_OPENING_HOURS: OpeningHours = {
 
 export default function AddCourtScreen() {
   const {} = useAuth();
+  const placesRequest = useGooglePlacesRequest();
   const { createCourt, loading } = useCreateCourt();
 
   const [form, setForm] = useState<CreateCourtForm>({
@@ -157,10 +158,10 @@ export default function AddCourtScreen() {
                 placeholder="Search for a court"
                 debounce={300}
                 fetchDetails={true}
+                {...placesRequest}
+                textInputProps={{ placeholderTextColor: '#999' }}
+                styles={{ textInput: styles.googleInput }}
                 query={{
-                  key:
-                    Constants.expoConfig?.extra?.googleMapsApiKey ||
-                    process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY,
                   language: 'en',
                   type: 'establishment',
                 }}
@@ -305,6 +306,13 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderWidth: 1,
     borderColor: '#E9ECEF',
+  },
+  googleInput: {
+    backgroundColor: 'transparent',
+    fontSize: 16,
+    color: '#1A1A1A',
+    paddingHorizontal: 0,
+    height: 24,
   },
   imageContainer: { marginBottom: 16 },
   footer: {

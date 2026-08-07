@@ -14,7 +14,7 @@ import {
   GooglePlaceDetail,
   GooglePlacesAutocomplete,
 } from 'react-native-google-places-autocomplete';
-import Constants from 'expo-constants';
+import { useGooglePlacesRequest } from '@/hooks/useGooglePlacesRequest';
 import {
   CreateEventForm,
   Event,
@@ -96,6 +96,7 @@ export function EventFormModal({
   const [form, setForm] = useState<CreateEventForm>(INITIAL_FORM);
   const [dateError, setDateError] = useState<string | null>(null);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const placesRequest = useGooglePlacesRequest();
 
   useEffect(() => {
     if (editingEvent) {
@@ -294,10 +295,9 @@ export function EventFormModal({
                     placeholder="Search for a venue or address"
                     debounce={300}
                     fetchDetails={true}
+                    {...placesRequest}
+                    textInputProps={{ placeholderTextColor: '#999' }}
                     query={{
-                      key:
-                        Constants.expoConfig?.extra?.googleMapsApiKey ||
-                        process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY,
                       language: 'en',
                     }}
                     onPress={(_, details) => {

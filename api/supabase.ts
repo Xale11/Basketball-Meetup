@@ -3,8 +3,33 @@ import 'react-native-url-polyfill/auto'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { createClient, processLock } from '@supabase/supabase-js'
 
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL!
-const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!
+/**
+ * These are inlined by Metro at build time. On EAS they come from the build
+ * profile's environment (`eas env:create --environment <env>`), NOT from the
+ * local .env — that file is gitignored and never uploaded. When they are
+ * missing, createClient throws a generic "supabaseUrl is required" during
+ * module import, which kills the app on launch with no visible error. Fail
+ * loudly instead, naming the variable and the fix.
+ */
+const requireEnv = (name: string, value: string | undefined): string => {
+  if (!value) {
+    throw new Error(
+      `Missing ${name}. Local builds read it from .env; EAS builds read it from ` +
+        `the build profile's environment — run: eas env:create --scope project ` +
+        `--name ${name} --environment <development|preview|production>`
+    )
+  }
+  return value
+}
+
+const supabaseUrl = requireEnv(
+  'EXPO_PUBLIC_SUPABASE_URL',
+  process.env.EXPO_PUBLIC_SUPABASE_URL
+)
+const supabaseAnonKey = requireEnv(
+  'EXPO_PUBLIC_SUPABASE_ANON_KEY',
+  process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY
+)
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
