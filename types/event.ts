@@ -56,6 +56,13 @@ export enum EventInviteStatus {
  * event_images, event_tickets, event_invites.
  * Note: the updated-at column is named `update_at` in the DB (typo in the schema).
  */
+/**
+ * An event carrying its confirmed headcount, from the `event_participants(count)`
+ * aggregate in `fetchEvents`. Used with `max_participants` to show availability
+ * without a per-card query.
+ */
+export type EventWithCounts = Event & { going_count: number }
+
 export interface Event {
   id: string
   name: string

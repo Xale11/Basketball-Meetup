@@ -1,44 +1,148 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
-import { theme } from '@/constants/theme';
+import { View, StyleSheet, SectionList, RefreshControl, TextInput, TouchableOpacity, Text, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-// Search and Bell moved into AC_AppHeader.
-import { ChevronRight, Plus, Sparkles } from 'lucide-react-native';
-import { useState, useMemo } from 'react';
+import { Zap, Clock, CalendarDays, Search, X, Building2, Crown, User } from 'lucide-react-native';
+import type { LucideIcon } from 'lucide-react-native';
+import { useMemo, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/hooks/useAuth';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
+import { SegmentedTabs } from '@/components/ui/SegmentedTabs';
+import { SectionHeader } from '@/components/ui/SectionHeader';
+import { FilterChipRow, FilterChip } from '@/components/ui/FilterChipRow';
 import { useFetchEvents } from '@/hooks/events/useFetchEvents';
 import { useFetchUserSocieties } from '@/hooks/societies/useFetchUserSocieties';
 import { useFetchSocietiesByUniId } from '@/hooks/societies/useFetchSocietiesByUniId';
 import { useFetchUniversities } from '@/hooks/universities/useFetchUniversities';
 import { useUserParticipations } from '@/hooks/events/useUserParticipations';
-import { Event, EventBookingMode } from '@/types/event';
+import { useFriendsAttendingCounts } from '@/hooks/friends/useFriendsAttendingCounts';
+import { EventWithCounts, EventBookingMode } from '@/types/event';
 import { EventCard } from '@/components/events/EventCard';
 import { useRefreshQueries } from '@/hooks/useRefreshQueries';
 import { qk } from '@/lib/queryKeys';
 import { AC_AppHeader } from '@/components/activCampus/AC_AppHeader';
+import { getClassification, ActivityClassification } from '@/lib/eventClassification';
+import { useTheme, useThemedStyles, Theme } from '@/hooks/useTheme';
 
-const { colors } = theme;
+/**
+ * The category strip needs `events.category`, which lands with AC-21. Flip this
+ * on once the column and its filter exist.
+ */
+const SHOW_CATEGORY_STRIP = false;
 
-type TimeFilter = 'Now' | 'Today' | 'This Week';
+type TimeTab = 'today' | 'tomorrow' | 'week';
+type OrganiserFilter = 'All' | ActivityClassification;
 type CostFilter = 'All' | 'Free' | 'Paid';
+
+const TABS = [
+  { key: 'today' as const, label: 'Today' },
+  { key: 'tomorrow' as const, label: 'Tomorrow' },
+  { key: 'week' as const, label: 'This Week' },
+];
+
+/**
+ * Each option carries its own active tint, matching the reference — a single
+ * accent colour for every selected filter is not what the design does.
+ * `neutral` is the slate/teal treatment used by "All" and "Associate".
+ */
+type FilterTone = 'neutral' | 'info' | 'warning' | 'success';
+
+const ORGANISER_OPTIONS: {
+  value: OrganiserFilter;
+  label: string;
+  tone: FilterTone;
+  icon?: LucideIcon;
+}[] = [
+  { value: 'All', label: 'All', tone: 'neutral' },
+  { value: 'University', label: 'University', tone: 'info', icon: Building2 },
+  // Displayed as "Executive"; the underlying classification is "Exec".
+  { value: 'Exec', label: 'Executive', tone: 'warning', icon: Crown },
+  { value: 'Associate', label: 'Associate', tone: 'neutral', icon: User },
+];
+
+const COST_OPTIONS: { value: CostFilter; label: string; tone: FilterTone }[] = [
+  { value: 'All', label: 'All', tone: 'neutral' },
+  { value: 'Free', label: 'Free', tone: 'success' },
+  { value: 'Paid', label: 'Paid', tone: 'warning' },
+];
+
+/** How far ahead counts as "Starting Soon". */
+const SOON_MS = 2 * 60 * 60 * 1000;
+const ONE_DAY = 86400000;
+
+type SectionTone = 'accent' | 'warning';
+type Section = { title: string; tone?: SectionTone; data: EventWithCounts[] };
+
+const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+
+/**
+ * A small filter button. Inactive is bare text with no fill or border; active
+ * takes its tone's tinted background, text and border. "All"/"Associate" use
+ * the neutral surface with accent text, which is the reference's treatment.
+ */
+function FilterButton({
+  label,
+  icon: Icon,
+  tone,
+  active,
+  onPress,
+}: {
+  label: string;
+  icon?: LucideIcon;
+  tone: FilterTone;
+  active: boolean;
+  onPress: () => void;
+}) {
+  const { theme } = useTheme();
+  const s = useThemedStyles(makeStyles);
+  const { colors } = theme;
+
+  const toneTokens =
+    tone === 'info' ? colors.infoTone : tone === 'warning' ? colors.warningTone : tone === 'success' ? colors.successTone : null;
+
+  const activeStyle = active
+    ? toneTokens
+      ? { backgroundColor: toneTokens.bg, borderColor: toneTokens.border }
+      : { backgroundColor: colors.surfaceAlt, borderColor: colors.borderStrong }
+    : null;
+
+  const textColor = active
+    ? toneTokens
+      ? toneTokens.text
+      : colors.accentText
+    : colors.textMuted;
+
+  // The icon keeps its tone's solid colour whether or not the option is active.
+  const iconColor = toneTokens ? toneTokens.solid : colors.accentHi;
+
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      style={[s.filterBtn, activeStyle]}
+      accessibilityRole="button"
+      accessibilityState={{ selected: active }}
+      hitSlop={4}
+    >
+      {Icon ? <Icon size={12} color={iconColor} /> : null}
+      <Text style={[s.filterBtnText, { color: textColor }]}>{label}</Text>
+    </TouchableOpacity>
+  );
+}
 
 export default function ActivCampusHome() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
-  const [timeFilter, setTimeFilter] = useState<TimeFilter>('Today');
-  const [costFilter, setCostFilter] = useState<CostFilter>('All');
+  const { theme } = useTheme();
+  const s = useThemedStyles(makeStyles);
 
-  const isWidestFilter = timeFilter === 'This Week' && costFilter === 'All';
-  const resetFilters = () => {
-    setTimeFilter('This Week');
-    setCostFilter('All');
-  };
-  const goToCreate = () => router.push('/create');
+  const [tab, setTab] = useState<TimeTab>('today');
+  const [search, setSearch] = useState('');
+  const [organiser, setOrganiser] = useState<OrganiserFilter>('All');
+  const [cost, setCost] = useState<CostFilter>('All');
+  const [maxPrice, setMaxPrice] = useState('');
 
   const { memberships } = useFetchUserSocieties(user?.id);
-  const societyIds = memberships.map((m) => m.society_id);
+  const societyIds = useMemo(() => memberships.map((m) => m.society_id), [memberships]);
   const { events, loading: eventsLoading } = useFetchEvents(user?.university_id, societyIds);
   const { participationMap } = useUserParticipations(user?.id);
 
@@ -46,204 +150,453 @@ export default function ActivCampusHome() {
   const { universities } = useFetchUniversities();
   const { refreshing, onRefresh } = useRefreshQueries([qk.events.all, qk.societies.all]);
 
+  const eventIds = useMemo(() => events.map((e) => e.id), [events]);
+  const { countFor: friendsAttendingFor } = useFriendsAttendingCounts(eventIds);
+
+  // Names are nullable in the DB; drop the nulls rather than render "null".
   const societyNameMap = useMemo(
-    () => new Map(societies.map((s) => [s.id, s.name])),
+    () =>
+      new Map(
+        societies.flatMap((soc) => (soc.name ? [[soc.id, soc.name] as [string, string]] : [])),
+      ),
     [societies],
   );
   const universityNameMap = useMemo(
-    () => new Map(universities.map((u) => [u.id, u.name])),
+    () =>
+      new Map(universities.flatMap((u) => (u.name ? [[u.id, u.name] as [string, string]] : []))),
     [universities],
   );
 
-  const now = new Date();
-  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const endOfToday = new Date(startOfToday.getTime() + 24 * 60 * 60 * 1000);
-  const endOfWeek = new Date(startOfToday.getTime() + 7 * 24 * 60 * 60 * 1000);
+  const goToCreate = () => router.push('/create');
 
-  const isHappeningNow = (e: Event) =>
-    new Date(e.start_date) <= now && new Date(e.end_date) >= now;
+  /** Search + organiser + cost, applied before the time bucketing. */
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    const priceCap = maxPrice.trim() ? Number(maxPrice) : null;
 
-  const matchesTimeFilter = (e: Event): boolean => {
-    const start = new Date(e.start_date);
-    if (timeFilter === 'Now') return isHappeningNow(e);
-    if (timeFilter === 'Today') return (start >= startOfToday && start < endOfToday) || isHappeningNow(e);
-    return (start >= startOfToday && start < endOfWeek) || isHappeningNow(e);
+    return events.filter((e) => {
+      if (q) {
+        const societyName = e.society_id ? societyNameMap.get(e.society_id) ?? '' : '';
+        const universityName = e.university_id ? universityNameMap.get(e.university_id) ?? '' : '';
+        const haystack = [e.name, e.address ?? '', societyName, universityName]
+          .join(' ')
+          .toLowerCase();
+        if (!haystack.includes(q)) return false;
+      }
+
+      if (organiser !== 'All' && getClassification(e) !== organiser) return false;
+
+      const isFree = e.booking_mode === EventBookingMode.FREE;
+      if (cost === 'Free' && !isFree) return false;
+      if (cost === 'Paid') {
+        if (isFree) return false;
+        if (priceCap !== null && !Number.isNaN(priceCap) && (e.price_from ?? 0) > priceCap) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }, [events, search, organiser, cost, maxPrice, societyNameMap, universityNameMap]);
+
+  /**
+   * Buckets for the active tab.
+   *
+   * There is no separate "Now" tab in the redesign — Happening Now is a section
+   * *inside* Today, alongside Starting Soon (next 2h) and Later Today. This Week
+   * groups by day so the SectionList can pin one sticky header per date.
+   */
+  const sections = useMemo<Section[]>(() => {
+    const now = Date.now();
+    const today = startOfDay(new Date());
+
+    const isLive = (e: EventWithCounts) =>
+      new Date(e.start_date).getTime() <= now && new Date(e.end_date).getTime() >= now;
+    const startsOn = (e: EventWithCounts, dayStart: number) =>
+      startOfDay(new Date(e.start_date)) === dayStart;
+    const byStart = (a: EventWithCounts, b: EventWithCounts) =>
+      new Date(a.start_date).getTime() - new Date(b.start_date).getTime();
+
+    if (tab === 'today') {
+      // A long-running event that began yesterday still counts as on today.
+      const todays = filtered.filter((e) => startsOn(e, today) || isLive(e));
+
+      const happeningNow = todays.filter(isLive).sort(byStart);
+      const startingSoon = todays
+        .filter((e) => {
+          const start = new Date(e.start_date).getTime();
+          return !isLive(e) && start > now && start - now <= SOON_MS;
+        })
+        .sort(byStart);
+      const laterToday = todays
+        .filter((e) => {
+          const start = new Date(e.start_date).getTime();
+          return !isLive(e) && start - now > SOON_MS;
+        })
+        .sort(byStart);
+
+      const all: Section[] = [
+        { title: 'Happening Now', tone: 'accent', data: happeningNow },
+        { title: 'Starting Soon', tone: 'warning', data: startingSoon },
+        { title: 'Later Today', data: laterToday },
+      ];
+      return all.filter((sec) => sec.data.length > 0);
+    }
+
+    if (tab === 'tomorrow') {
+      const data = filtered.filter((e) => startsOn(e, today + ONE_DAY)).sort(byStart);
+      return data.length ? [{ title: 'Tomorrow', data }] : [];
+    }
+
+    const weekEnd = today + 7 * ONE_DAY;
+    const upcoming = filtered
+      .filter((e) => {
+        const start = startOfDay(new Date(e.start_date));
+        return start >= today && start < weekEnd;
+      })
+      .sort(byStart);
+
+    const byDay = new Map<number, EventWithCounts[]>();
+    for (const e of upcoming) {
+      const key = startOfDay(new Date(e.start_date));
+      const list = byDay.get(key);
+      if (list) list.push(e);
+      else byDay.set(key, [e]);
+    }
+
+    return [...byDay.entries()]
+      .sort(([a], [b]) => a - b)
+      .map(([dayStart, data]) => ({
+        title:
+          dayStart === today
+            ? 'Today'
+            : dayStart === today + ONE_DAY
+            ? 'Tomorrow'
+            : new Date(dayStart).toLocaleDateString('en-GB', {
+                weekday: 'long',
+                day: 'numeric',
+                month: 'short',
+              }),
+        data,
+      }));
+  }, [filtered, tab]);
+
+  const resetAll = () => {
+    setSearch('');
+    setOrganiser('All');
+    setCost('All');
+    setMaxPrice('');
   };
 
-  const matchesCostFilter = (e: Event): boolean => {
-    if (costFilter === 'All') return true;
-    if (costFilter === 'Free') return e.booking_mode === EventBookingMode.FREE;
-    return e.booking_mode === EventBookingMode.TICKETED;
-  };
-
-  const nowEvents = events.filter(isHappeningNow);
-  const filteredEvents = events.filter((e) => {
-    if (!matchesCostFilter(e)) return false;
-    if (timeFilter === 'Now') return isHappeningNow(e);
-    return matchesTimeFilter(e) && !isHappeningNow(e);
-  });
+  /** One removable chip per active filter, per AC-10. */
+  const activeChips = useMemo<FilterChip[]>(() => {
+    const chips: FilterChip[] = [];
+    if (search.trim()) {
+      chips.push({ id: 'search', label: `“${search.trim()}”`, onRemove: () => setSearch('') });
+    }
+    if (organiser !== 'All') {
+      chips.push({ id: 'organiser', label: organiser, onRemove: () => setOrganiser('All') });
+    }
+    if (cost !== 'All') {
+      chips.push({
+        id: 'cost',
+        label: cost === 'Paid' && maxPrice.trim() ? `Paid · ≤£${maxPrice.trim()}` : cost,
+        onRemove: () => {
+          setCost('All');
+          setMaxPrice('');
+        },
+      });
+    }
+    return chips;
+  }, [search, organiser, cost, maxPrice]);
 
   if (authLoading) return <LoadingSpinner />;
 
-    // `edges` omits the top: AC_AppHeader applies the top inset itself.
+  // `edges` omits the top: AC_AppHeader applies the top inset itself.
   return (
-    <SafeAreaView style={styles.container} edges={['left', 'right']}>
+    <SafeAreaView style={s.container} edges={['left', 'right']}>
       <AC_AppHeader />
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.greeting}>Hey {user?.first_name || 'there'},</Text>
-          <Text style={styles.subtitle}>What's on today?</Text>
+
+      <View style={s.controls}>
+        <SegmentedTabs tabs={TABS} activeTab={tab} onTabChange={setTab} />
+
+        <View style={s.searchBar}>
+          <Search size={16} color={theme.colors.textMuted} />
+          <TextInput
+            style={s.searchInput}
+            value={search}
+            onChangeText={setSearch}
+            placeholder="Search activities, places, societies"
+            placeholderTextColor={theme.colors.textFaint}
+            returnKeyType="search"
+            autoCorrect={false}
+          />
+          {search.length > 0 && (
+            <TouchableOpacity onPress={() => setSearch('')} hitSlop={8}>
+              <X size={16} color={theme.colors.textMuted} />
+            </TouchableOpacity>
+          )}
         </View>
+
+        {/* Organiser and Cost share one panel, as in the reference. */}
+        <View style={s.filterPanel}>
+          {/* Label stays pinned; only the options scroll. */}
+          <View style={s.filterGroup}>
+            <Text style={s.filterGroupLabel}>Organiser:</Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={s.filterGroupScroll}
+            >
+              {ORGANISER_OPTIONS.map((opt) => (
+                <FilterButton
+                  key={opt.value}
+                  label={opt.label}
+                  icon={opt.icon}
+                  tone={opt.tone}
+                  active={organiser === opt.value}
+                  onPress={() => setOrganiser(opt.value)}
+                />
+              ))}
+            </ScrollView>
+          </View>
+
+          <View style={s.filterGroup}>
+            <Text style={s.filterGroupLabel}>Cost:</Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              contentContainerStyle={s.filterGroupScroll}
+            >
+              {COST_OPTIONS.map((opt) => (
+                <FilterButton
+                  key={opt.value}
+                  label={opt.label}
+                  tone={opt.tone}
+                  active={cost === opt.value}
+                  onPress={() => setCost(opt.value)}
+                />
+              ))}
+              {cost === 'Paid' && (
+                <View style={s.maxPriceWrap}>
+                  <Text style={s.maxPriceLabel}>≤ £</Text>
+                  <TextInput
+                    style={s.maxPriceInput}
+                    value={maxPrice}
+                    onChangeText={setMaxPrice}
+                    placeholder="20"
+                    placeholderTextColor={theme.colors.textFaint}
+                    keyboardType="number-pad"
+                    maxLength={5}
+                  />
+                </View>
+              )}
+            </ScrollView>
+          </View>
+        </View>
+
+        {SHOW_CATEGORY_STRIP && <View />}
+
+        {activeChips.length > 0 && (
+          <FilterChipRow chips={activeChips} onReset={resetAll} showReset style={s.activeChips} />
+        )}
       </View>
 
-      <ScrollView
-        style={styles.content}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} />
-        }
-      >
-
-        {/* Filters */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.filterRow}
-          contentContainerStyle={styles.filterRowContent}
-        >
-          {(['Now', 'Today', 'This Week'] as TimeFilter[]).map((f) => (
-            <TouchableOpacity
-              key={f}
-              style={[styles.filterChip, timeFilter === f && styles.filterChipActive]}
-              onPress={() => setTimeFilter(f)}
-            >
-              <Text style={[styles.filterChipText, timeFilter === f && styles.filterChipTextActive]}>{f}</Text>
-            </TouchableOpacity>
-          ))}
-          <View style={styles.filterDivider} />
-          {(['All', 'Free', 'Paid'] as CostFilter[]).map((f) => (
-            <TouchableOpacity
-              key={f}
-              style={[styles.filterChip, costFilter === f && styles.filterChipActive]}
-              onPress={() => setCostFilter(f)}
-            >
-              <Text style={[styles.filterChipText, costFilter === f && styles.filterChipTextActive]}>{f}</Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-
-        {eventsLoading ? (
-          <View style={styles.loadingContainer}>
-            <LoadingSpinner />
-          </View>
-        ) : (
-          <>
-            {/* Happening Now */}
-            {timeFilter !== 'Now' && nowEvents.length > 0 && (
-              <View style={styles.section}>
-                <View style={styles.sectionHeader}>
-                  <View style={styles.nowBadge}>
-                    <View style={styles.nowDot} />
-                    <Text style={styles.sectionTitle}>Happening Now</Text>
-                  </View>
-                  <ChevronRight size={20} color={colors.textMuted} />
-                </View>
-                {nowEvents.map((event) => (
-                  <EventCard
-                    key={event.id}
-                    event={event}
-                    societyNameMap={societyNameMap}
-                    universityNameMap={universityNameMap}
-                    participantStatus={participationMap.get(event.id) ?? null}
-                  />
-                ))}
-              </View>
-            )}
-
-            {/* Main feed */}
-            <View style={styles.section}>
-              <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>
-                  {timeFilter === 'Now' ? 'Right Now' : timeFilter === 'Today' ? 'Today' : 'This Week'}
-                </Text>
-                <Text style={styles.resultCount}>{filteredEvents.length} activities</Text>
-              </View>
-              {filteredEvents.length === 0 ? (
-                <EmptyState
-                  emoji="🔍"
-                  title={isWidestFilter ? 'No activities yet' : 'No activities match your filters'}
-                  subtitle={
-                    isWidestFilter
-                      ? "There's nothing on right now — kick things off by creating one."
-                      : 'Try widening your filters to see everything happening this week, or start something of your own.'
-                  }
-                  primaryAction={
-                    isWidestFilter
-                      ? { label: 'Create an activity', onPress: goToCreate, leftIcon: Plus }
-                      : { label: 'View all this week', onPress: resetFilters, leftIcon: Sparkles }
-                  }
-                  secondaryAction={
-                    isWidestFilter
-                      ? undefined
-                      : { label: 'Create an activity', onPress: goToCreate, leftIcon: Plus }
-                  }
-                />
-              ) : (
-                filteredEvents.map((event) => (
-                  <EventCard
-                    key={event.id}
-                    event={event}
-                    societyNameMap={societyNameMap}
-                    universityNameMap={universityNameMap}
-                    participantStatus={participationMap.get(event.id) ?? null}
-                  />
-                ))
-              )}
+      {eventsLoading ? (
+        <View style={s.loadingContainer}>
+          <LoadingSpinner />
+        </View>
+      ) : (
+        <SectionList
+          sections={sections}
+          keyExtractor={(item) => item.id}
+          stickySectionHeadersEnabled
+          contentContainerStyle={s.listContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={theme.colors.accent}
+            />
+          }
+          renderSectionHeader={({ section }) => (
+            <View style={s.sectionHeaderWrap}>
+              <SectionHeader
+                title={section.title}
+                tone={
+                  section.tone === 'accent'
+                    ? theme.colors.accentTone
+                    : section.tone === 'warning'
+                    ? theme.colors.warningTone
+                    : undefined
+                }
+                icon={
+                  section.tone === 'accent'
+                    ? Zap
+                    : section.tone === 'warning'
+                    ? Clock
+                    : CalendarDays
+                }
+                trailing={String(section.data.length)}
+              />
             </View>
-          </>
-        )}
-
-        <View style={{ height: 32 }} />
-      </ScrollView>
+          )}
+          renderItem={({ item }) => (
+            <EventCard
+              event={item}
+              societyNameMap={societyNameMap}
+              universityNameMap={universityNameMap}
+              participantStatus={participationMap.get(item.id) ?? null}
+              goingCount={item.going_count}
+              friendsAttendingCount={friendsAttendingFor(item.id)}
+            />
+          )}
+          ListEmptyComponent={
+            <EmptyState
+              emoji="🔍"
+              title={
+                activeChips.length > 0
+                  ? 'No activities match your filters'
+                  : tab === 'today'
+                  ? 'Nothing on today'
+                  : tab === 'tomorrow'
+                  ? 'Nothing on tomorrow'
+                  : 'Nothing on this week'
+              }
+              subtitle={
+                activeChips.length > 0
+                  ? 'Try widening your filters, or start something of your own.'
+                  : "There's nothing here yet — kick something off and bring people together."
+              }
+              primaryAction={
+                activeChips.length > 0
+                  ? { label: 'Reset all filters', onPress: resetAll }
+                  : { label: 'Create an activity', onPress: goToCreate }
+              }
+            />
+          }
+        />
+      )}
     </SafeAreaView>
   );
 }
 
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.canvas },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  greeting: { fontSize: 16, color: colors.textMuted },
-  subtitle: { fontSize: 22, fontWeight: '700', color: colors.textPrimary },
-  headerActions: { flexDirection: 'row', gap: 12 },
-  iconButton: { padding: 8, borderRadius: 12, backgroundColor: colors.canvas },
-  content: { flex: 1 },
-  filterRow: { backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border },
-  filterRowContent: { paddingHorizontal: 16, paddingVertical: 12, gap: 8, alignItems: 'center' },
-  filterChip: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 16, backgroundColor: colors.surfaceAlt },
-  filterChipActive: { backgroundColor: colors.accent },
-  filterChipText: { fontSize: 13, fontWeight: '600', color: colors.textBody },
-  filterChipTextActive: { color: colors.textOnAccent },
-  filterDivider: { width: 1, height: 20, backgroundColor: colors.surfaceAlt, marginHorizontal: 4 },
-  loadingContainer: { paddingTop: 60 },
-  section: { paddingHorizontal: 20, marginTop: 20 },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  sectionTitle: { fontSize: 18, fontWeight: '700', color: colors.textPrimary },
-  resultCount: { fontSize: 13, color: colors.textMuted },
-  nowBadge: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  nowDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.successTone.text },
-});
+const makeStyles = (t: Theme) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: t.colors.canvas,
+    },
+    controls: {
+      paddingHorizontal: t.spacing.lg,
+      paddingTop: t.spacing.md,
+      gap: t.spacing.sm,
+    },
+    searchBar: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: t.spacing.sm,
+      paddingHorizontal: t.spacing.md,
+      height: 42,
+      borderRadius: t.radius.chip,
+      backgroundColor: t.colors.surfaceAlt,
+      borderWidth: 1,
+      borderColor: t.colors.border,
+    },
+    searchInput: {
+      flex: 1,
+      ...t.typography.body,
+      color: t.colors.textPrimary,
+      // Android adds vertical padding that misaligns the row.
+      paddingVertical: 0,
+    },
+    // Both filter groups live in one panel — bg-slate-900/60, rounded-2xl,
+    // border-slate-800 in the reference.
+    filterPanel: {
+      // Groups stack; each one scrolls horizontally rather than wrapping, so a
+      // filter row is always exactly one line tall.
+      gap: t.spacing.sm,
+      padding: 10,
+      borderRadius: t.radius.card,
+      backgroundColor: t.colors.surface,
+      borderWidth: 1,
+      borderColor: t.colors.border,
+    },
+    filterGroup: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+    },
+    filterGroupScroll: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      // Keeps the last option clear of the panel's rounded edge.
+      paddingRight: t.spacing.sm,
+    },
+    filterGroupLabel: {
+      ...t.typography.microLabel,
+      fontSize: 11,
+      color: t.colors.textMuted,
+    },
+    filterBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      paddingHorizontal: t.spacing.sm,
+      paddingVertical: 4,
+      borderRadius: t.radius.sm,
+      // Inactive is bare text; the border only appears when selected.
+      borderWidth: 1,
+      borderColor: 'transparent',
+    },
+    filterBtnText: {
+      ...t.typography.badge,
+      fontSize: 11,
+    },
+    maxPriceWrap: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 2,
+      paddingHorizontal: t.spacing.sm,
+      borderRadius: t.radius.pill,
+      backgroundColor: t.colors.surfaceAlt,
+      borderWidth: 1,
+      borderColor: t.colors.border,
+    },
+    maxPriceLabel: {
+      ...t.typography.caption,
+      fontSize: 12,
+      color: t.colors.textMuted,
+    },
+    maxPriceInput: {
+      minWidth: 40,
+      ...t.typography.caption,
+      fontSize: 12,
+      color: t.colors.textPrimary,
+      paddingVertical: 6,
+    },
+    activeChips: {
+      marginTop: t.spacing.xs,
+    },
+    loadingContainer: {
+      flex: 1,
+      justifyContent: 'center',
+    },
+    listContent: {
+      paddingHorizontal: t.spacing.lg,
+      // Clears the floating tab bar and its FAB.
+      paddingBottom: t.spacing.xxl * 3,
+      flexGrow: 1,
+    },
+    sectionHeaderWrap: {
+      // Sticky headers scroll over the cards, so they need an opaque backing.
+      backgroundColor: t.colors.canvas,
+      paddingTop: t.spacing.md,
+      paddingBottom: t.spacing.sm,
+    },
+  });

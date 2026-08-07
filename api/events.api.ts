@@ -1,4 +1,4 @@
-import { Event, CreateEventForm, EventImageType, EventParticipant, EventParticipantStatus, EventJoinPolicy } from '@/types/event'
+import { Event, CreateEventForm, EventImageType, EventParticipant, EventParticipantStatus, EventJoinPolicy, EventWithCounts } from '@/types/event'
 import { SocietyRoleIdEnum } from '@/types/societies'
 import { UniversityRole } from '@/types/universities'
 import { supabase } from './supabase'
@@ -192,7 +192,7 @@ export const updateEvent = async (
 export const fetchEvents = async (
   universityId?: string | null,
   societyIds?: string[],
-): Promise<Event[]> => {
+): Promise<EventWithCounts[]> => {
   try {
     const now = new Date().toISOString()
 
@@ -200,9 +200,14 @@ export const fetchEvents = async (
     if (universityId) visibilityFilter.push('UNIVERSITY_ONLY')
     if (societyIds && societyIds.length > 0) visibilityFilter.push('SOCIETY_ONLY')
 
+    // `event_participants(count)` is a PostgREST aggregate — one query for every
+    // event's confirmed headcount, rather than a request per card. The
+    // `status` filter applies to the embedded rows, so it narrows the count
+    // without dropping events that nobody has joined.
     const { data, error } = await supabase
       .from('events')
-      .select('*')
+      .select('*, event_participants(count)')
+      .eq('event_participants.status', EventParticipantStatus.GOING)
       .eq('is_cancelled', false)
       .gte('end_date', now)
       .in('visibility', visibilityFilter)
@@ -213,13 +218,20 @@ export const fetchEvents = async (
     }
 
     const memberSocietySet = new Set(societyIds ?? [])
-    const filtered = (data ?? []).filter((e: Event) => {
-      if (e.visibility === 'UNIVERSITY_ONLY') return e.university_id === universityId
-      if (e.visibility === 'SOCIETY_ONLY') return e.society_id != null && memberSocietySet.has(e.society_id)
-      return true
-    }) as Event[]
+    type Row = Event & { event_participants?: { count: number }[] }
 
-    return filtered
+    return ((data ?? []) as Row[])
+      .filter((e) => {
+        if (e.visibility === 'UNIVERSITY_ONLY') return e.university_id === universityId
+        if (e.visibility === 'SOCIETY_ONLY')
+          return e.society_id != null && memberSocietySet.has(e.society_id)
+        return true
+      })
+      .map(({ event_participants, ...event }) => ({
+        ...(event as Event),
+        // An event with no participants embeds an empty array, not a zero row.
+        going_count: event_participants?.[0]?.count ?? 0,
+      }))
   } catch (error: any) {
     console.error('[fetchEvents] caught error:', error.message)
     throw new Error(error.message)
