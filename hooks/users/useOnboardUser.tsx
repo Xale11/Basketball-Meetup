@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { OnboardingStatus, OnboardingUserForm, User } from "@/types/user";
 import { createUser } from "@/api/users.api";
 import { useAuth } from "@/hooks/useAuth";
@@ -24,6 +24,7 @@ type UseOnboardUserReturn = {
 
 export default function useOnboardUser(): UseOnboardUserReturn {
   const { session } = useAuth();
+  const queryClient = useQueryClient();
 
   const mutation = useMutation({
     mutationFn: async ({ form, photoUri }: OnboardUserArgs) => {
@@ -89,6 +90,15 @@ export default function useOnboardUser(): UseOnboardUserReturn {
 
       console.log(`[useOnboardUser] onboarding done (userId=${updatedUser?.id})`);
       return updatedUser;
+    },
+    onSuccess: (createdUser) => {
+      // The onboarding route guard reads this query. Seed it directly so the
+      // guard releases immediately, then invalidate to reconcile with the
+      // server. Without this the user is stuck on the onboarding screen.
+      if (createdUser?.id) {
+        queryClient.setQueryData(["userFetchById", createdUser.id], createdUser);
+      }
+      queryClient.invalidateQueries({ queryKey: ["userFetchById"] });
     },
   });
 

@@ -37,13 +37,12 @@ export default function RegisterScreen() {
 
     try {
       const session = await signUpWithEmail(email, password, name);
-      
-      if (session) {
-        router.replace('/(tabs)');
-      } else if (!session) {
+
+      // A session means the account is active — the route guard in
+      // app/_layout.tsx takes over from here. No session means Supabase is
+      // waiting on email confirmation.
+      if (!session) {
         router.replace('/auth/checkEmail');
-      } else {
-        setError('Failed to create account. Please try again.');
       }
     } catch (err) {
       setError('Failed to create account. Please try again.');

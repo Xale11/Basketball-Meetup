@@ -1,22 +1,34 @@
 import { User } from "@/types/user"
 import { supabase } from "./supabase"
 
-export const getUserById = async (id: string | undefined | null): Promise<User> => {
-    try {
-        if (!id) throw new Error("No Id provided to fetch user - Function: getUserById")
-        const { data, error } = await supabase
-            .from("profiles")
-            .select("*")
-            .eq("id", id)
-            .maybeSingle()
-        console.log('getUserById data:', data)
-        if (error) {
-            throw new Error(JSON.stringify(error))
-        }
-        return data as User
-    } catch (error: any) {
+/**
+ * Returns the profile row for `id`, or `null` when the user has no profile yet
+ * (i.e. they have an auth account but have not onboarded).
+ *
+ * "No row" is a normal, expected state and is NOT an error — returning null
+ * rather than throwing is what lets callers tell it apart from a network
+ * failure or an RLS denial, which must stay errors.
+ */
+export const getUserById = async (id: string | undefined | null): Promise<User | null> => {
+    if (!id) throw new Error("No Id provided to fetch user - Function: getUserById")
+
+    const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", id)
+        .maybeSingle()
+
+    if (error) {
+        console.error("[users.api] getUserById failed:", {
+            message: error.message,
+            code: error.code,
+            details: error.details,
+            hint: error.hint,
+        })
         throw new Error(error.message)
     }
+
+    return (data as User) ?? null
 }
 
 export const createUser = async (user: Partial<User>): Promise<User> => {

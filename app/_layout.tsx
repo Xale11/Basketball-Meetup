@@ -1,7 +1,5 @@
-import { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { router } from 'expo-router';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 import { useAuth } from '@/hooks/useAuth';
 import { useFonts } from 'expo-font';
@@ -12,42 +10,50 @@ import {
   Inter_700Bold,
 } from '@expo-google-fonts/inter';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
-import { auth } from '@/api/firebase';
-import {
-  QueryClient,
-  QueryClientProvider,
-} from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from '@/providers/AuthProvider';
 
 const queryClient = new QueryClient();
 
 function AppNavigator({ fontsLoaded }: { fontsLoaded: boolean }) {
-  const { user, loading, session } = useAuth();
+  const { session, initialising, profileLoaded, needsOnboarding } = useAuth();
 
-  useEffect(() => {
-    if (!loading && fontsLoaded) {
-      if (session) {
-        console.log(auth.currentUser);
-        router.push('/(tabs)');
-      } else {
-        console.log('User is not authenticated');
-        router.replace('/auth/login');
-      }
-    }
-  }, [user, loading, fontsLoaded]);
-
-  if (!fontsLoaded || loading) {
+  // Only two conditions may replace the whole tree, and both are one-shot:
+  // fonts loading, and the cold-start session/profile resolve. Neither flips
+  // back to true later, so background refetches can no longer unmount the app.
+  if (!fontsLoaded || initialising) {
+    return <LoadingSpinner />;
+  }
+  if (session && !profileLoaded) {
     return <LoadingSpinner />;
   }
 
+  const signedIn = !!session;
+
+  // Route protection is declarative: expo-router keeps unavailable groups out of
+  // the navigation state and falls back to the first available screen. There are
+  // no imperative router calls here — mixing the two is what produced the random
+  // redirects (an effect keyed on `user` re-ran on every profile refetch).
   return (
     <>
       <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="auth" />
-        <Stack.Screen name="event" />
-        <Stack.Screen name="user" />
-        <Stack.Screen name="friends" />
+        <Stack.Protected guard={signedIn && !needsOnboarding}>
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="event" />
+          <Stack.Screen name="user" />
+          <Stack.Screen name="friends" />
+          <Stack.Screen name="club" />
+          <Stack.Screen name="society" />
+        </Stack.Protected>
+
+        <Stack.Protected guard={signedIn && needsOnboarding}>
+          <Stack.Screen name="onboarding" />
+        </Stack.Protected>
+
+        <Stack.Protected guard={!signedIn}>
+          <Stack.Screen name="auth" />
+        </Stack.Protected>
+
         <Stack.Screen name="+not-found" />
       </Stack>
       <StatusBar style="dark" />

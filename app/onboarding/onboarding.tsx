@@ -106,7 +106,8 @@ export default function OnboardingScreen() {
         photoUri: photoUri ?? undefined,
       });
 
-      router.replace('/(tabs)');
+      // No navigation here — once the profile row exists the route guard in
+      // app/_layout.tsx releases the onboarding group and swaps to the app.
     } catch (e) {
       setError('Something went wrong while saving your profile. Please try again.');
     } finally {

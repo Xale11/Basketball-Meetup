@@ -1,11 +1,10 @@
 import { View, Text, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState } from 'react';
-import { Link, router } from 'expo-router';
+import { Link } from 'expo-router';
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react-native';
 import { useAuth } from '@/hooks/useAuth';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
-import { auth } from '@/api/firebase';
 import { Button } from '@/components/ui/Button';
 import { TextInputField } from '@/components/ui/TextInputField';
 import { FormAlert } from '@/components/ui/FormAlert';
@@ -25,7 +24,8 @@ export default function LoginScreen() {
 
     try {
       await signInWithEmail(email, password);
-      router.replace('/(tabs)');
+      // No navigation here — the route guard in app/_layout.tsx swaps to the app
+      // as soon as the session lands.
     } catch (err) {
       setError('Invalid email or password');
     }
