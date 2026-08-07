@@ -1,4 +1,5 @@
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
+import { theme } from '@/constants/theme';
 import { SafeAreaView } from 'react-native-safe-area-context';
 // Search and Bell moved into AC_AppHeader.
 import { ChevronRight, Plus, Sparkles } from 'lucide-react-native';
@@ -17,6 +18,8 @@ import { EventCard } from '@/components/events/EventCard';
 import { useRefreshQueries } from '@/hooks/useRefreshQueries';
 import { qk } from '@/lib/queryKeys';
 import { AC_AppHeader } from '@/components/activCampus/AC_AppHeader';
+
+const { colors } = theme;
 
 type TimeFilter = 'Now' | 'Today' | 'This Week';
 type CostFilter = 'All' | 'Free' | 'Paid';
@@ -97,7 +100,7 @@ export default function ActivCampusHome() {
         style={styles.content}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FF6B35" />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} />
         }
       >
 
@@ -143,7 +146,7 @@ export default function ActivCampusHome() {
                     <View style={styles.nowDot} />
                     <Text style={styles.sectionTitle}>Happening Now</Text>
                   </View>
-                  <ChevronRight size={20} color="#666" />
+                  <ChevronRight size={20} color={colors.textMuted} />
                 </View>
                 {nowEvents.map((event) => (
                   <EventCard
@@ -208,29 +211,29 @@ export default function ActivCampusHome() {
 
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8F9FA' },
+  container: { flex: 1, backgroundColor: colors.canvas },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: colors.border,
   },
-  greeting: { fontSize: 16, color: '#666' },
-  subtitle: { fontSize: 22, fontWeight: '700', color: '#1A1A1A' },
+  greeting: { fontSize: 16, color: colors.textMuted },
+  subtitle: { fontSize: 22, fontWeight: '700', color: colors.textPrimary },
   headerActions: { flexDirection: 'row', gap: 12 },
-  iconButton: { padding: 8, borderRadius: 12, backgroundColor: '#F8F9FA' },
+  iconButton: { padding: 8, borderRadius: 12, backgroundColor: colors.canvas },
   content: { flex: 1 },
-  filterRow: { backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#F0F0F0' },
+  filterRow: { backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border },
   filterRowContent: { paddingHorizontal: 16, paddingVertical: 12, gap: 8, alignItems: 'center' },
-  filterChip: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 16, backgroundColor: '#F0F0F0' },
-  filterChipActive: { backgroundColor: '#FF6B35' },
-  filterChipText: { fontSize: 13, fontWeight: '600', color: '#555' },
-  filterChipTextActive: { color: '#FFFFFF' },
-  filterDivider: { width: 1, height: 20, backgroundColor: '#E0E0E0', marginHorizontal: 4 },
+  filterChip: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 16, backgroundColor: colors.surfaceAlt },
+  filterChipActive: { backgroundColor: colors.accent },
+  filterChipText: { fontSize: 13, fontWeight: '600', color: colors.textBody },
+  filterChipTextActive: { color: colors.textOnAccent },
+  filterDivider: { width: 1, height: 20, backgroundColor: colors.surfaceAlt, marginHorizontal: 4 },
   loadingContainer: { paddingTop: 60 },
   section: { paddingHorizontal: 20, marginTop: 20 },
   sectionHeader: {
@@ -239,8 +242,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 12,
   },
-  sectionTitle: { fontSize: 18, fontWeight: '700', color: '#1A1A1A' },
-  resultCount: { fontSize: 13, color: '#888' },
+  sectionTitle: { fontSize: 18, fontWeight: '700', color: colors.textPrimary },
+  resultCount: { fontSize: 13, color: colors.textMuted },
   nowBadge: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  nowDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#28A745' },
+  nowDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.successTone.text },
 });

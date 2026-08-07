@@ -1,4 +1,5 @@
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, ActivityIndicator, RefreshControl } from 'react-native';
+import { theme } from '@/constants/theme';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Settings, Pencil as Edit, ChevronRight, CreditCard, Bell, Shield, User, Camera, Users, UserPlus, Calendar } from 'lucide-react-native';
 import { router } from 'expo-router';
@@ -20,6 +21,8 @@ import { SectionCard } from '@/components/ui/SectionCard';
 import { useState } from 'react';
 import { useRefreshQueries } from '@/hooks/useRefreshQueries';
 import { qk } from '@/lib/queryKeys';
+
+const { colors } = theme;
 
 export default function ProfileScreen() {
   const { user, session, logout } = useAuth();
@@ -74,7 +77,7 @@ export default function ProfileScreen() {
       <View style={styles.header}>
         <Text style={styles.title}>Profile</Text>
         <TouchableOpacity style={styles.settingsButton}>
-          <Settings size={24} color="#1A1A1A" />
+          <Settings size={24} color={colors.textPrimary} />
         </TouchableOpacity>
       </View>
 
@@ -82,7 +85,7 @@ export default function ProfileScreen() {
         style={styles.content}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FF6B35" />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} />
         }
       >
         {/* Profile Header */}
@@ -95,12 +98,12 @@ export default function ProfileScreen() {
             >
               {user?.photo_url
                 ? <Image source={{ uri: user.photo_url }} style={styles.avatar} />
-                : <View style={styles.avatarPlaceholder}><User size={36} color="#9CA3AF" /></View>
+                : <View style={styles.avatarPlaceholder}><User size={36} color={colors.textMuted} /></View>
               }
               <View style={styles.avatarBadge}>
                 {photoUploading
-                  ? <ActivityIndicator size="small" color="#FFFFFF" />
-                  : <Camera size={14} color="#FFFFFF" />
+                  ? <ActivityIndicator size="small" color={colors.textOnAccent} />
+                  : <Camera size={14} color={colors.textOnAccent} />
                 }
               </View>
             </TouchableOpacity>
@@ -112,7 +115,7 @@ export default function ProfileScreen() {
               </View>
             </View>
             <TouchableOpacity style={styles.editButton} onPress={() => setShowEditModal(true)}>
-              <Edit size={20} color="#FF6B35" />
+              <Edit size={20} color={colors.accent} />
             </TouchableOpacity>
           </View>
         </View>
@@ -141,14 +144,14 @@ export default function ProfileScreen() {
               style={styles.networkBtn}
               onPress={() => router.push('/friends/search')}
             >
-              <UserPlus size={18} color="#FF6B35" />
+              <UserPlus size={18} color={colors.accent} />
               <Text style={styles.networkBtnText}>Find Friends</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.networkBtn, requestCount > 0 && styles.networkBtnBadged]}
               onPress={() => router.push('/friends/requests')}
             >
-              <Users size={18} color={requestCount > 0 ? '#FFFFFF' : '#FF6B35'} />
+              <Users size={18} color={requestCount > 0 ? colors.textOnAccent : colors.accent} />
               <Text style={[styles.networkBtnText, requestCount > 0 && styles.networkBtnTextWhite]}>
                 Requests{requestCount > 0 ? ` · ${requestCount}` : ''}
               </Text>
@@ -166,7 +169,7 @@ export default function ProfileScreen() {
             style={[styles.networkBtn, inviteCount > 0 && styles.networkBtnBadged]}
             onPress={() => router.push('/event/invites')}
           >
-            <Calendar size={18} color={inviteCount > 0 ? '#FFFFFF' : '#FF6B35'} />
+            <Calendar size={18} color={inviteCount > 0 ? colors.textOnAccent : colors.accent} />
             <Text style={[styles.networkBtnText, inviteCount > 0 && styles.networkBtnTextWhite]}>
               Invites{inviteCount > 0 ? ` · ${inviteCount}` : ''}
             </Text>
@@ -202,10 +205,10 @@ export default function ProfileScreen() {
           {menuItems.map((item, index) => (
             <TouchableOpacity key={index} style={styles.menuItem} onPress={item.onPress}>
               <View style={styles.menuItemLeft}>
-                <item.icon size={20} color="#666" />
+                <item.icon size={20} color={colors.textMuted} />
                 <Text style={styles.menuItemText}>{item.label}</Text>
               </View>
-              <ChevronRight size={20} color="#666" />
+              <ChevronRight size={20} color={colors.textMuted} />
             </TouchableOpacity>
           ))}
         </View>
@@ -225,22 +228,22 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8F9FA' },
+  container: { flex: 1, backgroundColor: colors.canvas },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: colors.border,
   },
-  title: { fontSize: 24, fontWeight: '700', color: '#1A1A1A' },
-  settingsButton: { padding: 8, borderRadius: 12, backgroundColor: '#F8F9FA' },
+  title: { fontSize: 24, fontWeight: '700', color: colors.textPrimary },
+  settingsButton: { padding: 8, borderRadius: 12, backgroundColor: colors.canvas },
   content: { flex: 1, paddingHorizontal: 20 },
   profileSection: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     borderRadius: 16,
     padding: 20,
     marginTop: 20,
@@ -257,7 +260,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: colors.surfaceAlt,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -268,31 +271,31 @@ const styles = StyleSheet.create({
     width: 26,
     height: 26,
     borderRadius: 13,
-    backgroundColor: '#FF6B35',
+    backgroundColor: colors.accent,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#FFFFFF',
+    borderColor: colors.surface,
   },
   profileInfo: { flex: 1 },
-  userName: { fontSize: 20, fontWeight: '600', color: '#1A1A1A', marginBottom: 4 },
-  userEmail: { fontSize: 14, color: '#666', marginBottom: 8 },
+  userName: { fontSize: 20, fontWeight: '600', color: colors.textPrimary, marginBottom: 4 },
+  userEmail: { fontSize: 14, color: colors.textMuted, marginBottom: 8 },
   statusBadge: {
-    backgroundColor: '#E8F5E8',
+    backgroundColor: colors.successTone.bg,
     borderRadius: 12,
     paddingHorizontal: 8,
     paddingVertical: 4,
     alignSelf: 'flex-start',
   },
-  statusText: { fontSize: 12, fontWeight: '600', color: '#28A745' },
-  editButton: { padding: 8, borderRadius: 12, backgroundColor: '#FFF4F0' },
+  statusText: { fontSize: 12, fontWeight: '600', color: colors.successTone.text },
+  editButton: { padding: 8, borderRadius: 12, backgroundColor: colors.warningTone.bg },
   sectionCardSpacing: {
     marginTop: 20,
   },
-  sectionTitle: { fontSize: 18, fontWeight: '600', color: '#1A1A1A', marginBottom: 16 },
-  helperText: { fontSize: 14, color: '#666', marginTop: 4 },
+  sectionTitle: { fontSize: 18, fontWeight: '600', color: colors.textPrimary, marginBottom: 16 },
+  helperText: { fontSize: 14, color: colors.textMuted, marginTop: 4 },
   societyCard: {
-    backgroundColor: '#F8F9FA',
+    backgroundColor: colors.canvas,
     borderRadius: 12,
     padding: 14,
     marginBottom: 10,
@@ -305,16 +308,16 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#FF6B35',
+    backgroundColor: colors.accent,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
   },
-  societyInitial: { fontSize: 16, fontWeight: '600', color: '#FFFFFF' },
-  societyName: { fontSize: 16, fontWeight: '600', color: '#1A1A1A' },
-  societyRole: { fontSize: 14, color: '#666' },
+  societyInitial: { fontSize: 16, fontWeight: '600', color: colors.textOnAccent },
+  societyName: { fontSize: 16, fontWeight: '600', color: colors.textPrimary },
+  societyRole: { fontSize: 14, color: colors.textMuted },
   menuSection: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     borderRadius: 16,
     marginTop: 20,
     shadowColor: '#000',
@@ -330,10 +333,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: colors.border,
   },
   menuItemLeft: { flexDirection: 'row', alignItems: 'center' },
-  menuItemText: { fontSize: 16, color: '#1A1A1A', marginLeft: 12 },
+  menuItemText: { fontSize: 16, color: colors.textPrimary, marginLeft: 12 },
   logoutButton: {
     marginTop: 20,
     marginBottom: 40,
@@ -344,7 +347,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 14,
   },
-  friendCount: { fontSize: 14, color: '#888' },
+  friendCount: { fontSize: 14, color: colors.textMuted },
   networkButtons: { flexDirection: 'row', gap: 10 },
   networkBtn: {
     flex: 1,
@@ -354,14 +357,14 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingVertical: 10,
     borderRadius: 12,
-    backgroundColor: '#FFF4EE',
+    backgroundColor: colors.warningTone.bg,
     borderWidth: 1,
-    borderColor: '#FFE0D1',
+    borderColor: colors.warningTone.border,
   },
   networkBtnBadged: {
-    backgroundColor: '#FF6B35',
-    borderColor: '#FF6B35',
+    backgroundColor: colors.accent,
+    borderColor: colors.accent,
   },
-  networkBtnText: { fontSize: 14, fontWeight: '600', color: '#FF6B35' },
-  networkBtnTextWhite: { color: '#FFFFFF' },
+  networkBtnText: { fontSize: 14, fontWeight: '600', color: colors.accent },
+  networkBtnTextWhite: { color: colors.textOnAccent },
 });

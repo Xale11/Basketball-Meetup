@@ -32,6 +32,10 @@ import { PillSelector } from '@/components/ui/PillSelector';
 import { Button } from '@/components/ui/Button';
 import { TextInputField } from '@/components/ui/TextInputField';
 
+import { theme } from '@/constants/theme';
+
+const { colors } = theme;
+
 const VISIBILITY_OPTIONS = [
   { label: 'Public',          description: 'Everyone can see this',        value: EventVisibility.PUBLIC,          icon: Globe },
   { label: 'Society Only',    description: 'Society members only',         value: EventVisibility.SOCIETY_ONLY,    icon: Users },
@@ -242,20 +246,20 @@ export default function CreateScreen() {
                     longitude: val ? null : p.longitude,
                   }))
                 }
-                trackColor={{ false: '#E9ECEF', true: '#FF6B35' }}
-                thumbColor="#FFFFFF"
+                trackColor={{ false: colors.surfaceAlt, true: colors.accent }}
+                thumbColor={colors.textPrimary}
               />
             </View>
           </View>
           {!form.is_online && (
             <View style={[styles.addressInputWrapper, formErrors.address ? styles.inputError : null]}>
-              <MapPin size={18} color="#666" style={{ marginTop: 14 }} />
+              <MapPin size={18} color={colors.textMuted} style={{ marginTop: 14 }} />
               <GooglePlacesAutocomplete
                 placeholder="Search for a venue or address"
                 debounce={300}
                 fetchDetails={true}
                 {...placesRequest}
-                textInputProps={{ placeholderTextColor: '#999' }}
+                textInputProps={{ placeholderTextColor: colors.textFaint }}
                 query={{
                   language: 'en',
                 }}
@@ -264,7 +268,7 @@ export default function CreateScreen() {
                 styles={{
                   textInput: styles.googleInput,
                   container: { flex: 1 },
-                  listView: { backgroundColor: '#FFFFFF', borderRadius: 8 },
+                  listView: { backgroundColor: colors.surface, borderRadius: 8 },
                 }}
               />
             </View>
@@ -367,8 +371,8 @@ export default function CreateScreen() {
                 if (!val) setForm((p) => ({ ...p, max_participants: null }));
                 else setForm((p) => ({ ...p, max_participants: 10 }));
               }}
-              trackColor={{ true: '#FF6B35' }}
-              thumbColor="#FFFFFF"
+              trackColor={{ true: colors.accent }}
+              thumbColor={colors.textPrimary}
             />
           </View>
           {hasMaxParticipants && (
@@ -385,7 +389,7 @@ export default function CreateScreen() {
                 <Text style={styles.counterButtonText}>−</Text>
               </TouchableOpacity>
               <View style={styles.counterValueContainer}>
-                <Users size={16} color="#666" />
+                <Users size={16} color={colors.textMuted} />
                 <Text style={styles.counterValue}>{form.max_participants ?? 10}</Text>
               </View>
               <TouchableOpacity
@@ -425,19 +429,19 @@ export default function CreateScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8F9FA' },
+  container: { flex: 1, backgroundColor: colors.canvas },
   header: {
     paddingHorizontal: 20,
     paddingVertical: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: colors.border,
   },
-  title: { fontSize: 24, fontWeight: '700', color: '#1A1A1A' },
+  title: { fontSize: 24, fontWeight: '700', color: colors.textPrimary },
   content: { flex: 1, paddingHorizontal: 20 },
   section: { marginTop: 24 },
-  sectionLabel: { fontSize: 16, fontWeight: '600', color: '#1A1A1A', marginBottom: 4 },
-  sectionSubLabel: { fontSize: 13, color: '#888', marginBottom: 10 },
+  sectionLabel: { fontSize: 16, fontWeight: '600', color: colors.textPrimary, marginBottom: 4 },
+  sectionSubLabel: { fontSize: 13, color: colors.textMuted, marginBottom: 10 },
   sectionLabelRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -445,63 +449,63 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   onlineToggle: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  onlineToggleLabel: { fontSize: 14, color: '#666' },
-  fieldError: { fontSize: 13, color: '#DC3545', marginTop: 4 },
+  onlineToggleLabel: { fontSize: 14, color: colors.textMuted },
+  fieldError: { fontSize: 13, color: colors.dangerTone.text, marginTop: 4 },
   dateTimeRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  dateSeparator: { fontSize: 14, color: '#888' },
+  dateSeparator: { fontSize: 14, color: colors.textMuted },
   addressInputWrapper: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     borderRadius: 12,
     paddingHorizontal: 12,
     borderWidth: 1,
-    borderColor: '#E9ECEF',
+    borderColor: colors.border,
     gap: 8,
   },
   googleInput: {
     backgroundColor: 'transparent',
     fontSize: 16,
-    color: '#1A1A1A',
+    color: colors.textPrimary,
     paddingHorizontal: 0,
     height: 48,
   },
   subSection: { marginTop: 16 },
-  subSectionLabel: { fontSize: 14, fontWeight: '500', color: '#666', marginBottom: 8 },
+  subSectionLabel: { fontSize: 14, fontWeight: '500', color: colors.textMuted, marginBottom: 8 },
   autoPopulatedTag: {
     marginTop: 14,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: '#FFF4F0',
+    backgroundColor: colors.warningTone.bg,
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 8,
     alignSelf: 'flex-start',
   },
-  autoPopulatedLabel: { fontSize: 13, color: '#FF6B35', fontWeight: '600' },
-  autoPopulatedValue: { fontSize: 13, color: '#1A1A1A', fontWeight: '500' },
+  autoPopulatedLabel: { fontSize: 13, color: colors.accent, fontWeight: '600' },
+  autoPopulatedValue: { fontSize: 13, color: colors.textPrimary, fontWeight: '500' },
   counterRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 20,
     marginTop: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     borderRadius: 12,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#E9ECEF',
+    borderColor: colors.border,
   },
   counterButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#F0F0F0',
+    backgroundColor: colors.surfaceAlt,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  counterButtonText: { fontSize: 20, color: '#1A1A1A', fontWeight: '600' },
+  counterButtonText: { fontSize: 20, color: colors.textPrimary, fontWeight: '600' },
   counterValueContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -509,13 +513,13 @@ const styles = StyleSheet.create({
     minWidth: 60,
     justifyContent: 'center',
   },
-  counterValue: { fontSize: 20, fontWeight: '700', color: '#1A1A1A' },
+  counterValue: { fontSize: 20, fontWeight: '700', color: colors.textPrimary },
   bottomPadding: { height: 32 },
   footer: {
     paddingHorizontal: 20,
     paddingVertical: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     borderTopWidth: 1,
-    borderTopColor: '#F0F0F0',
+    borderTopColor: colors.border,
   },
 });

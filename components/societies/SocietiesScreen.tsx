@@ -30,6 +30,10 @@ import { ImagePicker } from '@/components/ImagePicker';
 import { SOCIETY_CATEGORIES } from '@/types/societies';
 import { useCreateSociety } from '@/hooks/societies/useCreateSociety';
 
+import { theme } from '@/constants/theme';
+
+const { colors } = theme;
+
 const CATEGORY_COLORS: Record<string, string> = {
   Arts: '#FFF4E8',
   Tech: '#E8F0FF',
@@ -190,7 +194,7 @@ export default function SocietiesScreen() {
         style={styles.content}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FF6B35" />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} />
         }
       >
 
@@ -203,7 +207,7 @@ export default function SocietiesScreen() {
               </View>
             ) : memberships.length === 0 ? (
               <View style={styles.emptyState}>
-                <Calendar size={48} color="#CCC" />
+                <Calendar size={48} color={colors.textFaint} />
                 <Text style={styles.emptyTitle}>No societies, no events</Text>
                 <Text style={styles.emptyDescription}>
                   Join a society to start seeing their events here
@@ -272,7 +276,7 @@ export default function SocietiesScreen() {
                     </View>
                   ) : filteredEvents.length === 0 ? (
                     <View style={styles.emptyState}>
-                      <Calendar size={40} color="#CCC" />
+                      <Calendar size={40} color={colors.textFaint} />
                       <Text style={styles.emptyTitle}>No upcoming events</Text>
                       <Text style={styles.emptyDescription}>
                         {selectedSocietyFilter
@@ -302,11 +306,11 @@ export default function SocietiesScreen() {
           <View>
             {/* Search input */}
             <View style={styles.searchBox}>
-              <Search size={16} color="#888" />
+              <Search size={16} color={colors.textMuted} />
               <TextInput
                 style={styles.searchInput}
                 placeholder="Search societies..."
-                placeholderTextColor="#AAA"
+                placeholderTextColor={colors.textFaint}
                 value={searchQuery}
                 onChangeText={setSearchQuery}
                 clearButtonMode="while-editing"
@@ -314,7 +318,7 @@ export default function SocietiesScreen() {
               />
               {searchQuery.length > 0 && (
                 <TouchableOpacity onPress={() => setSearchQuery('')}>
-                  <X size={16} color="#AAA" />
+                  <X size={16} color={colors.textFaint} />
                 </TouchableOpacity>
               )}
             </View>
@@ -358,7 +362,7 @@ export default function SocietiesScreen() {
               </View>
             ) : filteredDiscoverSocieties.length === 0 ? (
               <View style={styles.emptyState}>
-                <Users size={48} color="#CCC" />
+                <Users size={48} color={colors.textFaint} />
                 <Text style={styles.emptyTitle}>No societies found</Text>
                 <Text style={styles.emptyDescription}>
                   {searchQuery || selectedCategories.length > 0
@@ -424,12 +428,12 @@ export default function SocietiesScreen() {
                         </Text>
                       ) : null}
                       <View style={styles.membersRow}>
-                        <Users size={13} color="#888" />
+                        <Users size={13} color={colors.textMuted} />
                         <Text style={styles.membersText}>{society.memberCount} members</Text>
                       </View>
                     </View>
                   </View>
-                  <ChevronRight size={18} color="#CCC" />
+                  <ChevronRight size={18} color={colors.textFaint} />
                 </TouchableOpacity>
               ))
             )}
@@ -446,7 +450,7 @@ export default function SocietiesScreen() {
               </View>
             ) : memberships.length === 0 ? (
               <View style={styles.emptyState}>
-                <Users size={48} color="#CCC" />
+                <Users size={48} color={colors.textFaint} />
                 <Text style={styles.emptyTitle}>No societies yet</Text>
                 <Text style={styles.emptyDescription}>
                   Discover and join societies to see them here
@@ -475,7 +479,7 @@ export default function SocietiesScreen() {
                     <Text style={styles.societyName}>{m.societies.name}</Text>
                     <Text style={styles.membershipRole}>{m.role_id}</Text>
                   </View>
-                  <ChevronRight size={20} color="#CCC" />
+                  <ChevronRight size={20} color={colors.textFaint} />
                 </TouchableOpacity>
               ))
             )}
@@ -491,7 +495,7 @@ export default function SocietiesScreen() {
                 m.role_id === 'OWNER' || m.role_id === 'PRESIDENT' || m.role_id === 'EXEC',
             ).length === 0 ? (
               <View style={styles.emptyState}>
-                <Crown size={48} color="#CCC" />
+                <Crown size={48} color={colors.textFaint} />
                 <Text style={styles.emptyTitle}>No societies managed</Text>
                 <Text style={styles.emptyDescription}>
                   Create a society to bring your community together
@@ -525,7 +529,7 @@ export default function SocietiesScreen() {
                       <Text style={styles.societyName}>{m.societies.name}</Text>
                       <Text style={styles.membershipRole}>{m.role_id}</Text>
                     </View>
-                    <ChevronRight size={20} color="#CCC" />
+                    <ChevronRight size={20} color={colors.textFaint} />
                   </TouchableOpacity>
                 ))
             )}
@@ -618,60 +622,60 @@ export default function SocietiesScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8F9FA' },
+  container: { flex: 1, backgroundColor: colors.canvas },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: colors.border,
   },
-  title: { fontSize: 24, fontWeight: '700', color: '#1A1A1A' },
+  title: { fontSize: 24, fontWeight: '700', color: colors.textPrimary },
   headerActions: { flexDirection: 'row', gap: 12 },
-  addButton: { padding: 8, borderRadius: 12, backgroundColor: '#FF6B35' },
+  addButton: { padding: 8, borderRadius: 12, backgroundColor: colors.accent },
   tabScroll: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: colors.border,
     flexGrow: 0,
   },
   tabContainer: { paddingHorizontal: 20, paddingVertical: 12, gap: 8 },
   tab: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20 },
-  activeTab: { backgroundColor: '#FF6B35' },
-  tabText: { fontSize: 14, fontWeight: '600', color: '#666' },
+  activeTab: { backgroundColor: colors.accent },
+  tabText: { fontSize: 14, fontWeight: '600', color: colors.textMuted },
   activeTabText: { color: '#FFFFFF' },
   content: { flex: 1, paddingHorizontal: 20, paddingTop: 20 },
   searchBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 10,
     gap: 10,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#F0F0F0',
+    borderColor: colors.border,
   },
   searchInput: {
     flex: 1,
     fontSize: 14,
-    color: '#1A1A1A',
+    color: colors.textPrimary,
     paddingVertical: 0,
   },
-  filterRow: { marginHorizontal: -20, backgroundColor: '#F8F9FA' },
+  filterRow: { marginHorizontal: -20, backgroundColor: colors.canvas },
   filterRowContent: { paddingHorizontal: 20, paddingVertical: 12, gap: 8 },
   filterChip: {
     paddingHorizontal: 14,
     paddingVertical: 7,
     borderRadius: 16,
-    backgroundColor: '#EEEEEE',
+    backgroundColor: colors.surfaceAlt,
   },
-  filterChipActive: { backgroundColor: '#FF6B35' },
-  filterChipText: { fontSize: 13, fontWeight: '600', color: '#555' },
+  filterChipActive: { backgroundColor: colors.accent },
+  filterChipText: { fontSize: 13, fontWeight: '600', color: colors.textBody },
   filterChipTextActive: { color: '#FFFFFF' },
   eventsSection: { marginTop: 4 },
   sectionHeaderRow: {
@@ -681,11 +685,11 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     marginTop: 8,
   },
-  resultCount: { fontSize: 13, color: '#888' },
+  resultCount: { fontSize: 13, color: colors.textMuted },
   loadingContainer: { paddingTop: 60, alignItems: 'center' },
-  sectionTitle: { fontSize: 20, fontWeight: '600', color: '#1A1A1A', marginBottom: 16 },
+  sectionTitle: { fontSize: 20, fontWeight: '600', color: colors.textPrimary, marginBottom: 16 },
   societyCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     borderRadius: 16,
     padding: 16,
     marginBottom: 12,
@@ -702,7 +706,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#FF6B35',
+    backgroundColor: colors.accent,
     justifyContent: 'center',
     alignItems: 'center',
     flexShrink: 0,
@@ -716,14 +720,14 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     flexWrap: 'wrap',
   },
-  societyName: { fontSize: 16, fontWeight: '600', color: '#1A1A1A', flexShrink: 1 },
+  societyName: { fontSize: 16, fontWeight: '600', color: colors.textPrimary, flexShrink: 1 },
   categoryBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 },
   categoryText: { fontSize: 11, fontWeight: '600' },
-  societyDescription: { fontSize: 13, color: '#666', marginBottom: 6 },
+  societyDescription: { fontSize: 13, color: colors.textMuted, marginBottom: 6 },
   membersRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  membersText: { fontSize: 12, color: '#888' },
+  membersText: { fontSize: 12, color: colors.textMuted },
   membershipCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     borderRadius: 16,
     padding: 16,
     marginBottom: 12,
@@ -737,7 +741,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   membershipInfo: { flex: 1 },
-  membershipRole: { fontSize: 13, color: '#888', marginTop: 2 },
+  membershipRole: { fontSize: 13, color: colors.textMuted, marginTop: 2 },
   emptyState: {
     alignItems: 'center',
     paddingVertical: 60,
@@ -746,19 +750,19 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#1A1A1A',
+    color: colors.textPrimary,
     marginTop: 16,
     marginBottom: 8,
   },
   emptyDescription: {
     fontSize: 15,
-    color: '#666',
+    color: colors.textMuted,
     textAlign: 'center',
     lineHeight: 22,
     marginBottom: 24,
   },
   discoverButton: { paddingHorizontal: 24 },
-  modalContainer: { flex: 1, backgroundColor: '#FFFFFF' },
+  modalContainer: { flex: 1, backgroundColor: colors.surface },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -766,22 +770,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: colors.border,
   },
-  modalTitle: { fontSize: 20, fontWeight: '600', color: '#1A1A1A' },
-  cancelText: { fontSize: 16, color: '#FF6B35', fontWeight: '600' },
+  modalTitle: { fontSize: 20, fontWeight: '600', color: colors.textPrimary },
+  cancelText: { fontSize: 16, color: colors.accent, fontWeight: '600' },
   modalContent: { flex: 1, paddingHorizontal: 20 },
   formSection: { paddingVertical: 12 },
   modalFooter: {
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderTopWidth: 1,
-    borderTopColor: '#F0F0F0',
+    borderTopColor: colors.border,
   },
   fieldLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1A1A1A',
+    color: colors.textPrimary,
     marginBottom: 8,
   },
   categoryChips: {
@@ -794,11 +798,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: colors.canvas,
     borderWidth: 1,
-    borderColor: '#E9ECEF',
+    borderColor: colors.border,
   },
-  catChipActive: { backgroundColor: '#FF6B35', borderColor: '#FF6B35' },
-  catChipText: { fontSize: 13, fontWeight: '600', color: '#666' },
+  catChipActive: { backgroundColor: colors.accent, borderColor: colors.accent },
+  catChipText: { fontSize: 13, fontWeight: '600', color: colors.textMuted },
   catChipTextActive: { color: '#FFFFFF' },
 });

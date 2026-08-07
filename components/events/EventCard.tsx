@@ -1,9 +1,12 @@
 import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import { theme } from '@/constants/theme';
 import { router } from 'expo-router';
 import { Clock, MapPin } from 'lucide-react-native';
 import { Event, EventBookingMode, EventHostType, EventJoinPolicy, EventParticipantStatus } from '@/types/event';
 import { useJoinEvent } from '@/hooks/events/useJoinEvent';
 import { useLeaveEvent } from '@/hooks/events/useLeaveEvent';
+
+const { colors } = theme;
 
 type HostTagType = 'user' | 'society' | 'university';
 type HostTag = { label: string; type: HostTagType };
@@ -25,9 +28,9 @@ function getHostTag(
 }
 
 const hostBadgeColors: Record<HostTagType, { bg: { backgroundColor: string }; text: { color: string } }> = {
-  user:       { bg: { backgroundColor: '#F0FDF4' }, text: { color: '#16A34A' } },
-  society:    { bg: { backgroundColor: '#EEF2FF' }, text: { color: '#4A6CF7' } },
-  university: { bg: { backgroundColor: '#FFF7ED' }, text: { color: '#EA6C00' } },
+  user:       { bg: { backgroundColor: colors.successTone.bg }, text: { color: colors.successTone.text } },
+  society:    { bg: { backgroundColor: colors.infoTone.bg }, text: { color: colors.infoTone.text } },
+  university: { bg: { backgroundColor: colors.warningTone.bg }, text: { color: colors.warningTone.text } },
 };
 
 interface EventCardProps {
@@ -106,7 +109,7 @@ export function EventCard({ event, societyNameMap, universityNameMap, participan
     if (actionLoading) {
       return (
         <View style={[s.joinButton, s.joinButtonLoading]}>
-          <ActivityIndicator size="small" color="#FFFFFF" />
+          <ActivityIndicator size="small" color={colors.textOnAccent} />
         </View>
       );
     }
@@ -159,12 +162,12 @@ export function EventCard({ event, societyNameMap, universityNameMap, participan
         </View>
         <View style={s.metaCol}>
           <View style={s.metaItem}>
-            <Clock size={13} color="#888" />
+            <Clock size={13} color={colors.textMuted} />
             <Text style={s.metaText}>{timeLabel}</Text>
           </View>
           {event.address && (
             <View style={s.metaItem}>
-              <MapPin size={13} color="#888" />
+              <MapPin size={13} color={colors.textMuted} />
               <Text style={s.metaText} numberOfLines={1}>{event.address}</Text>
             </View>
           )}
@@ -186,7 +189,7 @@ export function EventCard({ event, societyNameMap, universityNameMap, participan
 
 const s = StyleSheet.create({
   card: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     borderRadius: 16,
     padding: 16,
     marginBottom: 12,
@@ -198,33 +201,33 @@ const s = StyleSheet.create({
   },
   cardTop: { marginBottom: 12 },
   titleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8, marginBottom: 8 },
-  title: { fontSize: 16, fontWeight: '600', color: '#1A1A1A', flex: 1 },
+  title: { fontSize: 16, fontWeight: '600', color: colors.textPrimary, flex: 1 },
   badge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10, flexShrink: 0 },
   badgeText: { fontSize: 12, fontWeight: '600' },
-  badgeFree: { backgroundColor: '#F0FDF4' },
-  badgePaid: { backgroundColor: '#FFF7ED' },
-  badgeTextFree: { color: '#16A34A' },
-  badgeTextPaid: { color: '#EA6C00' },
+  badgeFree: { backgroundColor: colors.successTone.bg },
+  badgePaid: { backgroundColor: colors.warningTone.bg },
+  badgeTextFree: { color: colors.successTone.text },
+  badgeTextPaid: { color: colors.warningTone.text },
   metaCol: { gap: 4 },
   metaItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  metaText: { fontSize: 13, color: '#666', flex: 1 },
+  metaText: { fontSize: 13, color: colors.textMuted, flex: 1 },
   cardBottom: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
     alignItems: 'center',
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: '#F0F0F0',
+    borderTopColor: colors.border,
   },
   attendeesRow: { flex: 1, justifyContent: 'center' },
-  friendsCount: { fontSize: 12, color: '#888', fontWeight: '500' },
-  joinButton: { backgroundColor: '#FF6B35', borderRadius: 20, paddingHorizontal: 18, paddingVertical: 8, minWidth: 90, alignItems: 'center' },
-  joinButtonJoined: { backgroundColor: '#16A34A' },
-  joinButtonPending: { backgroundColor: '#E9ECEF' },
-  joinButtonLoading: { backgroundColor: '#FF6B35' },
-  joinButtonText: { fontSize: 14, fontWeight: '600', color: '#FFFFFF' },
-  joinButtonTextDark: { color: '#444' },
+  friendsCount: { fontSize: 12, color: colors.textMuted, fontWeight: '500' },
+  joinButton: { backgroundColor: colors.accent, borderRadius: 20, paddingHorizontal: 18, paddingVertical: 8, minWidth: 90, alignItems: 'center' },
+  joinButtonJoined: { backgroundColor: colors.successTone.text },
+  joinButtonPending: { backgroundColor: colors.surfaceAlt },
+  joinButtonLoading: { backgroundColor: colors.accent },
+  joinButtonText: { fontSize: 14, fontWeight: '600', color: colors.textOnAccent },
+  joinButtonTextDark: { color: colors.textBody },
   liveBadge: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 8 },
-  liveDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#E53E3E' },
-  liveText: { fontSize: 12, fontWeight: '700', color: '#E53E3E', letterSpacing: 0.5 },
+  liveDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.dangerTone.text },
+  liveText: { fontSize: 12, fontWeight: '700', color: colors.dangerTone.text, letterSpacing: 0.5 },
 });
