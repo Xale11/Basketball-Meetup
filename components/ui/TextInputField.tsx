@@ -5,6 +5,7 @@ import {
   StyleSheet,
   ViewStyle,
   KeyboardTypeOptions,
+  ReturnKeyTypeOptions,
 } from 'react-native';
 import { ReactNode } from 'react';
 import { LucideIcon } from 'lucide-react-native';
@@ -27,6 +28,11 @@ interface TextInputFieldProps {
   autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
   autoComplete?: string;
   maxLength?: number;
+  returnKeyType?: ReturnKeyTypeOptions;
+  /** Fires on the keyboard's submit key — used by the tag input to commit a tag. */
+  onSubmitEditing?: () => void;
+  /** Keeps the keyboard up after submit, for repeated entry. */
+  blurOnSubmit?: boolean;
   /** 'large' = auth variant (borderRadius 16, larger padding). Defaults to 'large' when icon is provided. */
   size?: 'default' | 'large';
   style?: ViewStyle;
@@ -51,6 +57,9 @@ export function TextInputField({
   autoCapitalize,
   autoComplete,
   maxLength,
+  returnKeyType,
+  onSubmitEditing,
+  blurOnSubmit,
   size,
   style,
 }: TextInputFieldProps) {
@@ -84,6 +93,9 @@ export function TextInputField({
           autoCapitalize={autoCapitalize}
           autoComplete={autoComplete as any}
           maxLength={maxLength}
+          returnKeyType={returnKeyType}
+          onSubmitEditing={onSubmitEditing}
+          blurOnSubmit={blurOnSubmit}
           multiline={multiline}
           numberOfLines={numberOfLines}
           textAlignVertical={multiline ? 'top' : undefined}

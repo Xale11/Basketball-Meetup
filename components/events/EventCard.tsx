@@ -8,6 +8,7 @@ import {
   EventHostType,
   EventJoinPolicy,
   EventParticipantStatus,
+  EVENT_CATEGORY_LABEL,
 } from '@/types/event';
 import { useJoinEvent } from '@/hooks/events/useJoinEvent';
 import { useLeaveEvent } from '@/hooks/events/useLeaveEvent';
@@ -227,6 +228,24 @@ export function EventCard({
           ) : null}
         </View>
 
+        {/* Category and tag pills (AC-21). Category leads, tags follow. */}
+        {(event.category || event.tags?.length > 0) && (
+          <View style={s.pillRow}>
+            {event.category && (
+              <View style={[s.pill, s.pillCategory]}>
+                <Text style={[s.pillText, s.pillCategoryText]}>
+                  {EVENT_CATEGORY_LABEL[event.category] ?? event.category}
+                </Text>
+              </View>
+            )}
+            {(event.tags ?? []).map((tag) => (
+              <View key={tag} style={s.pill}>
+                <Text style={s.pillText}>{tag}</Text>
+              </View>
+            ))}
+          </View>
+        )}
+
         {friends.length > 0 && (
           <View style={s.friendsRow}>
             <Text style={s.friendsLabel}>Friends attending:</Text>
@@ -327,6 +346,21 @@ const makeStyles = (t: Theme) =>
       color: t.colors.accentHi,
       flex: 1,
     },
+    pillRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+    pill: {
+      paddingHorizontal: t.spacing.sm + 2,
+      paddingVertical: 4,
+      borderRadius: t.radius.sm,
+      backgroundColor: t.colors.surfaceAlt,
+      borderWidth: 1,
+      borderColor: t.colors.border,
+    },
+    pillCategory: {
+      backgroundColor: t.colors.accentTone.bg,
+      borderColor: t.colors.accentTone.border,
+    },
+    pillText: { ...t.typography.badge, fontSize: 10, color: t.colors.textMuted },
+    pillCategoryText: { color: t.colors.accentTone.text },
     infoBlock: {
       backgroundColor: t.colors.surfaceInset,
       borderRadius: t.radius.chip,

@@ -617,13 +617,18 @@ const makeStyles = (t: Theme) =>
   },
   attendeeName: { ...t.typography.caption, fontSize: 12, color: t.colors.textBody, maxWidth: 110 },
 
-  // Square secondary action in the footer (share).
+  // Secondary action in the footer (share). The footer is a column, so this
+  // stretches full width — the icon needs centring explicitly, and its own
+  // bottom margin to match the spacing `inviteBtn` sets below itself.
   iconBtn: {
     padding: 11,
     borderRadius: t.radius.chip,
     backgroundColor: t.colors.surfaceAlt,
     borderWidth: 1,
     borderColor: t.colors.borderStrong,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 10,
   },
   detailsCard: {
     backgroundColor: t.colors.surface,

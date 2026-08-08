@@ -16,7 +16,13 @@ import { useFetchSocietiesByUniId } from '@/hooks/societies/useFetchSocietiesByU
 import { useFetchUniversities } from '@/hooks/universities/useFetchUniversities';
 import { useUserParticipations } from '@/hooks/events/useUserParticipations';
 import { useFriendsAttendingCounts } from '@/hooks/friends/useFriendsAttendingCounts';
-import { EventWithCounts, EventBookingMode } from '@/types/event';
+import {
+  EventWithCounts,
+  EventBookingMode,
+  EventCategory,
+  EVENT_CATEGORIES,
+  EVENT_CATEGORY_LABEL,
+} from '@/types/event';
 import { EventCard } from '@/components/events/EventCard';
 import { useRefreshQueries } from '@/hooks/useRefreshQueries';
 import { qk } from '@/lib/queryKeys';
@@ -24,13 +30,8 @@ import { AC_AppHeader } from '@/components/activCampus/AC_AppHeader';
 import { getClassification, ActivityClassification } from '@/lib/eventClassification';
 import { useTheme, useThemedStyles, Theme } from '@/hooks/useTheme';
 
-/**
- * The category strip needs `events.category`, which lands with AC-21. Flip this
- * on once the column and its filter exist.
- */
-const SHOW_CATEGORY_STRIP = false;
-
 type TimeTab = 'today' | 'tomorrow' | 'week';
+type CategoryFilter = 'All' | EventCategory;
 type OrganiserFilter = 'All' | ActivityClassification;
 type CostFilter = 'All' | 'Free' | 'Paid';
 
@@ -139,6 +140,7 @@ export default function ActivCampusHome() {
   const [search, setSearch] = useState('');
   const [organiser, setOrganiser] = useState<OrganiserFilter>('All');
   const [cost, setCost] = useState<CostFilter>('All');
+  const [category, setCategory] = useState<CategoryFilter>('All');
   const [maxPrice, setMaxPrice] = useState('');
 
   const { memberships } = useFetchUserSocieties(user?.id);
@@ -185,6 +187,7 @@ export default function ActivCampusHome() {
       }
 
       if (organiser !== 'All' && getClassification(e) !== organiser) return false;
+      if (category !== 'All' && e.category !== category) return false;
 
       const isFree = e.booking_mode === EventBookingMode.FREE;
       if (cost === 'Free' && !isFree) return false;
@@ -197,7 +200,7 @@ export default function ActivCampusHome() {
 
       return true;
     });
-  }, [events, search, organiser, cost, maxPrice, societyNameMap, universityNameMap]);
+  }, [events, search, organiser, cost, category, maxPrice, societyNameMap, universityNameMap]);
 
   /**
    * Buckets for the active tab.
@@ -285,6 +288,7 @@ export default function ActivCampusHome() {
     setSearch('');
     setOrganiser('All');
     setCost('All');
+    setCategory('All');
     setMaxPrice('');
   };
 
@@ -297,6 +301,13 @@ export default function ActivCampusHome() {
     if (organiser !== 'All') {
       chips.push({ id: 'organiser', label: organiser, onRemove: () => setOrganiser('All') });
     }
+    if (category !== 'All') {
+      chips.push({
+        id: 'category',
+        label: EVENT_CATEGORY_LABEL[category],
+        onRemove: () => setCategory('All'),
+      });
+    }
     if (cost !== 'All') {
       chips.push({
         id: 'cost',
@@ -308,7 +319,7 @@ export default function ActivCampusHome() {
       });
     }
     return chips;
-  }, [search, organiser, cost, maxPrice]);
+  }, [search, organiser, cost, category, maxPrice]);
 
   if (authLoading) return <LoadingSpinner />;
 
@@ -396,7 +407,28 @@ export default function ActivCampusHome() {
           </View>
         </View>
 
-        {SHOW_CATEGORY_STRIP && <View />}
+        {/* Horizontal category strip (AC-21). */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={s.categoryStrip}
+          style={s.categoryStripWrap}
+        >
+          {(['All', ...EVENT_CATEGORIES] as CategoryFilter[]).map((cat) => {
+            const active = category === cat;
+            return (
+              <TouchableOpacity
+                key={cat}
+                style={[s.categoryChip, active && s.categoryChipActive]}
+                onPress={() => setCategory(cat)}
+              >
+                <Text style={[s.categoryChipText, active && s.categoryChipTextActive]}>
+                  {cat === 'All' ? 'All' : EVENT_CATEGORY_LABEL[cat]}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
 
         {activeChips.length > 0 && (
           <FilterChipRow chips={activeChips} onReset={resetAll} showReset style={s.activeChips} />
@@ -554,6 +586,24 @@ const makeStyles = (t: Theme) =>
       borderWidth: 1,
       borderColor: 'transparent',
     },
+    // Horizontal category strip (AC-21).
+    categoryStripWrap: { flexGrow: 0, marginTop: t.spacing.sm },
+    categoryStrip: { flexDirection: 'row', gap: 6, paddingRight: t.spacing.lg },
+    categoryChip: {
+      paddingHorizontal: t.spacing.md,
+      paddingVertical: 6,
+      borderRadius: t.radius.pill,
+      backgroundColor: t.colors.surface,
+      borderWidth: 1,
+      borderColor: t.colors.border,
+    },
+    categoryChipActive: {
+      backgroundColor: t.colors.accentTone.bg,
+      borderColor: t.colors.accentTone.border,
+    },
+    categoryChipText: { ...t.typography.badge, fontSize: 11, color: t.colors.textMuted },
+    categoryChipTextActive: { color: t.colors.accentTone.text },
+
     filterBtnText: {
       ...t.typography.badge,
       fontSize: 11,

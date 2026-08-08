@@ -55,6 +55,37 @@ export interface Society {
   created_at: string | null;
   updated_at: string | null;
   status: string;
+  /** AC-25. Null falls back to a gradient keyed on the society id. */
+  banner_url: string | null;
+  /** AC-25. Drives the verified tick; NOT NULL in the database. */
+  verified_official: boolean;
+}
+
+/**
+ * Supabase table: society_announcements
+ * Notices posted by a society's leadership, shown on the Announcements tab.
+ * FK: society_id → societies.id, author_id → profiles.id.
+ * Writes are gated by RLS to OWNER/PRESIDENT/EXEC of that society.
+ */
+export interface SocietyAnnouncement {
+  id: string;
+  society_id: string;
+  author_id: string;
+  title: string;
+  content: string;
+  is_important: boolean;
+  created_at: string;
+  updated_at: string | null;
+}
+
+/** Announcement joined with its author's profile, for the list. */
+export interface SocietyAnnouncementWithAuthor extends SocietyAnnouncement {
+  author: {
+    id: string;
+    first_name: string | null;
+    last_name: string | null;
+    photo_url: string | null;
+  } | null;
 }
 
 /**

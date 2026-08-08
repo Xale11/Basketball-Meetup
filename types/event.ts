@@ -63,10 +63,44 @@ export enum EventInviteStatus {
  */
 export type EventWithCounts = Event & { going_count: number }
 
+/**
+ * Supabase: `events.category`, guarded by the `events_category_check`
+ * constraint. Keep this list and that constraint in step — the feed filters on
+ * it, so an unrecognised value silently empties the results.
+ */
+export const EVENT_CATEGORIES = [
+  'Sports',
+  'Social',
+  'Academic',
+  'Creative',
+  'Gaming',
+  'Cultural',
+  'Careers',
+  'Other',
+] as const;
+
+export type EventCategory = typeof EVENT_CATEGORIES[number];
+
+/** Display labels; the stored values stay short for the check constraint. */
+export const EVENT_CATEGORY_LABEL: Record<EventCategory, string> = {
+  Sports: 'Sports',
+  Social: 'Social',
+  Academic: 'Academic',
+  Creative: 'Creative',
+  Gaming: 'Gaming',
+  Cultural: 'Cultural',
+  Careers: 'Careers & networking',
+  Other: 'Other interests',
+};
+
 export interface Event {
   id: string
   name: string
   description: string | null
+  /** AC-21. Null on rows created before the column existed. */
+  category: EventCategory | null
+  /** AC-21. Free-text tags; defaults to an empty array, never null. */
+  tags: string[]
   start_date: string
   end_date: string
   is_online: boolean
@@ -197,6 +231,8 @@ export interface ReceivedEventInvite extends EventInvite {
 export interface CreateEventForm {
   name: string
   description: string | null
+  category: EventCategory | null
+  tags: string[]
   start_date: string
   end_date: string
   is_online: boolean

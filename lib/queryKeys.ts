@@ -59,6 +59,13 @@ export const qk = {
     byUniversity: (universityId: Id) => ['societies', 'byUniversity', universityId] as const,
     detail: (societyId: Id) => ['societies', 'detail', societyId] as const,
     mine: (userId: Id) => ['societies', 'mine', userId] as const,
+    announcements: (societyId: Id) => ['societies', 'announcements', societyId] as const,
+  },
+
+  notifications: {
+    all: ['notifications'] as const,
+    list: (userId: Id) => ['notifications', 'list', userId] as const,
+    unreadCount: (userId: Id) => ['notifications', 'unreadCount', userId] as const,
   },
 
   universities: {

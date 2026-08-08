@@ -46,6 +46,7 @@ function AppNavigator({ fontsLoaded }: { fontsLoaded: boolean }) {
           {/* Create was an empty-titled tab; it is now a dismissible modal
               pushed by the tab bar's floating (+). */}
           <Stack.Screen name="create" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="notifications" options={{ presentation: 'modal' }} />
           <Stack.Screen name="event" />
           <Stack.Screen name="user" />
           <Stack.Screen name="friends" />

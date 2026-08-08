@@ -24,6 +24,11 @@ export interface User {
   photo_url: string | null;
   university_id: string | null;
   course: string | null;
+  /** AC-22. Values come from `EVENT_CATEGORIES`; defaults to `[]`, never null. */
+  interests: string[];
+  /** AC-26. Shown on the profile header as "{degree} ({year_of_study})". */
+  degree: string | null;
+  year_of_study: string | null;
 }
 
 /** Form type — not a Supabase table. Used when registering a new auth user. */

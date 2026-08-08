@@ -11,9 +11,12 @@ import { useGooglePlacesRequest } from '@/hooks/useGooglePlacesRequest';
 import {
   CreateEventForm,
   EventBookingMode,
+  EventCategory,
   EventHostType,
   EventJoinPolicy,
   EventVisibility,
+  EVENT_CATEGORIES,
+  EVENT_CATEGORY_LABEL,
 } from '@/types/event';
 import { useCreateEvent } from '@/hooks/events/useCreateEvent';
 import { useFetchUserSocieties } from '@/hooks/societies/useFetchUserSocieties';
@@ -27,8 +30,8 @@ import { Button } from '@/components/ui/Button';
 import { TextInputField } from '@/components/ui/TextInputField';
 import { useTheme, useThemedStyles, Theme } from '@/hooks/useTheme';
 
-/** Category and tag pickers need `events.category` / `events.tags` — AC-21. */
-const SHOW_CATEGORY_PICKER = false;
+/** A tag is a short free-text label; the row is capped to keep cards readable. */
+const MAX_TAGS = 5;
 
 const VISIBILITY_OPTIONS = [
   { label: 'Public',          description: 'Everyone can see this',     value: EventVisibility.PUBLIC,          icon: Globe },
@@ -52,6 +55,8 @@ const HOST_TYPE_OPTIONS = [
 const INITIAL_FORM: CreateEventForm = {
   name: '',
   description: null,
+  category: null,
+  tags: [],
   start_date: '',
   end_date: '',
   is_online: false,
@@ -92,6 +97,7 @@ export default function CreateScreen() {
   const { colors } = theme;
 
   const [form, setForm] = useState<CreateEventForm>(INITIAL_FORM);
+  const [tagDraft, setTagDraft] = useState('');
   const [hasMaxParticipants, setHasMaxParticipants] = useState(false);
   const [dateError, setDateError] = useState<string | null>(null);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
@@ -111,6 +117,21 @@ export default function CreateScreen() {
   /** Clears one field's error without disturbing the others. */
   const clearError = (key: string) =>
     setFormErrors(({ [key]: _removed, ...rest }) => rest);
+
+  /** Trims, dedupes case-insensitively and enforces the cap. */
+  const addTag = () => {
+    const tag = tagDraft.trim();
+    if (!tag) return;
+    setForm((p) => {
+      if (p.tags.length >= MAX_TAGS) return p;
+      if (p.tags.some((t) => t.toLowerCase() === tag.toLowerCase())) return p;
+      return { ...p, tags: [...p.tags, tag] };
+    });
+    setTagDraft('');
+  };
+
+  const removeTag = (tag: string) =>
+    setForm((p) => ({ ...p, tags: p.tags.filter((t) => t !== tag) }));
 
   const addLocationToForm = (details: GooglePlaceDetail | null) => {
     if (!details) return;
@@ -221,6 +242,66 @@ export default function CreateScreen() {
             numberOfLines={3}
             multilineHeight={90}
           />
+        </View>
+
+        {/* Category */}
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>Category</Text>
+          <Text style={styles.sectionSubLabel}>Helps people find this in Discover</Text>
+          <View style={styles.chipWrap}>
+            {EVENT_CATEGORIES.map((cat) => {
+              const active = form.category === cat;
+              return (
+                <TouchableOpacity
+                  key={cat}
+                  style={[styles.chip, active && styles.chipActive]}
+                  onPress={() =>
+                    setForm((p) => ({ ...p, category: active ? null : (cat as EventCategory) }))
+                  }
+                >
+                  <Text style={[styles.chipText, active && styles.chipTextActive]}>
+                    {EVENT_CATEGORY_LABEL[cat]}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+
+        {/* Tags */}
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>Tags</Text>
+          <Text style={styles.sectionSubLabel}>
+            Up to {MAX_TAGS} short labels, e.g. “Beginners”, “Casual”
+          </Text>
+
+          {form.tags.length > 0 && (
+            <View style={styles.chipWrap}>
+              {form.tags.map((tag) => (
+                <TouchableOpacity
+                  key={tag}
+                  style={[styles.chip, styles.chipActive]}
+                  onPress={() => removeTag(tag)}
+                >
+                  <Text style={[styles.chipText, styles.chipTextActive]}>{tag}</Text>
+                  <X size={11} color={theme.colors.accentTone.text} />
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+
+          {form.tags.length < MAX_TAGS && (
+            <TextInputField
+              value={tagDraft}
+              onChangeText={setTagDraft}
+              placeholder="Add a tag and press enter"
+              maxLength={24}
+              returnKeyType="done"
+              onSubmitEditing={addTag}
+              blurOnSubmit={false}
+              style={styles.tagField}
+            />
+          )}
         </View>
 
         {/* Date & Time */}
@@ -618,6 +699,27 @@ const makeStyles = (t: Theme) =>
       color: t.colors.textBody,
     },
     googleSeparator: { height: 1, backgroundColor: t.colors.border },
+
+    // Category and tag chips (AC-21).
+    chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: t.spacing.sm },
+    chip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 5,
+      paddingHorizontal: t.spacing.md,
+      paddingVertical: 7,
+      borderRadius: t.radius.pill,
+      backgroundColor: t.colors.surface,
+      borderWidth: 1,
+      borderColor: t.colors.border,
+    },
+    chipActive: {
+      backgroundColor: t.colors.accentTone.bg,
+      borderColor: t.colors.accentTone.border,
+    },
+    chipText: { ...t.typography.badge, fontSize: 12, color: t.colors.textMuted },
+    chipTextActive: { color: t.colors.accentTone.text },
+    tagField: { marginTop: t.spacing.sm },
 
     subSection: { marginTop: t.spacing.lg },
     subSectionLabel: { ...t.typography.label, color: t.colors.textMuted, marginBottom: t.spacing.sm },

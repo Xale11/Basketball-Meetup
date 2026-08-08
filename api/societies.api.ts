@@ -1,4 +1,12 @@
-import { Society, SocietyMembership, SocietyMembershipStatusEnum, SocietyRoleIdEnum, SocietyStatusEnum } from '@/types/societies';
+import {
+  Society,
+  SocietyAnnouncement,
+  SocietyAnnouncementWithAuthor,
+  SocietyMembership,
+  SocietyMembershipStatusEnum,
+  SocietyRoleIdEnum,
+  SocietyStatusEnum,
+} from '@/types/societies';
 import { supabase } from './supabase';
 import { uploadToSupabaseBucket } from './supabase-storage.api';
 import { throwSupabaseError } from '@/lib/supabaseError';
@@ -274,4 +282,60 @@ export const getSocietyMembers = async (
 
   if (error) throwSupabaseError('societies.api getSocietyMembers', error);
   return (data ?? []) as SocietyMemberWithProfile[];
+};
+
+// ─── Announcements (AC-24) ───────────────────────────────────────────────────
+
+/**
+ * A society's announcements, newest first.
+ *
+ * `author` is a left join: the FK cascades on profile delete, but the embed is
+ * still typed nullable because a row can arrive before its author is readable.
+ */
+export const getSocietyAnnouncements = async (
+  society_id: string,
+): Promise<SocietyAnnouncementWithAuthor[]> => {
+  const { data, error } = await supabase
+    .from('society_announcements')
+    .select('*, author:profiles!society_announcements_author_id_fkey(id, first_name, last_name, photo_url)')
+    .eq('society_id', society_id)
+    .order('created_at', { ascending: false });
+
+  if (error) throwSupabaseError('societies.api getSocietyAnnouncements', error);
+  return (data ?? []) as SocietyAnnouncementWithAuthor[];
+};
+
+/**
+ * Posts an announcement.
+ *
+ * `author_id` is sent explicitly because the RLS policy pins it to auth.uid() —
+ * there is no column default, so omitting it fails the NOT NULL constraint
+ * before the policy is ever evaluated.
+ */
+export const createSocietyAnnouncement = async (input: {
+  society_id: string;
+  author_id: string;
+  title: string;
+  content: string;
+  is_important?: boolean;
+}): Promise<SocietyAnnouncement> => {
+  const { data, error } = await supabase
+    .from('society_announcements')
+    .insert({
+      society_id: input.society_id,
+      author_id: input.author_id,
+      title: input.title,
+      content: input.content,
+      is_important: input.is_important ?? false,
+    })
+    .select('*')
+    .single();
+
+  if (error) throwSupabaseError('societies.api createSocietyAnnouncement', error);
+  return data as SocietyAnnouncement;
+};
+
+export const deleteSocietyAnnouncement = async (id: string): Promise<void> => {
+  const { error } = await supabase.from('society_announcements').delete().eq('id', id);
+  if (error) throwSupabaseError('societies.api deleteSocietyAnnouncement', error);
 };

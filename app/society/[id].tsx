@@ -25,6 +25,7 @@ import {
   CheckCircle2,
   UserCheck,
   UserMinus,
+  Trash2,
 } from 'lucide-react-native';
 import { useState, useMemo } from 'react';
 import { useAuth } from '@/hooks/useAuth';
@@ -34,6 +35,10 @@ import { useJoinSociety } from '@/hooks/societies/useJoinSociety';
 import { useLeaveSociety } from '@/hooks/societies/useLeaveSociety';
 import { useUpdateSociety } from '@/hooks/societies/useUpdateSociety';
 import { useSocietyMembers, useUpdateMemberRole } from '@/hooks/societies/useSocietyMembers';
+import {
+  useSocietyAnnouncements,
+  useManageSocietyAnnouncements,
+} from '@/hooks/societies/useSocietyAnnouncements';
 import { useFetchEventsBySociety } from '@/hooks/events/useFetchEventsBySociety';
 import { useFetchUniversities } from '@/hooks/universities/useFetchUniversities';
 import { useUserParticipations } from '@/hooks/events/useUserParticipations';
@@ -49,9 +54,6 @@ import { SocietyMemberWithProfile } from '@/api/societies.api';
 import { SOCIETY_CATEGORIES, SocietyRoleIdEnum, ADMIN_SOCIETY_ROLES } from '@/types/societies';
 import { EventHostType } from '@/types/event';
 import { useTheme, useThemedStyles, Theme } from '@/hooks/useTheme';
-
-/** The Announcements tab needs a `society_announcements` table, which lands with AC-24. */
-const ANNOUNCEMENTS_ENABLED = false;
 
 type SocietyTab = 'activities' | 'overview' | 'announcements' | 'members' | 'executive';
 type ActivityFilter = 'all' | 'exec' | 'associate';
@@ -99,6 +101,8 @@ export default function SocietyProfileScreen() {
   const { leaveSociety, loading: leaving } = useLeaveSociety();
   const { updateSociety, loading: updating } = useUpdateSociety();
   const { updateRole, loading: rolePending } = useUpdateMemberRole(id);
+  const { announcements, loading: announcementsLoading } = useSocietyAnnouncements(id);
+  const { postAnnouncement, removeAnnouncement, posting } = useManageSocietyAnnouncements(id);
 
   const [tab, setTab] = useState<SocietyTab>(() =>
     SOCIETY_TABS.includes(requestedTab as SocietyTab)
@@ -153,6 +157,48 @@ export default function SocietyProfileScreen() {
       activityFilter === 'exec' ? EventHostType.SOCIETY : EventHostType.USER;
     return events.filter((e) => e.host_type === wanted);
   }, [events, activityFilter]);
+
+  // ── Announcement composer (leadership only) ───────────────────────────────
+  const [showAnnForm, setShowAnnForm] = useState(false);
+  const [annTitle, setAnnTitle] = useState('');
+  const [annContent, setAnnContent] = useState('');
+  const [annImportant, setAnnImportant] = useState(false);
+
+  const resetAnnForm = () => {
+    setShowAnnForm(false);
+    setAnnTitle('');
+    setAnnContent('');
+    setAnnImportant(false);
+  };
+
+  const handlePostAnnouncement = () => {
+    if (!annTitle.trim() || !annContent.trim()) {
+      Alert.alert('Validation', 'Give the announcement a title and a message.');
+      return;
+    }
+    postAnnouncement(
+      { title: annTitle.trim(), content: annContent.trim(), isImportant: annImportant },
+      {
+        onSuccess: resetAnnForm,
+        onError: (err: Error) => Alert.alert('Could not post', err.message),
+      },
+    );
+  };
+
+  const handleDeleteAnnouncement = (announcementId: string, title: string) => {
+    Alert.alert('Delete announcement', `Remove “${title}”?`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: () =>
+          removeAnnouncement(
+            { id: announcementId },
+            { onError: (err: Error) => Alert.alert('Could not delete', err.message) },
+          ),
+      },
+    ]);
+  };
 
   // ── Edit society modal ────────────────────────────────────────────────────
   const [showEdit, setShowEdit] = useState(false);
@@ -542,17 +588,118 @@ export default function SocietyProfileScreen() {
             </>
           )}
 
-          {/* ── Tab 3 · Announcements (blocked on AC-24) ───────────────── */}
+          {/* ── Tab 3 · Announcements ──────────────────────────────────── */}
           {activeTab === 'announcements' && (
-            <EmptyState
-              emoji="📢"
-              title="Announcements are coming soon"
-              subtitle={
-                ANNOUNCEMENTS_ENABLED
-                  ? 'No announcements have been posted yet.'
-                  : 'Society announcements need a place to live in the database. This lands with AC-24.'
-              }
-            />
+            <>
+              {isAdmin && (
+                <View style={s.panel}>
+                  {showAnnForm ? (
+                    <View style={s.annForm}>
+                      <TextInputField
+                        label="Title"
+                        value={annTitle}
+                        onChangeText={setAnnTitle}
+                        placeholder="e.g. Kit orders close Friday"
+                      />
+                      <TextInputField
+                        label="Message"
+                        value={annContent}
+                        onChangeText={setAnnContent}
+                        placeholder="What do members need to know?"
+                        multiline
+                        numberOfLines={4}
+                        multilineHeight={110}
+                        style={s.fieldSpacing}
+                      />
+                      <TouchableOpacity
+                        style={s.importantRow}
+                        onPress={() => setAnnImportant((p) => !p)}
+                        activeOpacity={0.8}
+                      >
+                        <View style={[s.checkbox, annImportant && s.checkboxOn]}>
+                          {annImportant && (
+                            <CheckCircle2 size={13} color={colors.textOnAccent} />
+                          )}
+                        </View>
+                        <Text style={s.importantLabel}>Mark as important</Text>
+                      </TouchableOpacity>
+
+                      <View style={s.annFormActions}>
+                        <TouchableOpacity onPress={resetAnnForm}>
+                          <Text style={s.annCancel}>Cancel</Text>
+                        </TouchableOpacity>
+                        <Button
+                          label={posting ? 'Posting…' : 'Post'}
+                          onPress={handlePostAnnouncement}
+                          disabled={posting}
+                          style={s.annPostBtn}
+                        />
+                      </View>
+                    </View>
+                  ) : (
+                    <TouchableOpacity
+                      style={s.annNewBtn}
+                      onPress={() => setShowAnnForm(true)}
+                      activeOpacity={0.85}
+                    >
+                      <Megaphone size={16} color={colors.accentHi} />
+                      <Text style={s.annNewText}>Post an announcement</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              )}
+
+              {announcementsLoading ? (
+                <ActivityIndicator color={colors.accent} style={s.inlineLoader} />
+              ) : announcements.length === 0 ? (
+                <EmptyState
+                  emoji="📢"
+                  title="No announcements yet"
+                  subtitle={
+                    isAdmin
+                      ? 'Post one to keep members up to date.'
+                      : 'This society has not posted anything yet.'
+                  }
+                />
+              ) : (
+                announcements.map((a) => {
+                  const authorName =
+                    [a.author?.first_name, a.author?.last_name].filter(Boolean).join(' ') ||
+                    'Committee';
+                  return (
+                    <View
+                      key={a.id}
+                      style={[s.annCard, a.is_important && s.annCardImportant]}
+                    >
+                      <View style={s.annCardHeader}>
+                        {a.is_important && (
+                          <View style={s.annImportantPill}>
+                            <Text style={s.annImportantPillText}>Important</Text>
+                          </View>
+                        )}
+                        <Text style={s.annDate}>
+                          {new Date(a.created_at).toLocaleDateString('en-GB', {
+                            day: 'numeric',
+                            month: 'short',
+                          })}
+                        </Text>
+                        {isAdmin && (
+                          <TouchableOpacity
+                            onPress={() => handleDeleteAnnouncement(a.id, a.title)}
+                            hitSlop={8}
+                          >
+                            <Trash2 size={14} color={colors.dangerTone.text} />
+                          </TouchableOpacity>
+                        )}
+                      </View>
+                      <Text style={s.annTitle}>{a.title}</Text>
+                      <Text style={s.annBody}>{a.content}</Text>
+                      <Text style={s.annAuthor}>— {authorName}</Text>
+                    </View>
+                  );
+                })
+              )}
+            </>
           )}
 
           {/* ── Tab 4 · Members ────────────────────────────────────────── */}
@@ -638,15 +785,20 @@ export default function SocietyProfileScreen() {
                 <ChevronRight size={16} color={colors.textFaint} />
               </TouchableOpacity>
 
-              <View style={[s.execAction, s.execActionDisabled]}>
-                <Megaphone size={16} color={colors.textFaint} />
+              <TouchableOpacity
+                style={s.execAction}
+                onPress={() => {
+                  setShowAnnForm(true);
+                  setTab('announcements');
+                }}
+              >
+                <Megaphone size={16} color={colors.accentHi} />
                 <View style={s.execActionText}>
-                  <Text style={[s.execActionTitle, s.execActionTitleDisabled]}>
-                    Post an announcement
-                  </Text>
-                  <Text style={s.execActionSub}>Available once AC-24 adds announcements</Text>
+                  <Text style={s.execActionTitle}>Post an announcement</Text>
+                  <Text style={s.execActionSub}>Notify members of this society</Text>
                 </View>
-              </View>
+                <ChevronRight size={16} color={colors.textFaint} />
+              </TouchableOpacity>
 
               <View style={s.sectionLabelRow}>
                 <Users size={13} color={colors.accentHi} />
@@ -885,6 +1037,70 @@ const makeStyles = (t: Theme) =>
     },
     panelBody: { ...t.typography.body, color: t.colors.textBody },
     panelMuted: { ...t.typography.caption, color: t.colors.textMuted, fontStyle: 'italic' },
+
+    // ── Announcements ───────────────────────────────────────────────────
+    annNewBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: t.spacing.sm,
+      paddingVertical: t.spacing.sm,
+    },
+    annNewText: { ...t.typography.button, color: t.colors.accentText },
+    annForm: { gap: t.spacing.sm },
+    annFormActions: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'flex-end',
+      gap: t.spacing.lg,
+      marginTop: t.spacing.sm,
+    },
+    annCancel: { ...t.typography.button, color: t.colors.textMuted },
+    annPostBtn: { paddingVertical: t.spacing.md, paddingHorizontal: t.spacing.xl },
+    importantRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: t.spacing.sm,
+      marginTop: t.spacing.sm,
+    },
+    checkbox: {
+      width: 20,
+      height: 20,
+      borderRadius: 6,
+      borderWidth: 1,
+      borderColor: t.colors.borderStrong,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    checkboxOn: { backgroundColor: t.colors.accent, borderColor: t.colors.accent },
+    importantLabel: { ...t.typography.label, color: t.colors.textBody },
+    annCard: {
+      backgroundColor: t.colors.surface,
+      borderRadius: t.radius.card,
+      borderWidth: 1,
+      borderColor: t.colors.border,
+      padding: t.spacing.lg,
+      gap: 6,
+    },
+    annCardImportant: { borderColor: t.colors.warningTone.border },
+    annCardHeader: { flexDirection: 'row', alignItems: 'center', gap: t.spacing.sm },
+    annImportantPill: {
+      paddingHorizontal: t.spacing.sm,
+      paddingVertical: 2,
+      borderRadius: t.radius.sm,
+      backgroundColor: t.colors.warningTone.bg,
+      borderWidth: 1,
+      borderColor: t.colors.warningTone.border,
+    },
+    annImportantPillText: {
+      ...t.typography.badge,
+      fontSize: 9,
+      color: t.colors.warningTone.text,
+    },
+    annDate: { ...t.typography.caption, fontSize: 11, color: t.colors.textFaint, flex: 1 },
+    annTitle: { ...t.typography.cardTitle, fontSize: 15 },
+    annBody: { ...t.typography.body, color: t.colors.textBody },
+    annAuthor: { ...t.typography.caption, fontSize: 11, color: t.colors.textMuted },
 
     // ── Stats ───────────────────────────────────────────────────────────
     statsRow: { flexDirection: 'row', gap: t.spacing.sm },

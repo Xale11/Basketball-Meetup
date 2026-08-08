@@ -30,6 +30,8 @@ export const createEvent = async (
       .from('events')
       .insert({
         name: form.name,
+        category: form.category,
+        tags: form.tags,
         description: form.description,
         start_date: form.start_date,
         end_date: form.end_date,
@@ -124,6 +126,8 @@ export const updateEvent = async (
       .from('events')
       .update({
         name: form.name,
+        category: form.category,
+        tags: form.tags,
         description: form.description,
         start_date: form.start_date,
         end_date: form.end_date,

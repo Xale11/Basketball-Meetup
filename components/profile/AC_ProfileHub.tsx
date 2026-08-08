@@ -46,11 +46,8 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { EventCard } from '@/components/events/EventCard';
 import { TextInputField } from '@/components/ui/TextInputField';
 import { Button } from '@/components/ui/Button';
-import { Event } from '@/types/event';
+import { Event, EVENT_CATEGORIES, EVENT_CATEGORY_LABEL } from '@/types/event';
 import { useTheme, useThemedStyles, Theme } from '@/hooks/useTheme';
-
-/** The Interests tab needs `profile_interests`, which lands with AC-22. */
-const SHOW_INTERESTS_TAB = false;
 
 const BIO_LIMIT = 150;
 
@@ -93,6 +90,38 @@ export function AC_ProfileHub() {
   const [changingPassword, setChangingPassword] = useState(false);
   const [pushEnabled, setPushEnabled] = useState(true);
 
+  // ── Interests & course details (AC-22 / AC-26) ────────────────────────────
+  // `interests` is kept locally so a tap reflects immediately; the mutation
+  // reconciles it. `user.interests` is NOT NULL in the DB but may be absent on
+  // a profile row cached from before the column existed.
+  const [interests, setInterests] = useState<string[]>(user?.interests ?? []);
+  const [degree, setDegree] = useState(user?.degree ?? '');
+  const [yearOfStudy, setYearOfStudy] = useState(user?.year_of_study ?? '');
+
+  const toggleInterest = async (cat: string) => {
+    const next = interests.includes(cat)
+      ? interests.filter((i) => i !== cat)
+      : [...interests, cat];
+    setInterests(next);
+    try {
+      await updateProfile({ interests: next });
+    } catch (e: any) {
+      setInterests(interests); // put the toggle back if the write failed
+      Alert.alert('Could not save interests', e?.message ?? 'Please try again.');
+    }
+  };
+
+  const handleSaveCourseDetails = async () => {
+    try {
+      await updateProfile({
+        degree: degree.trim() || null,
+        year_of_study: yearOfStudy.trim() || null,
+      });
+    } catch (e: any) {
+      Alert.alert('Could not save', e?.message ?? 'Please try again.');
+    }
+  };
+
   const now = Date.now();
 
   /** Attending, split by whether the event has finished. */
@@ -116,7 +145,7 @@ export function AC_ProfileHub() {
   const TABS = [
     { key: 'activity' as const, label: 'Activity' },
     { key: 'friends' as const, label: 'Friends' },
-    ...(SHOW_INTERESTS_TAB ? [{ key: 'interests' as const, label: 'Interests' }] : []),
+    { key: 'interests' as const, label: 'Interests' },
     { key: 'settings' as const, label: 'Settings' },
   ];
 
@@ -213,8 +242,19 @@ export function AC_ProfileHub() {
             </View>
           </View>
 
-          {/* Degree and year of study join this line with AC-26. */}
-          <Text style={s.email}>{session?.user?.email}</Text>
+          {/* email · Degree (Year) — the tail is omitted until those are set. */}
+          <Text style={s.email}>
+            {[
+              session?.user?.email,
+              user?.degree
+                ? user.year_of_study
+                  ? `${user.degree} (${user.year_of_study})`
+                  : user.degree
+                : null,
+            ]
+              .filter(Boolean)
+              .join(' • ')}
+          </Text>
 
           {/* Student bio, editable inline. */}
           <View style={[s.bioBox, editingBio && s.bioBoxEditing]}>
@@ -407,6 +447,56 @@ export function AC_ProfileHub() {
                 ))}
               </View>
             )}
+          </View>
+        )}
+
+        {/* ── Tab 3 · Interests ────────────────────────────────────────── */}
+        {tab === 'interests' && (
+          <View style={s.section}>
+            <Text style={s.interestsIntro}>
+              Pick the kinds of activity you care about. Tap to toggle — changes save
+              straight away.
+            </Text>
+
+            <View style={s.interestsGrid}>
+              {EVENT_CATEGORIES.map((cat) => {
+                const selected = interests.includes(cat);
+                return (
+                  <TouchableOpacity
+                    key={cat}
+                    style={[s.interestCard, selected && s.interestCardOn]}
+                    onPress={() => toggleInterest(cat)}
+                    disabled={saving}
+                    activeOpacity={0.85}
+                  >
+                    <Text style={[s.interestLabel, selected && s.interestLabelOn]}>
+                      {EVENT_CATEGORY_LABEL[cat]}
+                    </Text>
+                    {selected && <Check size={14} color={theme.colors.accentHi} strokeWidth={3} />}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            <Text style={s.sectionLabel}>Course details</Text>
+            <TextInputField
+              label="Degree"
+              value={degree}
+              onChangeText={setDegree}
+              placeholder="e.g. BSc Computer Science"
+            />
+            <TextInputField
+              label="Year of study"
+              value={yearOfStudy}
+              onChangeText={setYearOfStudy}
+              placeholder="e.g. 2nd Year"
+              style={s.fieldSpacing}
+            />
+            <Button
+              label={saving ? 'Saving…' : 'Save course details'}
+              onPress={handleSaveCourseDetails}
+              disabled={saving}
+            />
           </View>
         )}
 
@@ -649,6 +739,35 @@ const makeStyles = (t: Theme) =>
       color: t.colors.textMuted,
       marginTop: t.spacing.md,
     },
+
+    // Interests grid (AC-22).
+    interestsIntro: { ...t.typography.caption, color: t.colors.textMuted, lineHeight: 18 },
+    interestsGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: t.spacing.sm,
+      marginTop: t.spacing.sm,
+    },
+    interestCard: {
+      flexGrow: 1,
+      flexBasis: '46%',
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: t.spacing.sm,
+      paddingHorizontal: t.spacing.md,
+      paddingVertical: t.spacing.md,
+      borderRadius: t.radius.chip,
+      backgroundColor: t.colors.surface,
+      borderWidth: 1,
+      borderColor: t.colors.border,
+    },
+    interestCardOn: {
+      backgroundColor: t.colors.accentTone.bg,
+      borderColor: t.colors.accentTone.border,
+    },
+    interestLabel: { ...t.typography.badge, fontSize: 12, color: t.colors.textMuted, flexShrink: 1 },
+    interestLabelOn: { color: t.colors.accentTone.text },
     inlineLoader: { marginVertical: t.spacing.xl },
     rowActions: { flexDirection: 'row', gap: t.spacing.sm },
     rowAction: {

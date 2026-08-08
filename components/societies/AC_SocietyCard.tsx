@@ -20,11 +20,10 @@ export function roleLabelFor(roleId?: SocietyRoleIdEnum | string | null): Societ
 }
 
 /**
- * Deterministic banner placeholder.
+ * Deterministic banner placeholder, used when `banner_url` is unset.
  *
- * Society banners are blocked on AC-25 (no column exists yet), so the card
- * keys a gradient off the society id — the same society always gets the same
- * banner rather than one that reshuffles on every render.
+ * Keyed off the society id so the same society always gets the same gradient
+ * rather than one that reshuffles on every render.
  */
 export function bannerGradientFor(id: string, theme: Theme): [string, string, ...string[]] {
   const tones = [
@@ -94,6 +93,11 @@ export function AC_SocietyCard({
         end={{ x: 1, y: 1 }}
         style={s.banner}
       >
+        {/* A real banner covers the gradient; the gradient remains the fallback. */}
+        {society.banner_url ? (
+          <Image source={{ uri: society.banner_url }} style={StyleSheet.absoluteFill} />
+        ) : null}
+
         {/* Scrim so the logo and name stay legible against any tone. */}
         <LinearGradient colors={theme.gradient.imageScrim} style={StyleSheet.absoluteFill} />
 
@@ -123,9 +127,14 @@ export function AC_SocietyCard({
             </View>
           )}
           <View style={s.bannerText}>
-            <Text style={s.name} numberOfLines={1}>
-              {society.name ?? 'Untitled society'}
-            </Text>
+            <View style={s.nameRow}>
+              <Text style={s.name} numberOfLines={1}>
+                {society.name ?? 'Untitled society'}
+              </Text>
+              {society.verified_official && (
+                <ShieldCheck size={13} color={colors.successTone.solid} />
+              )}
+            </View>
             <View style={s.memberRow}>
               <Users size={11} color={colors.accentText} />
               <Text style={s.memberCount}>
@@ -249,9 +258,11 @@ const makeStyles = (t: Theme) =>
       color: t.colors.textPrimary,
     },
     bannerText: { flex: 1, gap: 2 },
+    nameRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
     name: {
       ...t.typography.cardTitle,
       fontSize: 14,
+      flexShrink: 1,
     },
     memberRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
     memberCount: {

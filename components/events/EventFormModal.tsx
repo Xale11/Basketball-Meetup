@@ -54,6 +54,10 @@ const HOST_TYPE_OPTIONS = [
 const INITIAL_FORM: CreateEventForm = {
   name: '',
   description: null,
+  // Basketball Meetup has no category/tag pickers; the fields exist so the
+  // shared form type is satisfied and the columns are written as empty.
+  category: null,
+  tags: [],
   start_date: '',
   end_date: '',
   is_online: false,

@@ -4,8 +4,7 @@ import { router } from 'expo-router';
 import { Bell, ShieldCheck, User as UserIcon } from 'lucide-react-native';
 import { theme } from '@/constants/theme';
 import { useAuth } from '@/hooks/useAuth';
-import { usePendingRequests } from '@/hooks/friends/usePendingRequests';
-import { useReceivedEventInvites } from '@/hooks/events/useReceivedEventInvites';
+import { useUnreadNotificationCount } from '@/hooks/notifications/useNotifications';
 import { AC_Logo } from './AC_Logo';
 
 const { colors, radius, spacing, shadow, typography } = theme;
@@ -28,16 +27,12 @@ interface AC_AppHeaderProps {
  * with a slate-700 hairline. The unread badge is rose; the avatar carries a
  * teal ring.
  *
- * The bell has no notification centre yet (AC-23). Until then it carries the
- * same unread count as the Profile tab — friend requests plus event invites —
- * and routes to friend requests rather than dead-ending.
+ * The bell shows unread `notifications` and opens the notification centre.
  */
 export function AC_AppHeader({ showVerified = false }: AC_AppHeaderProps) {
   const insets = useSafeAreaInsets();
   const { user, session } = useAuth();
-  const { count: friendRequestCount } = usePendingRequests();
-  const { count: eventInviteCount } = useReceivedEventInvites();
-  const unread = friendRequestCount + eventInviteCount;
+  const { count: unread } = useUnreadNotificationCount();
 
   // The reference derives the pill from the email domain — that domain is what
   // the verification actually attests to.
@@ -64,7 +59,7 @@ export function AC_AppHeader({ showVerified = false }: AC_AppHeaderProps) {
           accessibilityLabel={
             unread > 0 ? `Notifications, ${unread} unread` : 'Notifications'
           }
-          onPress={() => router.push('/friends/requests')}
+          onPress={() => router.push('/notifications')}
           style={({ pressed }) => [styles.chip, styles.bellChip, pressed && styles.chipPressed]}
           hitSlop={6}
         >
