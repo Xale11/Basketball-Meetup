@@ -1,4 +1,5 @@
-import { View, Text, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Image } from 'react-native';
+import { appVariant } from '@/constants/appVariant';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState } from 'react';
 import { Link, router } from 'expo-router';
@@ -8,8 +9,14 @@ import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { Button } from '@/components/ui/Button';
 import { TextInputField } from '@/components/ui/TextInputField';
 import { FormAlert } from '@/components/ui/FormAlert';
+import { useTheme, useThemedStyles, Theme } from '@/hooks/useTheme';
+
+const AC_LOGO = require('@/assets/images/activCampus/logo.png');
+const isActivCampus = appVariant === 'activCampus';
 
 export default function RegisterScreen() {
+  const { theme } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -65,11 +72,27 @@ export default function RegisterScreen() {
         contentContainerStyle={styles.scrollContent}>
           <View style={styles.content}>
             <View style={styles.header}>
-              <View style={styles.logo}>
-                <Text style={styles.logoText}>🏀</Text>
-              </View>
-              <Text style={styles.title}>Join the Game</Text>
-              <Text style={styles.subtitle}>Create your account to start playing</Text>
+              {isActivCampus ? (
+                <Image
+                  source={AC_LOGO}
+                  resizeMode="contain"
+                  style={styles.brandLogo}
+                  accessibilityRole="image"
+                  accessibilityLabel="Active Campus"
+                />
+              ) : (
+                <View style={styles.logo}>
+                  <Text style={styles.logoText}>🏀</Text>
+                </View>
+              )}
+              <Text style={styles.title}>
+                {isActivCampus ? 'Join your campus' : 'Join the Game'}
+              </Text>
+              <Text style={styles.subtitle}>
+                {isActivCampus
+                  ? 'Create your account to see what’s on'
+                  : 'Create your account to start playing'}
+              </Text>
             </View>
 
             <View style={styles.form}>
@@ -106,7 +129,7 @@ export default function RegisterScreen() {
                 style={styles.inputSpacing}
                 rightElement={
                   <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
-                    {showPassword ? <EyeOff size={20} color="#666" /> : <Eye size={20} color="#666" />}
+                    {showPassword ? <EyeOff size={20} color={theme.colors.textMuted} /> : <Eye size={20} color={theme.colors.textMuted} />}
                   </TouchableOpacity>
                 }
               />
@@ -121,7 +144,7 @@ export default function RegisterScreen() {
                 style={styles.inputSpacing}
                 rightElement={
                   <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)} style={styles.eyeIcon}>
-                    {showConfirmPassword ? <EyeOff size={20} color="#666" /> : <Eye size={20} color="#666" />}
+                    {showConfirmPassword ? <EyeOff size={20} color={theme.colors.textMuted} /> : <Eye size={20} color={theme.colors.textMuted} />}
                   </TouchableOpacity>
                 }
               />
@@ -153,92 +176,100 @@ export default function RegisterScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
-  keyboardView: {
-    flex: 1,
-  },
-  scrollContent: {
-    flexGrow: 1,
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: 24,
-    justifyContent: 'center',
-    paddingVertical: 40,
-  },
-  header: {
-    alignItems: 'center',
-    marginBottom: 48,
-  },
-  logo: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#FF6B35',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  logoText: {
-    fontSize: 32,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#1A1A1A',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
-    lineHeight: 24,
-  },
-  form: {
-    marginBottom: 32,
-  },
-  alert: {
-    marginBottom: 24,
-  },
-  inputSpacing: {
-    marginBottom: 16,
-  },
-  eyeIcon: {
-    padding: 4,
-  },
-  registerButton: {
-    marginTop: 8,
-  },
-  terms: {
-    marginTop: 24,
-    paddingHorizontal: 8,
-  },
-  termsText: {
-    fontSize: 12,
-    color: '#666',
-    textAlign: 'center',
-    lineHeight: 18,
-  },
-  linkText: {
-    color: '#FF6B35',
-    fontWeight: '500',
-  },
-  footer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  footerText: {
-    color: '#666',
-    fontSize: 14,
-  },
-  signInText: {
-    color: '#FF6B35',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-});
+const makeStyles = (t: Theme) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: t.colors.canvas,
+    },
+    keyboardView: {
+      flex: 1,
+    },
+    scrollContent: {
+      flexGrow: 1,
+    },
+    content: {
+      flex: 1,
+      paddingHorizontal: t.spacing.xl,
+      justifyContent: 'center',
+      paddingVertical: t.spacing.xxl,
+    },
+    header: {
+      alignItems: 'center',
+      marginBottom: t.spacing.xxl,
+    },
+    logo: {
+      width: 80,
+      height: 80,
+      borderRadius: 40,
+      backgroundColor: t.colors.accent,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: t.spacing.xl,
+    },
+    logoText: {
+      fontSize: 32,
+    },
+    // Smaller than the login screen's: this form is taller, so the lockup
+    // gives up height to keep the fields above the fold.
+    brandLogo: {
+      width: 120,
+      height: 120,
+      marginBottom: t.spacing.xs,
+    },
+    title: {
+      ...t.typography.h1,
+      fontSize: 28,
+      color: t.colors.textPrimary,
+      marginBottom: t.spacing.sm,
+    },
+    subtitle: {
+      ...t.typography.body,
+      fontSize: 15,
+      color: t.colors.textMuted,
+      textAlign: 'center',
+      lineHeight: 22,
+    },
+    form: {
+      marginBottom: t.spacing.xxl,
+    },
+    alert: {
+      marginBottom: t.spacing.xl,
+    },
+    inputSpacing: {
+      marginBottom: t.spacing.lg,
+    },
+    eyeIcon: {
+      padding: 4,
+    },
+    registerButton: {
+      marginTop: t.spacing.sm,
+    },
+    terms: {
+      marginTop: t.spacing.xl,
+      paddingHorizontal: t.spacing.sm,
+    },
+    termsText: {
+      ...t.typography.caption,
+      color: t.colors.textMuted,
+      textAlign: 'center',
+      lineHeight: 18,
+    },
+    linkText: {
+      color: t.colors.accentText,
+      fontFamily: t.typography.label.fontFamily,
+    },
+    footer: {
+      flexDirection: 'row',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    footerText: {
+      ...t.typography.body,
+      color: t.colors.textMuted,
+    },
+    signInText: {
+      ...t.typography.label,
+      color: t.colors.accentText,
+    },
+  });

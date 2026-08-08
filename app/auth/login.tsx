@@ -10,11 +10,14 @@ import { Button } from '@/components/ui/Button';
 import { TextInputField } from '@/components/ui/TextInputField';
 import { FormAlert } from '@/components/ui/FormAlert';
 import { DismissKeyboardView } from '@/components/ui/DismissKeyboardView';
+import { useTheme, useThemedStyles, Theme } from '@/hooks/useTheme';
 
 const AC_LOGO = require('@/assets/images/activCampus/logo.png');
 const isActivCampus = appVariant === 'activCampus';
 
 export default function LoginScreen() {
+  const { theme } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -95,7 +98,11 @@ export default function LoginScreen() {
               style={styles.inputSpacing}
               rightElement={
                 <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
-                  {showPassword ? <EyeOff size={20} color="#666" /> : <Eye size={20} color="#666" />}
+                  {showPassword ? (
+                    <EyeOff size={20} color={theme.colors.textMuted} />
+                  ) : (
+                    <Eye size={20} color={theme.colors.textMuted} />
+                  )}
                 </TouchableOpacity>
               }
             />
@@ -121,90 +128,90 @@ export default function LoginScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
-  keyboardView: {
-    flex: 1,
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: 24,
-    justifyContent: 'center',
-  },
-  header: {
-    alignItems: 'center',
-    marginBottom: 48,
-  },
-  logo: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#FF6B35',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  logoText: {
-    fontSize: 32,
-  },
-  // The artwork is a square lockup with its own internal padding, so it needs
-  // no circular chip behind it the way the emoji does.
-  brandLogo: {
-    width: 160,
-    height: 160,
-    marginBottom: 8,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#1A1A1A',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
-    lineHeight: 24,
-  },
-  form: {
-    marginBottom: 32,
-  },
-  alert: {
-    marginBottom: 24,
-  },
-  inputSpacing: {
-    marginBottom: 16,
-  },
-  eyeIcon: {
-    padding: 4,
-  },
-  loginButton: {
-    marginTop: 8,
-  },
-  forgotPassword: {
-    alignItems: 'center',
-    marginTop: 24,
-  },
-  forgotPasswordText: {
-    color: '#FF6B35',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  footer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  footerText: {
-    color: '#666',
-    fontSize: 14,
-  },
-  signUpText: {
-    color: '#FF6B35',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-});
+const makeStyles = (t: Theme) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: t.colors.canvas,
+    },
+    keyboardView: {
+      flex: 1,
+    },
+    content: {
+      flex: 1,
+      paddingHorizontal: t.spacing.xl,
+      justifyContent: 'center',
+    },
+    header: {
+      alignItems: 'center',
+      marginBottom: t.spacing.xxl,
+    },
+    logo: {
+      width: 80,
+      height: 80,
+      borderRadius: 40,
+      backgroundColor: t.colors.accent,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: t.spacing.xl,
+    },
+    logoText: {
+      fontSize: 32,
+    },
+    // The artwork is a square lockup with its own internal padding, so it needs
+    // no circular chip behind it the way the emoji does.
+    brandLogo: {
+      width: 160,
+      height: 160,
+      marginBottom: t.spacing.sm,
+    },
+    title: {
+      ...t.typography.h1,
+      fontSize: 28,
+      color: t.colors.textPrimary,
+      marginBottom: t.spacing.sm,
+    },
+    subtitle: {
+      ...t.typography.body,
+      fontSize: 15,
+      color: t.colors.textMuted,
+      textAlign: 'center',
+      lineHeight: 22,
+    },
+    form: {
+      marginBottom: t.spacing.xxl,
+    },
+    alert: {
+      marginBottom: t.spacing.xl,
+    },
+    inputSpacing: {
+      marginBottom: t.spacing.lg,
+    },
+    eyeIcon: {
+      padding: 4,
+    },
+    loginButton: {
+      marginTop: t.spacing.sm,
+    },
+    forgotPassword: {
+      alignItems: 'center',
+      marginTop: t.spacing.xl,
+    },
+    forgotPasswordText: {
+      ...t.typography.label,
+      color: t.colors.accentText,
+    },
+    footer: {
+      flexDirection: 'row',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    footerText: {
+      ...t.typography.body,
+      color: t.colors.textMuted,
+    },
+    signUpText: {
+      ...t.typography.label,
+      color: t.colors.accentText,
+    },
+  });

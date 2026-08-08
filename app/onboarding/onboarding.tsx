@@ -9,6 +9,7 @@ import {
   ScrollView,
   Modal,
   FlatList,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -24,8 +25,15 @@ import { Button } from '@/components/ui/Button';
 import { TextInputField } from '@/components/ui/TextInputField';
 import { FormAlert } from '@/components/ui/FormAlert';
 import { ToggleRow } from '@/components/ui/ToggleRow';
+import { appVariant } from '@/constants/appVariant';
+import { useTheme, useThemedStyles, Theme } from '@/hooks/useTheme';
+
+const AC_LOGO = require('@/assets/images/activCampus/logo.png');
+const isActivCampus = appVariant === 'activCampus';
 
 export default function OnboardingScreen() {
+  const { theme } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const { user, loading, session } = useAuth();
   const { onboardUser, loading: onboardingLoading } = useOnboardUser();
   
@@ -137,16 +145,18 @@ export default function OnboardingScreen() {
     .map(s => s.name);
 
   const normalizedSocietyQuery = societySearch.trim().toLowerCase();
+  // `societies.name` is nullable in the schema — a null used to throw here on
+  // both the search filter and the sort comparator.
   const filteredSocieties = societies
     .filter((s) => {
       if (!normalizedSocietyQuery) return true;
-      return s.name.toLowerCase().includes(normalizedSocietyQuery);
+      return (s.name ?? '').toLowerCase().includes(normalizedSocietyQuery);
     })
     .sort((a, b) => {
       const aSelected = selectedSocieties.includes(a.id);
       const bSelected = selectedSocieties.includes(b.id);
       if (aSelected !== bSelected) return aSelected ? -1 : 1;
-      return a.name.localeCompare(b.name);
+      return (a.name ?? '').localeCompare(b.name ?? '');
     })
     .slice(0, 5);
 
@@ -182,12 +192,24 @@ export default function OnboardingScreen() {
         contentContainerStyle={styles.scrollContent}>
           <View style={styles.content}>
             <View style={styles.header}>
-              <View style={styles.logo}>
-                <Text style={styles.logoText}>🏀</Text>
-              </View>
+              {isActivCampus ? (
+                <Image
+                  source={AC_LOGO}
+                  resizeMode="contain"
+                  style={styles.brandLogo}
+                  accessibilityRole="image"
+                  accessibilityLabel="Active Campus"
+                />
+              ) : (
+                <View style={styles.logo}>
+                  <Text style={styles.logoText}>🏀</Text>
+                </View>
+              )}
               <Text style={styles.title}>Set up your profile</Text>
               <Text style={styles.subtitle}>
-                Tell other hoopers a bit about yourself so we can match you with the right games.
+                {isActivCampus
+                  ? 'Tell us a bit about yourself so we can show you the right activities.'
+                  : 'Tell other hoopers a bit about yourself so we can match you with the right games.'}
               </Text>
 
               <View style={styles.stepIndicator}>
@@ -274,11 +296,11 @@ export default function OnboardingScreen() {
                     style={styles.universityPicker}
                     onPress={openUniversityPicker}
                   >
-                    <GraduationCap size={20} color="#666" style={styles.inputIcon} />
+                    <GraduationCap size={20} color={theme.colors.textMuted} style={styles.inputIcon} />
                     <Text style={[styles.universityPickerText, !selectedUniversity && styles.placeholderText]}>
                       {selectedUniversity ? selectedUniversity.name : 'Select University'}
                     </Text>
-                    <ChevronDown size={20} color="#666" />
+                    <ChevronDown size={20} color={theme.colors.textMuted} />
                   </TouchableOpacity>
 
                   <TextInputField
@@ -360,7 +382,7 @@ export default function OnboardingScreen() {
                           </Text>
                           {isSelected && (
                             <View style={styles.societyChipCheck}>
-                              <CheckCircle2 size={16} color="#FFFFFF" />
+                              <CheckCircle2 size={16} color={theme.colors.accentTone.text} />
                             </View>
                           )}
                         </TouchableOpacity>
@@ -378,7 +400,7 @@ export default function OnboardingScreen() {
                   )}
 
                   <View style={styles.summaryCard}>
-                    <CheckCircle2 size={22} color="#28A745" />
+                    <CheckCircle2 size={22} color={theme.colors.successTone.solid} />
                     <View style={{ marginLeft: 12, flex: 1 }}>
                       <Text style={styles.summaryTitle}>You're almost ready to hoop</Text>
                       <Text style={styles.summaryText}>
@@ -422,7 +444,7 @@ export default function OnboardingScreen() {
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Select University</Text>
               <TouchableOpacity onPress={() => setShowUniversityPicker(false)}>
-                <X size={24} color="#1A1A1A" />
+                <X size={24} color={theme.colors.textPrimary} />
               </TouchableOpacity>
             </View>
             <FlatList
@@ -447,7 +469,7 @@ export default function OnboardingScreen() {
                     {item.name}
                   </Text>
                   {form.university_id === item.id && (
-                    <CheckCircle2 size={20} color="#FF6B35" />
+                    <CheckCircle2 size={20} color={theme.colors.accentHi} />
                   )}
                 </TouchableOpacity>
               )}
@@ -459,265 +481,276 @@ export default function OnboardingScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
-  keyboardView: {
-    flex: 1,
-  },
-  scrollContent: {
-    flexGrow: 1,
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: 24,
-    paddingVertical: 32,
-    justifyContent: 'space-between',
-  },
-  header: {
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  logo: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: '#FF6B35',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  logoText: {
-    fontSize: 30,
-  },
-  title: {
-    fontSize: 26,
-    fontWeight: '700',
-    color: '#1A1A1A',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  subtitle: {
-    fontSize: 14,
-    color: '#666',
-    textAlign: 'center',
-    lineHeight: 22,
-  },
-  stepIndicator: {
-    flexDirection: 'row',
-    marginTop: 20,
-    gap: 8,
-  },
-  stepDot: {
-    height: 6,
-    borderRadius: 999,
-    backgroundColor: '#E9ECEF',
-    flex: 1,
-  },
-  stepDotActive: {
-    backgroundColor: '#FF6B35',
-  },
-  stepDotCompleted: {
-    backgroundColor: '#FFC2A3',
-  },
-  form: {
-    flex: 1,
-    marginTop: 8,
-  },
-  errorSpacing: {
-    marginBottom: 16,
-  },
-  inputSpacing: {
-    marginBottom: 16,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1A1A1A',
-    marginBottom: 16,
-  },
-  inputIcon: {
-    marginRight: 12,
-  },
-  universityPicker: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F8F9FA',
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 4,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#E9ECEF',
-  },
-  universityPickerText: {
-    flex: 1,
-    fontSize: 16,
-    paddingVertical: 14,
-    color: '#1A1A1A',
-  },
-  toggleRow: {
-    marginTop: 8,
-    padding: 16,
-    borderRadius: 16,
-    backgroundColor: '#F8F9FA',
-    borderWidth: 1,
-    borderColor: '#E9ECEF',
-  },
-  summaryCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    borderRadius: 16,
-    backgroundColor: '#E8F5E8',
-    marginTop: 8,
-  },
-  summaryTitle: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#1A1A1A',
-    marginBottom: 4,
-  },
-  summaryText: {
-    fontSize: 13,
-    color: '#4B5563',
-  },
-  footer: {
-    marginTop: 24,
-  },
-  footerButtons: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  footerButton: {
-    flex: 1,
-  },
-  skipButton: {
-    marginTop: 4,
-  },
-  photoSection: {
-    marginTop: 8,
-  },
-  photoLabel: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#1A1A1A',
-    marginBottom: 12,
-  },
-  placeholderText: {
-    color: '#9CA3AF',
-  },
-  societyHelperText: {
-    fontSize: 13,
-    color: '#666',
-    marginBottom: 8,
-  },
-  noSocietiesText: {
-    fontSize: 13,
-    color: '#666',
-    marginBottom: 8,
-  },
-  societiesContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginTop: 8,
-  },
-  societyChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 20,
-    backgroundColor: '#F8F9FA',
-    borderWidth: 1,
-    borderColor: '#E9ECEF',
-    marginBottom: 8,
-  },
-  societyChipSelected: {
-    backgroundColor: '#FF6B35',
-    borderColor: '#FF6B35',
-  },
-  societyChipText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#1A1A1A',
-  },
-  societyChipTextSelected: {
-    color: '#FFFFFF',
-  },
-  societyChipCheck: {
-    marginLeft: 8,
-  },
-  selectedSocietiesContainer: {
-    marginTop: 16,
-    padding: 12,
-    backgroundColor: '#F8F9FA',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E9ECEF',
-  },
-  selectedSocietiesLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#666',
-    marginBottom: 4,
-  },
-  selectedSocietiesText: {
-    fontSize: 14,
-    color: '#1A1A1A',
-  },
-  sectionSubtitle: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 16,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: '80%',
-    paddingBottom: 32,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E9ECEF',
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#1A1A1A',
-  },
-  modalItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F8F9FA',
-  },
-  modalItemSelected: {
-    backgroundColor: '#FFF4F0',
-  },
-  modalItemText: {
-    fontSize: 16,
-    color: '#1A1A1A',
-  },
-  modalItemTextSelected: {
-    fontWeight: '600',
-    color: '#FF6B35',
-  },
-});
+const makeStyles = (t: Theme) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: t.colors.canvas,
+    },
+    keyboardView: {
+      flex: 1,
+    },
+    scrollContent: {
+      flexGrow: 1,
+    },
+    content: {
+      flex: 1,
+      paddingHorizontal: t.spacing.xl,
+      paddingVertical: t.spacing.xxl,
+      justifyContent: 'space-between',
+    },
+    header: {
+      alignItems: 'center',
+      marginBottom: t.spacing.xl,
+    },
+    logo: {
+      width: 72,
+      height: 72,
+      borderRadius: 36,
+      backgroundColor: t.colors.accent,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: t.spacing.lg,
+    },
+    logoText: {
+      fontSize: 30,
+    },
+    brandLogo: {
+      width: 96,
+      height: 96,
+      marginBottom: t.spacing.xs,
+    },
+    title: {
+      ...t.typography.h1,
+      fontSize: 26,
+      color: t.colors.textPrimary,
+      marginBottom: t.spacing.sm,
+      textAlign: 'center',
+    },
+    subtitle: {
+      ...t.typography.body,
+      color: t.colors.textMuted,
+      textAlign: 'center',
+      lineHeight: 21,
+    },
+    stepIndicator: {
+      flexDirection: 'row',
+      marginTop: t.spacing.lg,
+      gap: t.spacing.sm,
+    },
+    stepDot: {
+      height: 6,
+      borderRadius: t.radius.pill,
+      backgroundColor: t.colors.surfaceAlt,
+      flex: 1,
+    },
+    stepDotActive: {
+      backgroundColor: t.colors.accent,
+    },
+    // Completed steps read as accent-but-spent: the tinted fill rather than
+    // the solid one, so the current step stays the brightest thing in the row.
+    stepDotCompleted: {
+      backgroundColor: t.colors.accentTone.border,
+    },
+    form: {
+      flex: 1,
+      marginTop: t.spacing.sm,
+    },
+    errorSpacing: {
+      marginBottom: t.spacing.lg,
+    },
+    inputSpacing: {
+      marginBottom: t.spacing.lg,
+    },
+    sectionTitle: {
+      ...t.typography.h3,
+      color: t.colors.textPrimary,
+      marginBottom: t.spacing.lg,
+    },
+    inputIcon: {
+      marginRight: t.spacing.md,
+    },
+    universityPicker: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: t.colors.surfaceInset,
+      borderRadius: t.radius.card,
+      paddingHorizontal: t.spacing.lg,
+      paddingVertical: 4,
+      marginBottom: t.spacing.lg,
+      borderWidth: 1,
+      borderColor: t.colors.borderStrong,
+    },
+    universityPickerText: {
+      ...t.typography.body,
+      flex: 1,
+      fontSize: 15,
+      paddingVertical: 14,
+      color: t.colors.textPrimary,
+    },
+    toggleRow: {
+      marginTop: t.spacing.sm,
+      padding: t.spacing.lg,
+      borderRadius: t.radius.card,
+      backgroundColor: t.colors.surface,
+      borderWidth: 1,
+      borderColor: t.colors.border,
+    },
+    summaryCard: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      padding: t.spacing.lg,
+      borderRadius: t.radius.card,
+      backgroundColor: t.colors.successTone.bg,
+      borderWidth: 1,
+      borderColor: t.colors.successTone.border,
+      marginTop: t.spacing.sm,
+    },
+    summaryTitle: {
+      ...t.typography.bodyStrong,
+      fontSize: 15,
+      color: t.colors.textPrimary,
+      marginBottom: 4,
+    },
+    summaryText: {
+      ...t.typography.caption,
+      color: t.colors.textBody,
+    },
+    footer: {
+      marginTop: t.spacing.xl,
+    },
+    footerButtons: {
+      flexDirection: 'row',
+      gap: t.spacing.md,
+    },
+    footerButton: {
+      flex: 1,
+    },
+    skipButton: {
+      marginTop: 4,
+    },
+    photoSection: {
+      marginTop: t.spacing.sm,
+    },
+    photoLabel: {
+      ...t.typography.label,
+      fontSize: 15,
+      color: t.colors.textPrimary,
+      marginBottom: t.spacing.md,
+    },
+    placeholderText: {
+      color: t.colors.textFaint,
+    },
+    societyHelperText: {
+      ...t.typography.caption,
+      color: t.colors.textMuted,
+      marginBottom: t.spacing.sm,
+    },
+    noSocietiesText: {
+      ...t.typography.caption,
+      color: t.colors.textMuted,
+      marginBottom: t.spacing.sm,
+    },
+    societiesContainer: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: t.spacing.sm,
+      marginTop: t.spacing.sm,
+    },
+    societyChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: t.spacing.lg,
+      paddingVertical: 10,
+      borderRadius: t.radius.pill,
+      backgroundColor: t.colors.surface,
+      borderWidth: 1,
+      borderColor: t.colors.border,
+      marginBottom: t.spacing.sm,
+    },
+    societyChipSelected: {
+      backgroundColor: t.colors.accentTone.bg,
+      borderColor: t.colors.accentTone.border,
+    },
+    societyChipText: {
+      ...t.typography.label,
+      color: t.colors.textBody,
+    },
+    societyChipTextSelected: {
+      color: t.colors.accentTone.text,
+    },
+    societyChipCheck: {
+      marginLeft: t.spacing.sm,
+    },
+    selectedSocietiesContainer: {
+      marginTop: t.spacing.lg,
+      padding: t.spacing.md,
+      backgroundColor: t.colors.surfaceInset,
+      borderRadius: t.radius.chip,
+      borderWidth: 1,
+      borderColor: t.colors.border,
+    },
+    selectedSocietiesLabel: {
+      ...t.typography.microLabel,
+      fontSize: 11,
+      color: t.colors.textMuted,
+      marginBottom: 4,
+    },
+    selectedSocietiesText: {
+      ...t.typography.body,
+      color: t.colors.textPrimary,
+    },
+    sectionSubtitle: {
+      ...t.typography.body,
+      color: t.colors.textMuted,
+      marginBottom: t.spacing.lg,
+    },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: t.colors.overlay,
+      justifyContent: 'flex-end',
+    },
+    modalContent: {
+      backgroundColor: t.colors.surface,
+      borderTopLeftRadius: t.radius.hero,
+      borderTopRightRadius: t.radius.hero,
+      borderTopWidth: 1,
+      borderColor: t.colors.chromeBorder,
+      maxHeight: '80%',
+      paddingBottom: t.spacing.xxl,
+    },
+    modalHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      padding: t.spacing.lg,
+      borderBottomWidth: 1,
+      borderBottomColor: t.colors.border,
+    },
+    modalTitle: {
+      ...t.typography.h2,
+      color: t.colors.textPrimary,
+    },
+    modalItem: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingHorizontal: t.spacing.lg,
+      paddingVertical: t.spacing.lg,
+      borderBottomWidth: 1,
+      borderBottomColor: t.colors.border,
+    },
+    modalItemSelected: {
+      backgroundColor: t.colors.accentTone.bg,
+    },
+    modalItemText: {
+      ...t.typography.body,
+      fontSize: 15,
+      color: t.colors.textPrimary,
+    },
+    modalItemTextSelected: {
+      color: t.colors.accentTone.text,
+      fontFamily: t.typography.label.fontFamily,
+    },
+  });
 

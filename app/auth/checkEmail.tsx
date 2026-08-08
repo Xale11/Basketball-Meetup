@@ -6,8 +6,11 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { supabase } from '@/api/supabase';
 import { Button } from '@/components/ui/Button';
 import { FormAlert } from '@/components/ui/FormAlert';
+import { useTheme, useThemedStyles, Theme } from '@/hooks/useTheme';
 
 export default function CheckEmailScreen() {
+  const { theme } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const { email: initialEmail } = useLocalSearchParams<{ email?: string }>();
   const [email] = useState(initialEmail || '');
   const [resending, setResending] = useState(false);
@@ -54,7 +57,7 @@ export default function CheckEmailScreen() {
       <View style={styles.content}>
         <View style={styles.iconWrapper}>
           <View style={styles.iconCircle}>
-            <MailCheck size={40} color="#FFFFFF" />
+            <MailCheck size={40} color={theme.colors.textOnAccent} />
           </View>
         </View>
 
@@ -89,47 +92,50 @@ export default function CheckEmailScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: 24,
-    justifyContent: 'center',
-  },
-  iconWrapper: {
-    alignItems: 'center',
-    marginBottom: 32,
-  },
-  iconCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#FF6B35',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#1A1A1A',
-    textAlign: 'center',
-    marginBottom: 12,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#666666',
-    textAlign: 'center',
-    lineHeight: 24,
-    marginBottom: 32,
-  },
-  alert: {
-    marginBottom: 16,
-  },
-  actions: {
-    gap: 12,
-    marginBottom: 24,
-  },
-});
+const makeStyles = (t: Theme) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: t.colors.canvas,
+    },
+    content: {
+      flex: 1,
+      paddingHorizontal: t.spacing.xl,
+      justifyContent: 'center',
+    },
+    iconWrapper: {
+      alignItems: 'center',
+      marginBottom: t.spacing.xxl,
+    },
+    iconCircle: {
+      width: 80,
+      height: 80,
+      borderRadius: 40,
+      backgroundColor: t.colors.accent,
+      justifyContent: 'center',
+      alignItems: 'center',
+      ...t.shadow.accentGlow,
+    },
+    title: {
+      ...t.typography.h1,
+      fontSize: 28,
+      color: t.colors.textPrimary,
+      textAlign: 'center',
+      marginBottom: t.spacing.md,
+    },
+    subtitle: {
+      ...t.typography.body,
+      fontSize: 15,
+      color: t.colors.textMuted,
+      textAlign: 'center',
+      lineHeight: 22,
+      marginBottom: t.spacing.xxl,
+    },
+    alert: {
+      marginBottom: t.spacing.lg,
+    },
+    actions: {
+      gap: t.spacing.md,
+      marginBottom: t.spacing.xl,
+    },
+  });
