@@ -83,6 +83,7 @@ export default function SocietiesScreen() {
   const [societyDescription, setSocietyDescription] = useState('');
   const [createCategory, setCreateCategory] = useState<string | null>(null);
   const [createLogoUri, setCreateLogoUri] = useState<string | undefined>(undefined);
+  const [createBannerUri, setCreateBannerUri] = useState<string | undefined>(undefined);
 
   const { createSociety: submitCreate, loading: creating } = useCreateSociety();
   const { joinSociety, loading: joining } = useJoinSociety();
@@ -170,6 +171,7 @@ export default function SocietiesScreen() {
     setSocietyDescription('');
     setCreateCategory(null);
     setCreateLogoUri(undefined);
+    setCreateBannerUri(undefined);
   };
 
   const handleCreate = () => {
@@ -190,6 +192,7 @@ export default function SocietiesScreen() {
         description: societyDescription,
         category: createCategory,
         logoUri: createLogoUri,
+        bannerUri: createBannerUri,
       },
       {
         onSuccess: (newSociety) => {
@@ -647,14 +650,25 @@ export default function SocietiesScreen() {
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
         style={styles.modalContent} contentContainerStyle={{ paddingBottom: 32 }}>
-            {/* Logo / Banner */}
+            {/* Logo — the square mark shown on cards and in listings. */}
             <View style={styles.formSection}>
-              <Text style={styles.fieldLabel}>Banner Image</Text>
+              <Text style={styles.fieldLabel}>Society logo</Text>
               <ImagePicker
                 selectedImage={createLogoUri}
                 onImageSelected={setCreateLogoUri}
                 onImageRemoved={() => setCreateLogoUri(undefined)}
-                placeholder="Add Society Banner"
+                placeholder="Add a logo"
+              />
+            </View>
+
+            {/* Banner — optional; falls back to a gradient keyed on the id. */}
+            <View style={styles.formSection}>
+              <Text style={styles.fieldLabel}>Banner image</Text>
+              <ImagePicker
+                selectedImage={createBannerUri}
+                onImageSelected={setCreateBannerUri}
+                onImageRemoved={() => setCreateBannerUri(undefined)}
+                placeholder="Add a banner"
               />
             </View>
 

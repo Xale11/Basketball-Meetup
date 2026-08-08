@@ -206,12 +206,14 @@ export default function SocietyProfileScreen() {
   const [editDescription, setEditDescription] = useState('');
   const [editCategory, setEditCategory] = useState<string | null>(null);
   const [editLogoUri, setEditLogoUri] = useState<string | undefined>(undefined);
+  const [editBannerUri, setEditBannerUri] = useState<string | undefined>(undefined);
 
   const openEdit = () => {
     setEditName(society?.name ?? '');
     setEditDescription(society?.description ?? '');
     setEditCategory(society?.category ?? null);
     setEditLogoUri(undefined);
+    setEditBannerUri(undefined);
     setShowEdit(true);
   };
 
@@ -228,6 +230,7 @@ export default function SocietyProfileScreen() {
         description: editDescription,
         category: editCategory,
         logoUri: editLogoUri,
+        bannerUri: editBannerUri,
       },
       {
         onSuccess: () => setShowEdit(false),
@@ -853,6 +856,17 @@ export default function SocietyProfileScreen() {
               placeholder="Add society logo"
             />
 
+            <Text style={[s.fieldLabel, s.fieldSpacing]}>Banner image</Text>
+            <Text style={s.fieldHint}>
+              Shown behind the society name on cards and at the top of this page.
+            </Text>
+            <ImagePicker
+              selectedImage={editBannerUri ?? society.banner_url ?? undefined}
+              onImageSelected={setEditBannerUri}
+              onImageRemoved={() => setEditBannerUri(undefined)}
+              placeholder="Add a banner"
+            />
+
             <TextInputField
               label="Society name *"
               value={editName}
@@ -1223,6 +1237,13 @@ const makeStyles = (t: Theme) =>
     modalBody: { flex: 1, paddingHorizontal: t.spacing.lg },
     modalBodyContent: { paddingTop: t.spacing.lg, paddingBottom: t.spacing.xxl },
     fieldLabel: { ...t.typography.label, color: t.colors.textPrimary, marginBottom: t.spacing.sm },
+    fieldHint: {
+      ...t.typography.caption,
+      fontSize: 11,
+      color: t.colors.textMuted,
+      marginTop: -4,
+      marginBottom: t.spacing.sm,
+    },
     fieldSpacing: { marginTop: t.spacing.lg },
     categoryChips: { flexDirection: 'row', flexWrap: 'wrap', gap: t.spacing.sm },
     catChip: {

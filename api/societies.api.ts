@@ -122,6 +122,7 @@ export const createSociety = async (
     description: string;
     category: string | null;
     logoUri?: string;
+    bannerUri?: string;
   },
 ): Promise<Society> => {
   // Generate a slug-style text ID matching the existing society ID convention
@@ -152,19 +153,34 @@ export const createSociety = async (
   if (error) throwSupabaseError('societies.api createSociety', error);
   const society = data as Society;
 
-  // Upload logo if provided, then patch the logo URL onto the row
+  // Upload logo and banner if provided, then patch their URLs onto the row.
+  // Both are a second pass because the storage path needs the society id, which
+  // only exists once the row is inserted.
+  const assetPatch: Partial<Society> = {};
   if (input.logoUri) {
-    const logoUrl = await uploadToSupabaseBucket(
+    assetPatch.logo = await uploadToSupabaseBucket(
       input.logoUri,
       `societies/${id}`,
       'logo',
       'images',
     );
-    const { error: logoError } = await supabase
+  }
+  if (input.bannerUri) {
+    assetPatch.banner_url = await uploadToSupabaseBucket(
+      input.bannerUri,
+      `societies/${id}`,
+      'banner',
+      'images',
+    );
+  }
+  if (Object.keys(assetPatch).length > 0) {
+    const { error: assetError } = await supabase
       .from('societies')
-      .update({ logo: logoUrl })
+      .update(assetPatch)
       .eq('id', id);
-    if (!logoError) society.logo = logoUrl;
+    // A failed asset upload must not orphan the society, so this stays
+    // non-fatal — the row is already valid without its images.
+    if (!assetError) Object.assign(society, assetPatch);
   }
 
   // Auto-enrol the creator as OWNER
@@ -187,6 +203,7 @@ export const updateSociety = async (
     description?: string;
     category?: string | null;
     logoUri?: string;
+    bannerUri?: string;
   },
 ): Promise<Society> => {
   if (updates.name !== undefined && !updates.name.trim()) {
@@ -201,13 +218,21 @@ export const updateSociety = async (
   if (updates.category !== undefined) payload.category = updates.category;
 
   if (updates.logoUri) {
-    const logoUrl = await uploadToSupabaseBucket(
+    payload.logo = await uploadToSupabaseBucket(
       updates.logoUri,
       `societies/${id}`,
       'logo',
       'images',
     );
-    payload.logo = logoUrl;
+  }
+
+  if (updates.bannerUri) {
+    payload.banner_url = await uploadToSupabaseBucket(
+      updates.bannerUri,
+      `societies/${id}`,
+      'banner',
+      'images',
+    );
   }
 
   const { data, error } = await supabase

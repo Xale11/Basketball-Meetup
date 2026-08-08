@@ -9,7 +9,14 @@ export const useUpdateSociety = () => {
   const mutation = useMutation<
     Society,
     Error,
-    { id: string; name: string; description: string; category: string | null; logoUri?: string }
+    {
+      id: string;
+      name: string;
+      description: string;
+      category: string | null;
+      logoUri?: string;
+      bannerUri?: string;
+    }
   >({
     mutationFn: ({ id, ...updates }) => updateSociety(id, updates),
     onSuccess: () => {

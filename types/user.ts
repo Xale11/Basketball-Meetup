@@ -50,6 +50,9 @@ export interface OnboardingUserForm {
   photo_url?: string;
   university_id?: string;
   course?: string;
+  /** AC-26. Optional at signup; also editable from the profile hub. */
+  degree?: string;
+  year_of_study?: string;
   societies?: string[];
 }
 

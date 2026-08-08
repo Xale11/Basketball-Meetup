@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { User as UserIcon, BookOpen, GraduationCap, CheckCircle2, ChevronDown, X, Search } from 'lucide-react-native';
+import { User as UserIcon, BookOpen, GraduationCap, CalendarClock, CheckCircle2, ChevronDown, X, Search } from 'lucide-react-native';
 import { useAuth } from '@/hooks/useAuth';
 import { OnboardingStatus, OnboardingUserForm } from '@/types/user';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
@@ -45,6 +45,8 @@ export default function OnboardingScreen() {
     photo_url: user?.photo_url ?? '',
     university_id: user?.university_id ?? '',
     course: user?.course ?? '',
+    degree: user?.degree ?? '',
+    year_of_study: user?.year_of_study ?? '',
     societies: [],
   });
 
@@ -284,6 +286,26 @@ export default function OnboardingScreen() {
                     placeholder="Course"
                     value={form.course ?? ""}
                     onChangeText={(text) => setForm((prev) => ({ ...prev, course: text }))}
+                  />
+
+                  {/* Degree and year of study (AC-26). Both optional — they
+                      only enrich the profile header's "{degree} ({year})". */}
+                  <TextInputField
+                    icon={GraduationCap}
+                    placeholder="Degree (optional) — e.g. BSc Computer Science"
+                    value={form.degree ?? ''}
+                    onChangeText={(text) => setForm((prev) => ({ ...prev, degree: text }))}
+                    style={styles.inputSpacing}
+                  />
+
+                  <TextInputField
+                    icon={CalendarClock}
+                    placeholder="Year of study (optional) — e.g. 2nd Year"
+                    value={form.year_of_study ?? ''}
+                    onChangeText={(text) =>
+                      setForm((prev) => ({ ...prev, year_of_study: text }))
+                    }
+                    style={styles.inputSpacing}
                   />
                 </View>
               )}

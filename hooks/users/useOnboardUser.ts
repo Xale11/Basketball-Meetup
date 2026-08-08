@@ -54,6 +54,8 @@ export function useOnboardUser(): UseOnboardUserReturn {
         over_18: form.over_18,
         university_id: form.university_id || undefined,
         course: form.course?.trim() || undefined,
+        degree: form.degree?.trim() || undefined,
+        year_of_study: form.year_of_study?.trim() || undefined,
         photo_url: photoUrl || form.photo_url || undefined,
         onboarding_status: OnboardingStatus.COMPLETED,
       };

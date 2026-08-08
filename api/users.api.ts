@@ -38,6 +38,8 @@ export const createUser = async (user: Partial<User>): Promise<User> => {
             photo_url: user.photo_url,
             university_id: user.university_id,
             course: user.course,
+            degree: user.degree,
+            year_of_study: user.year_of_study,
             onboarding_status: user.onboarding_status,
         })
         .select("*")

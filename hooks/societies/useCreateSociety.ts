@@ -10,6 +10,7 @@ interface CreateSocietyInput {
   description: string;
   category: string | null;
   logoUri?: string;
+  bannerUri?: string;
 }
 
 export const useCreateSociety = () => {
