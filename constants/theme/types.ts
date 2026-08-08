@@ -59,6 +59,19 @@ export interface ColorTokens {
   overlay: string;
   /** Map basemap tint, keeps pins legible against the palette. */
   mapBackdrop: string;
+
+  /**
+   * Map marker colours keyed by who hosts the event.
+   *
+   * Declared per variant rather than derived from the accent, so each app keeps
+   * its own legend: Basketball Meetup's orange/purple/blue is unchanged, while
+   * ActivCampus uses hues that stay legible on the dark basemap.
+   */
+  mapPin: {
+    personal: string;
+    society: string;
+    university: string;
+  };
 }
 
 export interface RadiusTokens {

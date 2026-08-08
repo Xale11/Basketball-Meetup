@@ -1,20 +1,19 @@
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ViewStyle } from 'react-native';
-import { theme } from '@/constants/theme';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { appVariant } from '@/constants/appVariant';
 import { AC_AppHeader } from '@/components/activCampus/AC_AppHeader';
 import { useState, useMemo } from 'react';
-import { Maximize2, Minimize2 } from 'lucide-react-native';
+import { Maximize2, Minimize2, Zap, Calendar, Clock, LucideIcon } from 'lucide-react-native';
 import { useAuth } from '@/hooks/useAuth';
 import { useFetchEvents } from '@/hooks/events/useFetchEvents';
 import { useFetchUserSocieties } from '@/hooks/societies/useFetchUserSocieties';
 import { useUserParticipations } from '@/hooks/events/useUserParticipations';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
-import InteractiveMap from '@/components/BM_InteractiveMap';
+import InteractiveMap, { hostTypeColors } from '@/components/BM_InteractiveMap';
 import { EventCard } from '@/components/events/EventCard';
+import { SectionHeader } from '@/components/ui/SectionHeader';
 import { Event, EventBookingMode, EventHostType } from '@/types/event';
-
-const { colors } = theme;
+import { useTheme, useThemedStyles, Theme } from '@/hooks/useTheme';
 
 type TimeFilter = 'Now' | 'Today' | 'This Week';
 type CostFilter = 'All' | 'Free' | 'Paid';
@@ -27,7 +26,24 @@ const ACTIVITY_HOST_MAP: Record<ActivityFilter, EventHostType | null> = {
   University: EventHostType.UNIVERSITY,
 };
 
+/**
+ * The list heading for each time filter.
+ *
+ * The map has a single section rather than the feed's stacked ones, so every
+ * filter gets the tinted-pill treatment — the feed reserves it for the sections
+ * that need emphasis and leaves the rest as plain labels.
+ */
+const TIME_FILTER_HEADING: Record<TimeFilter, { title: string; icon: LucideIcon }> = {
+  Now: { title: 'Happening Now', icon: Zap },
+  Today: { title: 'Today', icon: Calendar },
+  'This Week': { title: 'This Week', icon: Clock },
+};
+
 export default function MapScreen() {
+  const { theme } = useTheme();
+  const styles = useThemedStyles(makeStyles);
+  const { colors } = theme;
+
   const { user } = useAuth();
   const { memberships } = useFetchUserSocieties(user?.id);
   const societyIds = useMemo(() => memberships.map((m) => m.society_id), [memberships]);
@@ -71,24 +87,48 @@ export default function MapScreen() {
     position: 'relative',
   };
 
-    // ActivCampus renders the shared app header, which owns the top inset.
+  /** Active-chip fill for the host-type filters, matched to the map pin colours. */
+  const activityChipColor = (filter: ActivityFilter): ViewStyle => {
+    const hostType = ACTIVITY_HOST_MAP[filter];
+    if (!hostType) return {};
+    return { backgroundColor: hostTypeColors(theme)[hostType] };
+  };
+
+  // ActivCampus renders the shared app header, which owns the top inset.
   // Basketball Meetup keeps its own header and the default safe area.
   return (
     <SafeAreaView
       style={styles.container}
       edges={appVariant === 'activCampus' ? ['left', 'right'] : undefined}
     >
-      {appVariant === 'activCampus' && <AC_AppHeader />}
-      <View style={styles.header}>
-        <Text style={styles.title}>Events Map</Text>
-        <TouchableOpacity onPress={() => setShowFullScreen((p) => !p)} style={styles.expandButton}>
-          {showFullScreen ? <Minimize2 size={20} color={colors.textOnAccent} /> : <Maximize2 size={20} color={colors.textOnAccent} />}
-        </TouchableOpacity>
-      </View>
+      {appVariant === 'activCampus' ? (
+        // The app header is the only chrome above the map — no title row, so the
+        // map starts immediately beneath it.
+        <AC_AppHeader />
+      ) : (
+        // Basketball Meetup has no app header, so it keeps a title row rather
+        // than opening straight onto the map with nothing above it.
+        <View style={styles.header}>
+          <Text style={styles.title}>Events Map</Text>
+        </View>
+      )}
 
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={mapContainerStyle}>
           <InteractiveMap events={filteredEvents} participationMap={participationMap} />
+
+          {/* Overlaid top-right; the marker legend owns the top-left corner. */}
+          <TouchableOpacity
+            onPress={() => setShowFullScreen((p) => !p)}
+            style={styles.expandButton}
+            accessibilityLabel={showFullScreen ? 'Collapse map' : 'Expand map'}
+          >
+            {showFullScreen ? (
+              <Minimize2 size={20} color={colors.textOnAccent} />
+            ) : (
+              <Maximize2 size={20} color={colors.textOnAccent} />
+            )}
+          </TouchableOpacity>
         </View>
 
         {/* Filters */}
@@ -105,7 +145,9 @@ export default function MapScreen() {
               style={[styles.filterChip, timeFilter === f && styles.filterChipActive]}
               onPress={() => setTimeFilter(f)}
             >
-              <Text style={[styles.filterChipText, timeFilter === f && styles.filterChipTextActive]}>{f}</Text>
+              <Text style={[styles.filterChipText, timeFilter === f && styles.filterChipTextActive]}>
+                {f}
+              </Text>
             </TouchableOpacity>
           ))}
 
@@ -118,7 +160,9 @@ export default function MapScreen() {
               style={[styles.filterChip, costFilter === f && styles.filterChipActive]}
               onPress={() => setCostFilter(f)}
             >
-              <Text style={[styles.filterChipText, costFilter === f && styles.filterChipTextActive]}>{f}</Text>
+              <Text style={[styles.filterChipText, costFilter === f && styles.filterChipTextActive]}>
+                {f}
+              </Text>
             </TouchableOpacity>
           ))}
 
@@ -135,22 +179,31 @@ export default function MapScreen() {
               ]}
               onPress={() => setActivityFilter(f)}
             >
-              <Text style={[styles.filterChipText, activityFilter === f && styles.filterChipTextActive]}>{f}</Text>
+              <Text
+                style={[styles.filterChipText, activityFilter === f && styles.filterChipTextActive]}
+              >
+                {f}
+              </Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
 
         {/* Event list */}
         <View style={styles.listSection}>
-          <View style={styles.listHeader}>
-            <Text style={styles.listTitle}>
-              {timeFilter === 'Now' ? 'Happening Now' : timeFilter === 'Today' ? 'Today' : 'This Week'}
-            </Text>
-            <Text style={styles.resultCount}>{filteredEvents.length} events</Text>
-          </View>
+          {/* Same SectionHeader the Discover feed uses, so these headings read
+              identically on both screens. */}
+          <SectionHeader
+            title={TIME_FILTER_HEADING[timeFilter].title}
+            tone={colors.accentTone}
+            icon={TIME_FILTER_HEADING[timeFilter].icon}
+            trailing={`${filteredEvents.length} events`}
+            style={styles.listHeader}
+          />
 
           {loading ? (
-            <View style={styles.loadingContainer}><LoadingSpinner /></View>
+            <View style={styles.loadingContainer}>
+              <LoadingSpinner />
+            </View>
           ) : filteredEvents.length === 0 ? (
             <View style={styles.emptyState}>
               <Text style={styles.emptyTitle}>No events found</Text>
@@ -167,54 +220,76 @@ export default function MapScreen() {
           )}
         </View>
 
-        <View style={{ height: 32 }} />
+        <View style={styles.bottomPadding} />
       </ScrollView>
     </SafeAreaView>
   );
 }
 
-/** Returns a tinted background style for active activity chips */
-function activityChipColor(filter: ActivityFilter): object {
-  if (filter === 'Personal') return { backgroundColor: colors.accent };
-  if (filter === 'Society') return { backgroundColor: colors.infoTone.solid };
-  if (filter === 'University') return { backgroundColor: colors.infoTone.solid };
-  return {};
-}
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.canvas },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  title: { fontSize: 24, fontWeight: '700', color: colors.textPrimary },
-  expandButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.accent,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  filterRow: { backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border, flexGrow: 0 },
-  filterRowContent: { paddingHorizontal: 16, paddingVertical: 12, gap: 8, alignItems: 'center' },
-  filterChip: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 16, backgroundColor: colors.surfaceAlt },
-  filterChipActive: { backgroundColor: colors.accent },
-  filterChipText: { fontSize: 13, fontWeight: '600', color: colors.textBody },
-  filterChipTextActive: { color: colors.textOnAccent },
-  filterDivider: { width: 1, height: 20, backgroundColor: colors.surfaceAlt, marginHorizontal: 4 },
-  listSection: { paddingHorizontal: 20, paddingTop: 20 },
-  listHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  listTitle: { fontSize: 20, fontWeight: '600', color: colors.textPrimary },
-  resultCount: { fontSize: 13, color: colors.textMuted },
-  loadingContainer: { paddingTop: 40, alignItems: 'center' },
-  emptyState: { alignItems: 'center', paddingVertical: 40 },
-  emptyTitle: { fontSize: 16, fontWeight: '600', color: colors.textPrimary },
-  emptySubtitle: { fontSize: 14, color: colors.textMuted, marginTop: 4 },
-});
+const makeStyles = (t: Theme) =>
+  StyleSheet.create({
+    container: { flex: 1, backgroundColor: t.colors.canvas },
+    header: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingHorizontal: t.spacing.lg,
+      paddingVertical: t.spacing.lg,
+      backgroundColor: t.colors.surface,
+      borderBottomWidth: 1,
+      borderBottomColor: t.colors.chromeBorder,
+    },
+    title: { ...t.typography.h1, color: t.colors.textPrimary },
+    expandButton: {
+      position: 'absolute',
+      top: t.spacing.md,
+      right: t.spacing.md,
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: t.colors.accent,
+      justifyContent: 'center',
+      alignItems: 'center',
+      // Android draws MapView late; without an explicit stacking order the
+      // control can end up behind it.
+      zIndex: 10,
+      ...t.shadow.md,
+      elevation: 6,
+    },
+    filterRow: {
+      backgroundColor: t.colors.surface,
+      borderBottomWidth: 1,
+      borderBottomColor: t.colors.border,
+      flexGrow: 0,
+    },
+    filterRowContent: {
+      paddingHorizontal: t.spacing.lg,
+      paddingVertical: t.spacing.md,
+      gap: t.spacing.sm,
+      alignItems: 'center',
+    },
+    filterChip: {
+      paddingHorizontal: t.spacing.lg,
+      paddingVertical: 7,
+      borderRadius: t.radius.pill,
+      backgroundColor: t.colors.surfaceAlt,
+      borderWidth: 1,
+      borderColor: t.colors.border,
+    },
+    filterChipActive: { backgroundColor: t.colors.accent, borderColor: t.colors.accent },
+    filterChipText: { ...t.typography.badge, fontSize: 12, color: t.colors.textBody },
+    filterChipTextActive: { color: t.colors.textOnAccent },
+    filterDivider: {
+      width: 1,
+      height: 20,
+      backgroundColor: t.colors.borderStrong,
+      marginHorizontal: t.spacing.xs,
+    },
+    listSection: { paddingHorizontal: t.spacing.lg, paddingTop: t.spacing.lg },
+    listHeader: { marginBottom: t.spacing.md },
+    loadingContainer: { paddingTop: t.spacing.xl, alignItems: 'center' },
+    emptyState: { alignItems: 'center', paddingVertical: t.spacing.xl },
+    emptyTitle: { ...t.typography.h3, color: t.colors.textPrimary },
+    emptySubtitle: { ...t.typography.body, color: t.colors.textMuted, marginTop: 4 },
+    bottomPadding: { height: t.spacing.xxl },
+  });

@@ -69,6 +69,13 @@ export const basketballTheme: Theme = {
 
     overlay: 'rgba(0, 0, 0, 0.5)',
     mapBackdrop: '#FFFFFF',
+
+    // Unchanged from the original hardcoded legend.
+    mapPin: {
+      personal: '#FF6B35', // orange
+      society: '#7C3AED', // purple
+      university: '#2563EB', // blue
+    },
   },
 
   radius,

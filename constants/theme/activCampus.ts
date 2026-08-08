@@ -68,6 +68,15 @@ export const activCampusTheme: Theme = {
 
     overlay: 'rgba(2, 6, 23, 0.85)',
     mapBackdrop: '#0F172A',
+
+    // Bright 400-weight hues — the 500s used on light backgrounds go muddy
+    // against the dark basemap. Purple and blue carry over from the original
+    // legend; only "personal" changes, from orange to the brand teal.
+    mapPin: {
+      personal: '#2DD4BF', // teal-400
+      society: '#C084FC', // purple-400
+      university: '#60A5FA', // blue-400
+    },
   },
 
   radius,
