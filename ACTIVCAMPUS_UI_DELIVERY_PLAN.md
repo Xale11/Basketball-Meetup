@@ -149,11 +149,17 @@ The two biggest structural rewrites.
 `components/societies/SocietiesScreen.tsx` (801 lines) keeps its **4** tabs (Society Events / Discover / My Societies / Managed) and is restyled to the redesign's visual language.
 
 - Gradient hero banner + "Create Society" CTA.
-- *Events* tab drops (already on Discover); *Managed* folds into the role badge on each card plus the Executive tab from AC-18.
 - Keep the existing search + category chips.
+- Logo **and** banner pickers in the create-society modal (the single picker was
+  labelled "Banner" but bound to the logo).
 
-**Acceptance:** 2 sub-tabs render; no functionality lost from the removed tabs; create-society flow intact.
-**Depends on:** AC-03, AC-04. **Decision made:** keep all 4 tabs — this ticket is a restyle (hero, tokens, SegmentedTabs), not a restructure. Scope is therefore below the 2.5d estimate.
+**Acceptance:** hero banner and restyled cards render; all 4 tabs still work; create-society flow intact.
+**Depends on:** AC-03, AC-04.
+
+> **Decision (closes open question 2): keep all 4 tabs.** The redesign's 2-tab
+> layout was not adopted. This ticket is therefore a restyle — hero, tokens,
+> `SegmentedTabs`, card treatment — not a restructure, so actual scope came in
+> below the 2.5d estimate.
 
 ### AC-13 · Society card — **1.5d**
 Banner-led card: banner image, role badge (President/Committee/Member), logo, name + verified tick, member count, description, **"Next Activity" inset box**, footer actions (`View activities` · `Leave`/`+ Join` · `View society →`).

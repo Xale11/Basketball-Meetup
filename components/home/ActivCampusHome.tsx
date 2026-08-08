@@ -15,7 +15,7 @@ import { useFetchUserSocieties } from '@/hooks/societies/useFetchUserSocieties';
 import { useFetchSocietiesByUniId } from '@/hooks/societies/useFetchSocietiesByUniId';
 import { useFetchUniversities } from '@/hooks/universities/useFetchUniversities';
 import { useUserParticipations } from '@/hooks/events/useUserParticipations';
-import { useFriendsAttendingCounts } from '@/hooks/friends/useFriendsAttendingCounts';
+import { useFriendsAttending } from '@/hooks/friends/useFriendsAttending';
 import {
   EventWithCounts,
   EventBookingMode,
@@ -153,7 +153,7 @@ export default function ActivCampusHome() {
   const { refreshing, onRefresh } = useRefreshQueries([qk.events.all, qk.societies.all]);
 
   const eventIds = useMemo(() => events.map((e) => e.id), [events]);
-  const { countFor: friendsAttendingFor } = useFriendsAttendingCounts(eventIds);
+  const { friendsFor: friendsAttendingFor } = useFriendsAttending(eventIds);
 
   // Names are nullable in the DB; drop the nulls rather than render "null".
   const societyNameMap = useMemo(
@@ -484,7 +484,11 @@ export default function ActivCampusHome() {
               universityNameMap={universityNameMap}
               participantStatus={participationMap.get(item.id) ?? null}
               goingCount={item.going_count}
-              friendsAttendingCount={friendsAttendingFor(item.id)}
+              friendsAttending={friendsAttendingFor(item.id).map((f) => ({
+                id: f.id,
+                name: f.first_name,
+                photoUrl: f.photo_url,
+              }))}
             />
           )}
           ListEmptyComponent={

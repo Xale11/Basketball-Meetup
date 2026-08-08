@@ -135,13 +135,17 @@ export const getEventFriends = async (
 };
 
 /**
- * Efficient bulk query: returns a Map<eventId, friendCount> for use in event feeds.
- * Avoids N+1 queries by loading all friends' participations in a single request.
+ * The viewer's friends attending each of `eventIds`, keyed by event.
+ *
+ * Returns the profiles rather than a bare count so the feed can render the
+ * avatar stack; callers that only need a number read `.length`. Still one bulk
+ * round trip for the whole feed — the profile embed rides along on the
+ * participation query that was already being made.
  */
-export const getFriendsAttendingCountMap = async (
+export const getFriendsAttendingMap = async (
   eventIds: string[],
   userId: string,
-): Promise<Map<string, number>> => {
+): Promise<Map<string, FriendProfile[]>> => {
   if (eventIds.length === 0) return new Map();
 
   const [{ data: sent, error: e1 }, { data: received, error: e2 }] = await Promise.all([
@@ -156,8 +160,8 @@ export const getFriendsAttendingCountMap = async (
       .eq('addressee_id', userId)
       .eq('status', FriendshipStatus.ACCEPTED),
   ]);
-  if (e1) throwSupabaseError('friends.api getFriendsAttendingCountMap (sent)', e1);
-  if (e2) throwSupabaseError('friends.api getFriendsAttendingCountMap (received)', e2);
+  if (e1) throwSupabaseError('friends.api getFriendsAttendingMap (sent)', e1);
+  if (e2) throwSupabaseError('friends.api getFriendsAttendingMap (received)', e2);
 
   const friendIds = [
     ...(sent ?? []).map((f: any) => f.addressee_id as string),
@@ -167,17 +171,25 @@ export const getFriendsAttendingCountMap = async (
 
   const { data, error } = await supabase
     .from('event_participants')
-    .select('event_id')
+    .select(
+      'event_id, profiles!event_participants_user_id_fkey(id, first_name, last_name, photo_url, university_id, course)',
+    )
     .in('event_id', eventIds)
     .in('user_id', friendIds)
     .eq('status', 'GOING');
-  if (error) throwSupabaseError('friends.api getFriendsAttendingCountMap', error);
+  if (error) throwSupabaseError('friends.api getFriendsAttendingMap', error);
 
-  const countMap = new Map<string, number>();
-  for (const row of data ?? []) {
-    countMap.set(row.event_id, (countMap.get(row.event_id) ?? 0) + 1);
+  const map = new Map<string, FriendProfile[]>();
+  for (const row of (data ?? []) as any[]) {
+    // The embed is an object here (many-to-one), but a row whose profile is
+    // unreadable comes back null rather than being dropped.
+    const profile = row.profiles as FriendProfile | null;
+    if (!profile) continue;
+    const existing = map.get(row.event_id);
+    if (existing) existing.push(profile);
+    else map.set(row.event_id, [profile]);
   }
-  return countMap;
+  return map;
 };
 
 // ─── Friendship Mutations ─────────────────────────────────────────────────────
