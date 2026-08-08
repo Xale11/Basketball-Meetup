@@ -76,7 +76,13 @@ export function TextInputField({
           error ? styles.containerError : null,
         ]}
       >
-        {Icon && <Icon size={20} color={colors.textMuted} style={styles.iconLeft} />}
+        {Icon && (
+          <Icon
+            size={20}
+            color={colors.textMuted}
+            style={[styles.iconLeft, multiline && styles.iconLeftMultiline]}
+          />
+        )}
         <TextInput
           style={[
             styles.input,
@@ -152,6 +158,14 @@ const styles = StyleSheet.create({
   },
   iconLeft: {
     marginRight: 12,
+  },
+  /**
+   * A multiline container switches to `alignItems: 'flex-start'` so the input
+   * grows downward — which also pins the icon to the container's top edge,
+   * above the first line of text. This nudges it down to sit on that line.
+   */
+  iconLeftMultiline: {
+    marginTop: 14,
   },
   errorText: {
     color: colors.dangerTone.text,

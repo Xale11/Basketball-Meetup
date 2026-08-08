@@ -308,6 +308,7 @@ export default function OnboardingScreen() {
                     placeholder="Course"
                     value={form.course ?? ""}
                     onChangeText={(text) => setForm((prev) => ({ ...prev, course: text }))}
+                    style={styles.inputSpacing}
                   />
 
                   {/* Degree and year of study (AC-26). Both optional — they
