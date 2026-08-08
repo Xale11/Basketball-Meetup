@@ -4,6 +4,7 @@ import { UniversityRole } from '@/types/universities'
 import { supabase } from './supabase'
 import { uploadToSupabaseBucket } from './supabase-storage.api'
 import { throwSupabaseError } from '@/lib/supabaseError'
+import { FriendProfile } from '@/types/friends'
 
 const EVENT_IMAGES_BUCKET = 'event_images'
 
@@ -455,4 +456,22 @@ export const fetchParticipantEvents = async (userId: string): Promise<Event[]> =
     console.error('[fetchParticipantEvents] caught error:', error.message)
     throw new Error(error.message)
   }
+}
+
+/**
+ * Everyone confirmed GOING to an event, with their profile — drives the
+ * attendees list on the detail screen. One query, not one per attendee.
+ */
+export const fetchEventAttendees = async (eventId: string): Promise<FriendProfile[]> => {
+  const { data, error } = await supabase
+    .from('event_participants')
+    .select(
+      'profiles!event_participants_user_id_fkey(id, first_name, last_name, photo_url, university_id, course)',
+    )
+    .eq('event_id', eventId)
+    .eq('status', EventParticipantStatus.GOING)
+
+  if (error) throwSupabaseError('events.api fetchEventAttendees', error)
+
+  return ((data ?? []) as any[]).map((r) => r.profiles).filter(Boolean) as FriendProfile[]
 }

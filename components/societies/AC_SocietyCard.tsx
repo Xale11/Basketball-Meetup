@@ -26,7 +26,7 @@ export function roleLabelFor(roleId?: SocietyRoleIdEnum | string | null): Societ
  * keys a gradient off the society id — the same society always gets the same
  * banner rather than one that reshuffles on every render.
  */
-function bannerGradientFor(id: string, theme: Theme): [string, string, ...string[]] {
+export function bannerGradientFor(id: string, theme: Theme): [string, string, ...string[]] {
   const tones = [
     theme.colors.accentTone,
     theme.colors.infoTone,

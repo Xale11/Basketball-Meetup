@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useState } from 'react';
+import { useTheme, useThemedStyles, Theme } from '@/hooks/useTheme';
 
 interface DateTimeInputProps {
   onChange: (time: string) => boolean;
@@ -22,6 +23,8 @@ const DateTimeInput = ({
   defaultValue,
   initialValue,
 }: DateTimeInputProps) => {
+  const { theme } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const [showPicker, setShowPicker] = useState(false);
   const [dateTime, setDateTime] = useState<Date | undefined>(
     initialValue ? new Date(initialValue) : undefined
@@ -189,8 +192,10 @@ const DateTimeInput = ({
                 is24Hour={true}
                 onChange={handleTimePickerChange}
                 style={styles.iosPicker}
-                themeVariant="light"
-                textColor="#1A1A1A"
+                // The wheel is drawn by UIKit, not by our stylesheet — it needs
+                // telling which palette it sits on or it renders dark-on-dark.
+                themeVariant={theme.dark ? 'dark' : 'light'}
+                textColor={theme.colors.textPrimary}
               />
             )}
           </View>
@@ -202,66 +207,65 @@ const DateTimeInput = ({
 
 export default DateTimeInput;
 
-const styles = StyleSheet.create({
-  timeInputGroup: {
-    flex: 1,
-  },
-  timeLabel: {
-    fontSize: 12,
-    color: '#666',
-    marginBottom: 4,
-  },
-  timeInput: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderWidth: 1,
-    borderColor: '#E9ECEF',
-    // Matches the height a single-line TextInput used to occupy.
-    justifyContent: 'center',
-    minHeight: 38,
-  },
-  timeValue: {
-    fontSize: 14,
-    color: '#1A1A1A',
-  },
-  timePlaceholder: {
-    fontSize: 14,
-    color: '#999',
-  },
-  iosModalOverlay: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0,0,0,0.4)',
-  },
-  iosPickerContainer: {
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    paddingBottom: 24,
-  },
-  iosPickerHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
-  },
-  iosPickerCancel: {
-    fontSize: 16,
-    color: '#888',
-    fontWeight: '500',
-  },
-  iosPickerDone: {
-    fontSize: 16,
-    color: '#FF6B35',
-    fontWeight: '600',
-  },
-  iosPicker: {
-    width: '100%',
-    alignSelf: 'center',
-  },
-});
+const makeStyles = (t: Theme) =>
+  StyleSheet.create({
+    timeInputGroup: {
+      flex: 1,
+    },
+    timeLabel: {
+      ...t.typography.caption,
+      color: t.colors.textMuted,
+      marginBottom: 4,
+    },
+    timeInput: {
+      backgroundColor: t.colors.surfaceInset,
+      borderRadius: t.radius.sm,
+      paddingHorizontal: t.spacing.md,
+      paddingVertical: t.spacing.sm,
+      borderWidth: 1,
+      borderColor: t.colors.borderStrong,
+      // Matches the height a single-line TextInput used to occupy.
+      justifyContent: 'center',
+      minHeight: 38,
+    },
+    timeValue: {
+      ...t.typography.bodyStrong,
+      color: t.colors.textPrimary,
+    },
+    timePlaceholder: {
+      ...t.typography.body,
+      color: t.colors.textFaint,
+    },
+    iosModalOverlay: {
+      flex: 1,
+      justifyContent: 'flex-end',
+      backgroundColor: t.colors.overlay,
+    },
+    iosPickerContainer: {
+      backgroundColor: t.colors.surface,
+      borderTopLeftRadius: t.radius.card,
+      borderTopRightRadius: t.radius.card,
+      paddingBottom: t.spacing.xl,
+    },
+    iosPickerHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingHorizontal: t.spacing.lg,
+      paddingVertical: t.spacing.md,
+      borderBottomWidth: 1,
+      borderBottomColor: t.colors.border,
+    },
+    iosPickerCancel: {
+      ...t.typography.button,
+      color: t.colors.textMuted,
+    },
+    iosPickerDone: {
+      ...t.typography.button,
+      color: t.colors.accentText,
+    },
+    iosPicker: {
+      width: '100%',
+      alignSelf: 'center',
+    },
+  });

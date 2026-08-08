@@ -1,15 +1,8 @@
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  Switch,
-  Alert,
-} from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState } from 'react';
-import { MapPin, Users, Globe, Lock, Clock, Building } from 'lucide-react-native';
+import { router } from 'expo-router';
+import { MapPin, Users, Globe, Lock, Clock, Building, X, Coins } from 'lucide-react-native';
 import {
   GooglePlacesAutocomplete,
   GooglePlaceDetail,
@@ -29,30 +22,31 @@ import DateTimeInput from '@/components/DateTimeInput';
 import { ImagePicker } from '@/components/ImagePicker';
 import { OptionCardList } from '@/components/ui/OptionCard';
 import { PillSelector } from '@/components/ui/PillSelector';
+import { SegmentedTabs } from '@/components/ui/SegmentedTabs';
 import { Button } from '@/components/ui/Button';
 import { TextInputField } from '@/components/ui/TextInputField';
+import { useTheme, useThemedStyles, Theme } from '@/hooks/useTheme';
 
-import { theme } from '@/constants/theme';
-
-const { colors } = theme;
+/** Category and tag pickers need `events.category` / `events.tags` — AC-21. */
+const SHOW_CATEGORY_PICKER = false;
 
 const VISIBILITY_OPTIONS = [
-  { label: 'Public',          description: 'Everyone can see this',        value: EventVisibility.PUBLIC,          icon: Globe },
-  { label: 'Society Only',    description: 'Society members only',         value: EventVisibility.SOCIETY_ONLY,    icon: Users },
-  { label: 'University Only', description: 'Your university only',         value: EventVisibility.UNIVERSITY_ONLY, icon: Building },
-  { label: 'Private',         description: 'Hidden from discovery',        value: EventVisibility.PRIVATE,         icon: Lock },
+  { label: 'Public',          description: 'Everyone can see this',     value: EventVisibility.PUBLIC,          icon: Globe },
+  { label: 'Society Only',    description: 'Society members only',      value: EventVisibility.SOCIETY_ONLY,    icon: Users },
+  { label: 'University Only', description: 'Your university only',      value: EventVisibility.UNIVERSITY_ONLY, icon: Building },
+  { label: 'Private',         description: 'Hidden from discovery',     value: EventVisibility.PRIVATE,         icon: Lock },
 ];
 
 const JOIN_POLICY_OPTIONS = [
-  { label: 'Open',        description: 'Anyone can join instantly',   value: EventJoinPolicy.OPEN,              icon: Globe },
-  { label: 'Approval',    description: 'You approve each request',    value: EventJoinPolicy.APPROVAL_REQUIRED, icon: Clock },
-  { label: 'Invite Only', description: 'By invitation only',          value: EventJoinPolicy.INVITE_ONLY,       icon: Lock },
+  { label: 'Open',        description: 'Anyone can join instantly', value: EventJoinPolicy.OPEN,              icon: Globe },
+  { label: 'Approval',    description: 'You approve each request',  value: EventJoinPolicy.APPROVAL_REQUIRED, icon: Clock },
+  { label: 'Invite Only', description: 'By invitation only',        value: EventJoinPolicy.INVITE_ONLY,       icon: Lock },
 ];
 
 const HOST_TYPE_OPTIONS = [
-  { label: 'Personal',   description: 'Just you',                        value: EventHostType.USER,       icon: Users },
-  { label: 'Society',    description: 'On behalf of a society',          value: EventHostType.SOCIETY,    icon: Users },
-  { label: 'University', description: 'On behalf of your university',    value: EventHostType.UNIVERSITY, icon: Building },
+  { label: 'Personal',   description: 'Just you',                     value: EventHostType.USER,       icon: Users },
+  { label: 'Society',    description: 'On behalf of a society',       value: EventHostType.SOCIETY,    icon: Users },
+  { label: 'University', description: 'On behalf of your university', value: EventHostType.UNIVERSITY, icon: Building },
 ];
 
 const INITIAL_FORM: CreateEventForm = {
@@ -78,7 +72,25 @@ const INITIAL_FORM: CreateEventForm = {
   currency: null,
 };
 
+/** Formats the gap between start and end as the redesign's duration hint. */
+function durationLabel(start: string, end: string): string | null {
+  if (!start || !end) return null;
+  const minutes = Math.round(
+    (new Date(end).getTime() - new Date(start).getTime()) / 60000,
+  );
+  if (minutes <= 0) return null;
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  if (hours === 0) return `${rest} min`;
+  if (rest === 0) return `${hours} hr`;
+  return `${hours} hr ${rest} min`;
+}
+
 export default function CreateScreen() {
+  const { theme } = useTheme();
+  const styles = useThemedStyles(makeStyles);
+  const { colors } = theme;
+
   const [form, setForm] = useState<CreateEventForm>(INITIAL_FORM);
   const [hasMaxParticipants, setHasMaxParticipants] = useState(false);
   const [dateError, setDateError] = useState<string | null>(null);
@@ -92,6 +104,13 @@ export default function CreateScreen() {
   const needsSociety =
     form.host_type === EventHostType.SOCIETY ||
     form.visibility === EventVisibility.SOCIETY_ONLY;
+
+  const isPaid = form.booking_mode === EventBookingMode.TICKETED;
+  const duration = durationLabel(form.start_date, form.end_date);
+
+  /** Clears one field's error without disturbing the others. */
+  const clearError = (key: string) =>
+    setFormErrors(({ [key]: _removed, ...rest }) => rest);
 
   const addLocationToForm = (details: GooglePlaceDetail | null) => {
     if (!details) return;
@@ -107,7 +126,7 @@ export default function CreateScreen() {
       latitude: lat,
       longitude: lng,
     }));
-    setFormErrors((e) => ({ ...e, address: undefined as any }));
+    clearError('address');
   };
 
   const validate = (): boolean => {
@@ -122,6 +141,9 @@ export default function CreateScreen() {
     if (needsSociety && memberships.length > 0 && !form.society_id) {
       errors.society_id = 'Please select a society.';
     }
+    if (isPaid && (form.price_from == null || form.price_from <= 0)) {
+      errors.price_from = 'Enter a ticket price above £0.';
+    }
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -135,27 +157,42 @@ export default function CreateScreen() {
           setForm(INITIAL_FORM);
           setHasMaxParticipants(false);
           setFormErrors({});
-          Alert.alert('Created!', 'Your activity is live.');
+          Alert.alert('Created!', 'Your activity is live.', [
+            { text: 'Done', onPress: () => router.back() },
+          ]);
         },
         onError: (err) => Alert.alert('Error', err.message),
       },
     );
   };
 
+  // `societies.name` is nullable in the schema; the pill selector needs a string.
   const societyPillOptions = memberships.map((m) => ({
-    label: m.societies.name,
+    label: m.societies.name ?? 'Untitled society',
     value: m.society_id,
   }));
 
   return (
     <SafeAreaView style={styles.container}>
+      {/* Modal chrome — this is a presented sheet, so it needs its own dismiss. */}
       <View style={styles.header}>
-        <Text style={styles.title}>Create Activity</Text>
+        <View style={styles.headerText}>
+          <Text style={styles.title}>Host an activity</Text>
+          <Text style={styles.subtitle}>Bring people together on campus</Text>
+        </View>
+        <TouchableOpacity
+          style={styles.closeButton}
+          onPress={() => router.back()}
+          accessibilityLabel="Close"
+        >
+          <X size={20} color={colors.textPrimary} />
+        </TouchableOpacity>
       </View>
 
       <ScrollView
         style={styles.content}
         keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
         showsVerticalScrollIndicator={false}
       >
         {/* Name */}
@@ -165,7 +202,7 @@ export default function CreateScreen() {
             value={form.name}
             onChangeText={(val) => {
               setForm((p) => ({ ...p, name: val }));
-              if (val.trim()) setFormErrors((e) => ({ ...e, name: undefined as any }));
+              if (val.trim()) clearError('name');
             }}
             placeholder="e.g. 5-a-side football, study session..."
             maxLength={80}
@@ -188,7 +225,15 @@ export default function CreateScreen() {
 
         {/* Date & Time */}
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>When? *</Text>
+          <View style={styles.sectionLabelRow}>
+            <Text style={styles.sectionLabel}>When? *</Text>
+            {duration && (
+              <View style={styles.durationPill}>
+                <Clock size={11} color={colors.accentTone.text} />
+                <Text style={styles.durationText}>{duration}</Text>
+              </View>
+            )}
+          </View>
           <View style={styles.dateTimeRow}>
             <DateTimeInput
               label="Start"
@@ -197,11 +242,14 @@ export default function CreateScreen() {
               onChange={(val) => {
                 setForm((p) => {
                   const newEnd = p.end_date && p.end_date <= val ? '' : p.end_date;
-                  if (p.end_date && p.end_date <= val) setDateError('End time must be after start time.');
-                  else setDateError(null);
+                  if (p.end_date && p.end_date <= val) {
+                    setDateError('End time must be after start time.');
+                  } else {
+                    setDateError(null);
+                  }
                   return { ...p, start_date: val, end_date: newEnd };
                 });
-                setFormErrors((e) => ({ ...e, start_date: undefined as any }));
+                clearError('start_date');
                 return true;
               }}
             />
@@ -217,7 +265,7 @@ export default function CreateScreen() {
                 }
                 setDateError(null);
                 setForm((p) => ({ ...p, end_date: val }));
-                setFormErrors((e) => ({ ...e, end_date: undefined as any }));
+                clearError('end_date');
                 return true;
               }}
             />
@@ -252,28 +300,78 @@ export default function CreateScreen() {
             </View>
           </View>
           {!form.is_online && (
-            <View style={[styles.addressInputWrapper, formErrors.address ? styles.inputError : null]}>
-              <MapPin size={18} color={colors.textMuted} style={{ marginTop: 14 }} />
+            <View
+              style={[
+                styles.addressInputWrapper,
+                formErrors.address ? styles.addressInputError : null,
+              ]}
+            >
+              <MapPin size={18} color={colors.textMuted} style={styles.addressIcon} />
               <GooglePlacesAutocomplete
                 placeholder="Search for a venue or address"
                 debounce={300}
                 fetchDetails={true}
                 {...placesRequest}
                 textInputProps={{ placeholderTextColor: colors.textFaint }}
-                query={{
-                  language: 'en',
-                }}
+                query={{ language: 'en' }}
                 onPress={(_, details) => addLocationToForm(details ?? null)}
                 enablePoweredByContainer={false}
                 styles={{
                   textInput: styles.googleInput,
-                  container: { flex: 1 },
-                  listView: { backgroundColor: colors.surface, borderRadius: 8 },
+                  container: styles.googleContainer,
+                  listView: styles.googleListView,
+                  row: styles.googleRow,
+                  description: styles.googleDescription,
+                  separator: styles.googleSeparator,
                 }}
               />
             </View>
           )}
           {formErrors.address && <Text style={styles.fieldError}>{formErrors.address}</Text>}
+        </View>
+
+        {/* Cost */}
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>Cost</Text>
+          <Text style={styles.sectionSubLabel}>Is this free to attend?</Text>
+          <SegmentedTabs
+            tabs={[
+              { key: EventBookingMode.FREE, label: 'Free' },
+              { key: EventBookingMode.TICKETED, label: 'Paid' },
+            ]}
+            activeTab={form.booking_mode ?? EventBookingMode.FREE}
+            onTabChange={(mode) =>
+              setForm((p) => ({
+                ...p,
+                booking_mode: mode,
+                // Currency is only meaningful alongside a price.
+                price_from: mode === EventBookingMode.FREE ? null : p.price_from,
+                currency: mode === EventBookingMode.FREE ? null : (p.currency ?? 'GBP'),
+              }))
+            }
+          />
+
+          {isPaid && (
+            <View style={styles.subSection}>
+              <TextInputField
+                icon={Coins}
+                value={form.price_from != null ? String(form.price_from) : ''}
+                onChangeText={(val) => {
+                  const cleaned = val.replace(/[^0-9.]/g, '');
+                  const parsed = cleaned === '' ? null : Number(cleaned);
+                  setForm((p) => ({
+                    ...p,
+                    price_from: parsed != null && Number.isFinite(parsed) ? parsed : null,
+                    currency: p.currency ?? 'GBP',
+                  }));
+                  clearError('price_from');
+                }}
+                placeholder="Ticket price in £"
+                keyboardType="decimal-pad"
+                error={formErrors.price_from}
+              />
+            </View>
+          )}
         </View>
 
         {/* Visibility */}
@@ -299,7 +397,7 @@ export default function CreateScreen() {
 
         {/* Join Policy */}
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Who Can Join?</Text>
+          <Text style={styles.sectionLabel}>Who can join?</Text>
           <Text style={styles.sectionSubLabel}>How do people get in?</Text>
           <OptionCardList
             options={JOIN_POLICY_OPTIONS}
@@ -310,7 +408,7 @@ export default function CreateScreen() {
 
         {/* Host Type */}
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Hosted By</Text>
+          <Text style={styles.sectionLabel}>Hosted by</Text>
           <Text style={styles.sectionSubLabel}>Who is organising this activity?</Text>
           <OptionCardList
             options={HOST_TYPE_OPTIONS}
@@ -336,42 +434,43 @@ export default function CreateScreen() {
                 selected={form.society_id ?? ''}
                 onSelect={(value) => {
                   setForm((p) => ({ ...p, society_id: value }));
-                  setFormErrors((e) => ({ ...e, society_id: undefined as any }));
+                  clearError('society_id');
                 }}
               />
-              {formErrors.society_id && <Text style={styles.fieldError}>{formErrors.society_id}</Text>}
+              {formErrors.society_id && (
+                <Text style={styles.fieldError}>{formErrors.society_id}</Text>
+              )}
             </View>
           )}
 
           {needsSociety && memberships.length === 1 && (
             <View style={styles.autoPopulatedTag}>
               <Text style={styles.autoPopulatedLabel}>Society</Text>
-              <Text style={styles.autoPopulatedValue}>{memberships[0].societies.name}</Text>
+              <Text style={styles.autoPopulatedValue}>
+                {memberships[0].societies.name ?? 'Untitled society'}
+              </Text>
             </View>
           )}
 
           {needsSociety && memberships.length === 0 && (
-            <Text style={[styles.sectionSubLabel, { marginTop: 8 }]}>
-              You're not a member of any society yet.
-            </Text>
+            <Text style={styles.sectionNote}>You're not a member of any society yet.</Text>
           )}
         </View>
 
         {/* Max Participants */}
         <View style={styles.section}>
           <View style={styles.sectionLabelRow}>
-            <View>
-              <Text style={styles.sectionLabel}>Max Participants</Text>
+            <View style={styles.sectionLabelStack}>
+              <Text style={styles.sectionLabel}>Max participants</Text>
               <Text style={styles.sectionSubLabel}>Leave off for unlimited</Text>
             </View>
             <Switch
               value={hasMaxParticipants}
               onValueChange={(val) => {
                 setHasMaxParticipants(val);
-                if (!val) setForm((p) => ({ ...p, max_participants: null }));
-                else setForm((p) => ({ ...p, max_participants: 10 }));
+                setForm((p) => ({ ...p, max_participants: val ? 10 : null }));
               }}
-              trackColor={{ true: colors.accent }}
+              trackColor={{ false: colors.surfaceAlt, true: colors.accent }}
               thumbColor={colors.textPrimary}
             />
           </View>
@@ -395,10 +494,7 @@ export default function CreateScreen() {
               <TouchableOpacity
                 style={styles.counterButton}
                 onPress={() =>
-                  setForm((p) => ({
-                    ...p,
-                    max_participants: (p.max_participants ?? 10) + 1,
-                  }))
+                  setForm((p) => ({ ...p, max_participants: (p.max_participants ?? 10) + 1 }))
                 }
               >
                 <Text style={styles.counterButtonText}>+</Text>
@@ -409,7 +505,7 @@ export default function CreateScreen() {
 
         {/* Banner Image */}
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Banner Image</Text>
+          <Text style={styles.sectionLabel}>Banner image</Text>
           <ImagePicker
             placeholder="Add a banner photo"
             selectedImage={form.banner_image_uri ?? form.banner_image_url ?? undefined}
@@ -422,104 +518,161 @@ export default function CreateScreen() {
       </ScrollView>
 
       <View style={styles.footer}>
-        <Button label="Create Activity" onPress={handleCreate} loading={loading} />
+        <Button label="Publish activity" onPress={handleCreate} loading={loading} />
       </View>
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.canvas },
-  header: {
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  title: { fontSize: 24, fontWeight: '700', color: colors.textPrimary },
-  content: { flex: 1, paddingHorizontal: 20 },
-  section: { marginTop: 24 },
-  sectionLabel: { fontSize: 16, fontWeight: '600', color: colors.textPrimary, marginBottom: 4 },
-  sectionSubLabel: { fontSize: 13, color: colors.textMuted, marginBottom: 10 },
-  sectionLabelRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  onlineToggle: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  onlineToggleLabel: { fontSize: 14, color: colors.textMuted },
-  fieldError: { fontSize: 13, color: colors.dangerTone.text, marginTop: 4 },
-  dateTimeRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  dateSeparator: { fontSize: 14, color: colors.textMuted },
-  addressInputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    backgroundColor: colors.surface,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    borderWidth: 1,
-    borderColor: colors.border,
-    gap: 8,
-  },
-  googleInput: {
-    backgroundColor: 'transparent',
-    fontSize: 16,
-    color: colors.textPrimary,
-    paddingHorizontal: 0,
-    height: 48,
-  },
-  subSection: { marginTop: 16 },
-  subSectionLabel: { fontSize: 14, fontWeight: '500', color: colors.textMuted, marginBottom: 8 },
-  autoPopulatedTag: {
-    marginTop: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: colors.warningTone.bg,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    alignSelf: 'flex-start',
-  },
-  autoPopulatedLabel: { fontSize: 13, color: colors.accent, fontWeight: '600' },
-  autoPopulatedValue: { fontSize: 13, color: colors.textPrimary, fontWeight: '500' },
-  counterRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 20,
-    marginTop: 16,
-    backgroundColor: colors.surface,
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  counterButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.surfaceAlt,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  counterButtonText: { fontSize: 20, color: colors.textPrimary, fontWeight: '600' },
-  counterValueContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    minWidth: 60,
-    justifyContent: 'center',
-  },
-  counterValue: { fontSize: 20, fontWeight: '700', color: colors.textPrimary },
-  bottomPadding: { height: 32 },
-  footer: {
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: colors.surface,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
-});
+const makeStyles = (t: Theme) =>
+  StyleSheet.create({
+    container: { flex: 1, backgroundColor: t.colors.canvas },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: t.spacing.md,
+      paddingHorizontal: t.spacing.lg,
+      paddingVertical: t.spacing.lg,
+      backgroundColor: t.colors.surface,
+      borderBottomWidth: 1,
+      borderBottomColor: t.colors.chromeBorder,
+    },
+    headerText: { flex: 1, gap: 2 },
+    title: { ...t.typography.h1, color: t.colors.textPrimary },
+    subtitle: { ...t.typography.caption, color: t.colors.textMuted },
+    closeButton: {
+      width: 38,
+      height: 38,
+      borderRadius: 19,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: t.colors.surfaceAlt,
+      borderWidth: 1,
+      borderColor: t.colors.border,
+    },
+
+    content: { flex: 1, paddingHorizontal: t.spacing.lg },
+    section: { marginTop: t.spacing.xl },
+    sectionLabel: { ...t.typography.h3, color: t.colors.textPrimary, marginBottom: 4 },
+    sectionSubLabel: { ...t.typography.caption, color: t.colors.textMuted, marginBottom: 10 },
+    sectionNote: { ...t.typography.caption, color: t.colors.textMuted, marginTop: t.spacing.sm },
+    sectionLabelRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 10,
+    },
+    sectionLabelStack: { flex: 1 },
+
+    durationPill: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      paddingHorizontal: t.spacing.sm + 2,
+      paddingVertical: 3,
+      borderRadius: t.radius.pill,
+      backgroundColor: t.colors.accentTone.bg,
+      borderWidth: 1,
+      borderColor: t.colors.accentTone.border,
+    },
+    durationText: { ...t.typography.badge, fontSize: 10, color: t.colors.accentTone.text },
+
+    onlineToggle: { flexDirection: 'row', alignItems: 'center', gap: t.spacing.sm },
+    onlineToggleLabel: { ...t.typography.caption, color: t.colors.textMuted },
+    fieldError: { ...t.typography.caption, color: t.colors.dangerTone.text, marginTop: 4 },
+    dateTimeRow: { flexDirection: 'row', alignItems: 'center', gap: t.spacing.sm },
+    dateSeparator: { ...t.typography.caption, color: t.colors.textMuted, marginTop: 18 },
+
+    addressInputWrapper: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      backgroundColor: t.colors.surfaceInset,
+      borderRadius: t.radius.chip,
+      paddingHorizontal: t.spacing.md,
+      borderWidth: 1,
+      borderColor: t.colors.borderStrong,
+      gap: t.spacing.sm,
+    },
+    addressInputError: { borderColor: t.colors.dangerTone.solid },
+    addressIcon: { marginTop: 14 },
+    googleContainer: { flex: 1 },
+    googleInput: {
+      backgroundColor: 'transparent',
+      fontFamily: t.typography.body.fontFamily,
+      fontSize: 15,
+      color: t.colors.textPrimary,
+      paddingHorizontal: 0,
+      height: 48,
+    },
+    // The dropdown renders outside our wrapper, so it needs its own surface.
+    googleListView: {
+      backgroundColor: t.colors.surface,
+      borderRadius: t.radius.chip,
+      borderWidth: 1,
+      borderColor: t.colors.border,
+    },
+    googleRow: { backgroundColor: 'transparent', paddingVertical: t.spacing.md },
+    googleDescription: {
+      fontFamily: t.typography.body.fontFamily,
+      fontSize: 14,
+      color: t.colors.textBody,
+    },
+    googleSeparator: { height: 1, backgroundColor: t.colors.border },
+
+    subSection: { marginTop: t.spacing.lg },
+    subSectionLabel: { ...t.typography.label, color: t.colors.textMuted, marginBottom: t.spacing.sm },
+    autoPopulatedTag: {
+      marginTop: t.spacing.md,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: t.spacing.sm,
+      backgroundColor: t.colors.accentTone.bg,
+      borderWidth: 1,
+      borderColor: t.colors.accentTone.border,
+      borderRadius: t.radius.sm,
+      paddingHorizontal: t.spacing.md,
+      paddingVertical: t.spacing.sm,
+      alignSelf: 'flex-start',
+    },
+    autoPopulatedLabel: { ...t.typography.microLabel, fontSize: 10, color: t.colors.accentText },
+    autoPopulatedValue: { ...t.typography.bodyStrong, color: t.colors.textPrimary },
+
+    counterRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: t.spacing.lg,
+      marginTop: t.spacing.lg,
+      backgroundColor: t.colors.surface,
+      borderRadius: t.radius.chip,
+      padding: t.spacing.lg,
+      borderWidth: 1,
+      borderColor: t.colors.border,
+    },
+    counterButton: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: t.colors.surfaceAlt,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    counterButtonText: { ...t.typography.h2, color: t.colors.textPrimary },
+    counterValueContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: t.spacing.sm,
+      minWidth: 60,
+      justifyContent: 'center',
+    },
+    counterValue: { ...t.typography.h2, color: t.colors.textPrimary },
+
+    bottomPadding: { height: t.spacing.xxl },
+    footer: {
+      paddingHorizontal: t.spacing.lg,
+      paddingVertical: t.spacing.lg,
+      backgroundColor: t.colors.surface,
+      borderTopWidth: 1,
+      borderTopColor: t.colors.chromeBorder,
+    },
+  });

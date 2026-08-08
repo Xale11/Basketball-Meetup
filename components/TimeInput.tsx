@@ -6,8 +6,8 @@ import {
   Platform,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { OpeningHours } from '@/types/courts';
 import { useState } from 'react';
+import { useTheme, useThemedStyles, Theme } from '@/hooks/useTheme';
 
 interface TimeInputProps {
   onChange: (time: string) => boolean;
@@ -22,6 +22,8 @@ const TimeInput = ({
   defaultValue,
   mode = 'time',
 }: TimeInputProps) => {
+  const { theme } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const [showPicker, setShowPicker] = useState(false);
   const [time, setTime] = useState<Date>();
 
@@ -85,8 +87,10 @@ const TimeInput = ({
             onChange={(e) =>
               handleTimePickerChange(e, new Date(e.nativeEvent.timestamp))
             }
-            themeVariant="light"
-            textColor="#1A1A1A"
+            // Drawn by the platform, not by our stylesheet — without this it
+            // renders dark-on-dark under the ActivCampus palette.
+            themeVariant={theme.dark ? 'dark' : 'light'}
+            textColor={theme.colors.textPrimary}
           />
         ))}
     </View>
@@ -95,32 +99,33 @@ const TimeInput = ({
 
 export default TimeInput;
 
-const styles = StyleSheet.create({
-  timeInputGroup: {
-    flex: 1,
-  },
-  timeLabel: {
-    fontSize: 12,
-    color: '#666',
-    marginBottom: 4,
-  },
-  timeInput: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderWidth: 1,
-    borderColor: '#E9ECEF',
-    // Matches the height a single-line TextInput used to occupy.
-    justifyContent: 'center',
-    minHeight: 38,
-  },
-  timeValue: {
-    fontSize: 14,
-    color: '#1A1A1A',
-  },
-  timePlaceholder: {
-    fontSize: 14,
-    color: '#999',
-  },
-});
+const makeStyles = (t: Theme) =>
+  StyleSheet.create({
+    timeInputGroup: {
+      flex: 1,
+    },
+    timeLabel: {
+      ...t.typography.caption,
+      color: t.colors.textMuted,
+      marginBottom: 4,
+    },
+    timeInput: {
+      backgroundColor: t.colors.surfaceInset,
+      borderRadius: t.radius.sm,
+      paddingHorizontal: t.spacing.md,
+      paddingVertical: t.spacing.sm,
+      borderWidth: 1,
+      borderColor: t.colors.borderStrong,
+      // Matches the height a single-line TextInput used to occupy.
+      justifyContent: 'center',
+      minHeight: 38,
+    },
+    timeValue: {
+      ...t.typography.bodyStrong,
+      color: t.colors.textPrimary,
+    },
+    timePlaceholder: {
+      ...t.typography.body,
+      color: t.colors.textFaint,
+    },
+  });

@@ -510,10 +510,12 @@ export default function SocietiesScreen() {
                     onPress={() =>
                       router.push({ pathname: '/society/[id]', params: { id: society.id } })
                     }
-                    onViewActivities={() => {
-                      setSelectedSocietyFilter(society.id);
-                      setSelectedTab('events');
-                    }}
+                    onViewActivities={() =>
+                      router.push({
+                        pathname: '/society/[id]',
+                        params: { id: society.id, tab: 'activities' },
+                      })
+                    }
                     onJoin={() => joinSociety({ societyId: society.id })}
                     onLeave={() => leaveSociety({ societyId: society.id })}
                     actionLoading={joining || leaving}
@@ -559,10 +561,12 @@ export default function SocietiesScreen() {
                   onPress={() =>
                     router.push({ pathname: '/society/[id]', params: { id: m.society_id } })
                   }
-                  onViewActivities={() => {
-                    setSelectedSocietyFilter(m.society_id);
-                    setSelectedTab('events');
-                  }}
+                  onViewActivities={() =>
+                    router.push({
+                      pathname: '/society/[id]',
+                      params: { id: m.society_id, tab: 'activities' },
+                    })
+                  }
                   onLeave={() => leaveSociety({ societyId: m.society_id })}
                   actionLoading={leaving}
                 />
@@ -605,10 +609,12 @@ export default function SocietiesScreen() {
                   onPress={() =>
                     router.push({ pathname: '/society/[id]', params: { id: m.society_id } })
                   }
-                  onViewActivities={() => {
-                    setSelectedSocietyFilter(m.society_id);
-                    setSelectedTab('events');
-                  }}
+                  onViewActivities={() =>
+                    router.push({
+                      pathname: '/society/[id]',
+                      params: { id: m.society_id, tab: 'activities' },
+                    })
+                  }
                   onLeave={() => leaveSociety({ societyId: m.society_id })}
                   actionLoading={leaving}
                 />

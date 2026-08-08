@@ -211,3 +211,67 @@ export const updateSociety = async (
   if (error) throwSupabaseError('societies.api updateSociety', error);
   return data as Society;
 };
+
+/**
+ * Changes a member's role within a society.
+ *
+ * Authorisation lives in the `Leaders can change member roles` RLS policy, not
+ * here — only OWNER/PRESIDENT of the same society may call this, an OWNER's row
+ * is untouchable, and the new role is restricted to MEMBER or EXEC so
+ * leadership cannot be granted sideways.
+ */
+export const updateSocietyMemberRole = async (
+  user_id: string,
+  society_id: string,
+  role_id: SocietyRoleIdEnum.MEMBER | SocietyRoleIdEnum.EXEC,
+): Promise<SocietyMembership> => {
+  const { data, error } = await supabase
+    .from('society_memberships')
+    .update({ role_id })
+    .eq('user_id', user_id)
+    .eq('society_id', society_id)
+    .select('*')
+    .maybeSingle();
+
+  if (error) throwSupabaseError('societies.api updateSocietyMemberRole', error);
+  if (!data) {
+    // An RLS denial surfaces as zero rows rather than an error.
+    throw new Error('You do not have permission to change this member\u2019s role.');
+  }
+  return data as SocietyMembership;
+};
+
+export type SocietyMemberWithProfile = SocietyMembership & {
+  profiles: {
+    id: string;
+    first_name: string | null;
+    last_name: string | null;
+    photo_url: string | null;
+  };
+};
+
+/**
+ * Active members of a society with their profiles, for the Members tab.
+ *
+ * The embed hint is `societyMemberships_userId_fkey1`, which does NOT follow the
+ * `<table>_<column>_fkey` convention the rest of this file relies on. Two things
+ * are going on, both in the database rather than here:
+ *   * `society_memberships` was created with camelCase constraint names, so the
+ *     FK is `societyMemberships_userId_fkey`, not `society_memberships_user_id_fkey`;
+ *   * `user_id` carries TWO foreign keys — one to `auth.users` and one to
+ *     `profiles` — and the profiles one was added second, so Postgres suffixed
+ *     it `1`.
+ * See the note in ACTIVCAMPUS_UI_REDESIGN.md about normalising these.
+ */
+export const getSocietyMembers = async (
+  society_id: string,
+): Promise<SocietyMemberWithProfile[]> => {
+  const { data, error } = await supabase
+    .from('society_memberships')
+    .select('*, profiles!societyMemberships_userId_fkey1(id, first_name, last_name, photo_url)')
+    .eq('society_id', society_id)
+    .eq('status', SocietyMembershipStatusEnum.ACTIVE);
+
+  if (error) throwSupabaseError('societies.api getSocietyMembers', error);
+  return (data ?? []) as SocietyMemberWithProfile[];
+};

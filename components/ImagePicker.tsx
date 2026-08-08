@@ -1,7 +1,8 @@
 import { View, Text, TouchableOpacity, StyleSheet, Alert, Image } from 'react-native';
 import { useState } from 'react';
 import * as ImagePickerExpo from 'expo-image-picker';
-import { Camera, Image as ImageIcon, X } from 'lucide-react-native';
+import { Camera, X } from 'lucide-react-native';
+import { useTheme, useThemedStyles, Theme } from '@/hooks/useTheme';
 
 interface ImagePickerProps {
   onImageSelected: (uri: string) => void;
@@ -16,6 +17,8 @@ export function ImagePicker({
   selectedImage, 
   placeholder = "Add Photo" 
 }: ImagePickerProps) {
+  const { theme } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const [loading, setLoading] = useState(false);
 
   const requestPermission = async () => {
@@ -115,7 +118,7 @@ export function ImagePicker({
     >
       <View style={styles.content}>
         <View style={styles.iconContainer}>
-          <Camera size={32} color="#FF6B35" />
+          <Camera size={32} color={theme.colors.accentHi} />
         </View>
         <Text style={styles.text}>{placeholder}</Text>
         <Text style={styles.subtext}>Tap to add from camera or gallery</Text>
@@ -124,60 +127,62 @@ export function ImagePicker({
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    backgroundColor: '#F8F9FA',
-    borderRadius: 16,
-    borderWidth: 2,
-    borderColor: '#E9ECEF',
-    borderStyle: 'dashed',
-    padding: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 200,
-  },
-  content: {
-    alignItems: 'center',
-  },
-  iconContainer: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: '#FFF4F0',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  text: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1A1A1A',
-    marginBottom: 4,
-  },
-  subtext: {
-    fontSize: 14,
-    color: '#666',
-    textAlign: 'center',
-  },
-  selectedImageContainer: {
-    position: 'relative',
-    borderRadius: 16,
-    overflow: 'hidden',
-  },
-  selectedImage: {
-    width: '100%',
-    height: 200,
-    borderRadius: 16,
-  },
-  removeButton: {
-    position: 'absolute',
-    top: 12,
-    right: 12,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-});
+const makeStyles = (t: Theme) =>
+  StyleSheet.create({
+    container: {
+      backgroundColor: t.colors.surfaceInset,
+      borderRadius: t.radius.card,
+      borderWidth: 2,
+      borderColor: t.colors.borderStrong,
+      borderStyle: 'dashed',
+      padding: t.spacing.xxl,
+      alignItems: 'center',
+      justifyContent: 'center',
+      minHeight: 180,
+    },
+    content: {
+      alignItems: 'center',
+    },
+    iconContainer: {
+      width: 64,
+      height: 64,
+      borderRadius: 32,
+      backgroundColor: t.colors.accentTone.bg,
+      borderWidth: 1,
+      borderColor: t.colors.accentTone.border,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: t.spacing.lg,
+    },
+    text: {
+      ...t.typography.h3,
+      color: t.colors.textPrimary,
+      marginBottom: 4,
+    },
+    subtext: {
+      ...t.typography.caption,
+      color: t.colors.textMuted,
+      textAlign: 'center',
+    },
+    selectedImageContainer: {
+      position: 'relative',
+      borderRadius: t.radius.card,
+      overflow: 'hidden',
+    },
+    selectedImage: {
+      width: '100%',
+      height: 200,
+      borderRadius: t.radius.card,
+    },
+    removeButton: {
+      position: 'absolute',
+      top: t.spacing.md,
+      right: t.spacing.md,
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      backgroundColor: t.colors.overlay,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+  });

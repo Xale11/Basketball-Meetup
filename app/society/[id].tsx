@@ -11,7 +11,21 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
-import { ArrowLeft, Users, Pencil, Calendar } from 'lucide-react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import {
+  ArrowLeft,
+  Users,
+  Pencil,
+  Crown,
+  ShieldCheck,
+  Megaphone,
+  Award,
+  ChevronRight,
+  Plus,
+  CheckCircle2,
+  UserCheck,
+  UserMinus,
+} from 'lucide-react-native';
 import { useState, useMemo } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useFetchSocietyById } from '@/hooks/societies/useFetchSocietyById';
@@ -19,6 +33,7 @@ import { useFetchUserSocieties } from '@/hooks/societies/useFetchUserSocieties';
 import { useJoinSociety } from '@/hooks/societies/useJoinSociety';
 import { useLeaveSociety } from '@/hooks/societies/useLeaveSociety';
 import { useUpdateSociety } from '@/hooks/societies/useUpdateSociety';
+import { useSocietyMembers, useUpdateMemberRole } from '@/hooks/societies/useSocietyMembers';
 import { useFetchEventsBySociety } from '@/hooks/events/useFetchEventsBySociety';
 import { useFetchUniversities } from '@/hooks/universities/useFetchUniversities';
 import { useUserParticipations } from '@/hooks/events/useUserParticipations';
@@ -27,63 +42,119 @@ import { EventCard } from '@/components/events/EventCard';
 import { Button } from '@/components/ui/Button';
 import { TextInputField } from '@/components/ui/TextInputField';
 import { ImagePicker } from '@/components/ImagePicker';
-import {
-  SOCIETY_CATEGORIES,
-  SocietyRoleIdEnum,
-  ADMIN_SOCIETY_ROLES,
-} from '@/types/societies';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { SegmentedTabs } from '@/components/ui/SegmentedTabs';
+import { bannerGradientFor, roleLabelFor } from '@/components/societies/AC_SocietyCard';
+import { SocietyMemberWithProfile } from '@/api/societies.api';
+import { SOCIETY_CATEGORIES, SocietyRoleIdEnum, ADMIN_SOCIETY_ROLES } from '@/types/societies';
+import { EventHostType } from '@/types/event';
+import { useTheme, useThemedStyles, Theme } from '@/hooks/useTheme';
 
-const CATEGORY_COLORS: Record<string, string> = {
-  Arts: '#FFF4E8',
-  Tech: '#E8F0FF',
-  Sport: '#E8F5E8',
-  Academic: '#F4E8FF',
-  Social: '#FFF0F5',
-  Other: '#F0F0F0',
-};
-const CATEGORY_TEXT: Record<string, string> = {
-  Arts: '#FF9F40',
-  Tech: '#4A6CF7',
-  Sport: '#28A745',
-  Academic: '#9B59B6',
-  Social: '#E84393',
-  Other: '#666666',
-};
+/** The Announcements tab needs a `society_announcements` table, which lands with AC-24. */
+const ANNOUNCEMENTS_ENABLED = false;
+
+type SocietyTab = 'activities' | 'overview' | 'announcements' | 'members' | 'executive';
+type ActivityFilter = 'all' | 'exec' | 'associate';
+
+/**
+ * `ADMIN_SOCIETY_ROLES` is a `readonly [OWNER, PRESIDENT, EXEC]` tuple, so
+ * `.includes()` rejects the wider enum. Widening here keeps the call sites
+ * readable and the constant as the single source of truth.
+ */
+const isAdminRole = (roleId?: SocietyRoleIdEnum | string | null): boolean =>
+  !!roleId && (ADMIN_SOCIETY_ROLES as readonly string[]).includes(roleId);
+
+/** Anyone with a role above plain MEMBER appears under Leadership. */
+const isLeadershipRole = (roleId?: SocietyRoleIdEnum | string | null): boolean =>
+  isAdminRole(roleId) || roleId === SocietyRoleIdEnum.MODERATOR;
+
+const memberName = (m: SocietyMemberWithProfile) =>
+  [m.profiles?.first_name, m.profiles?.last_name].filter(Boolean).join(' ') || 'Member';
+
+const SOCIETY_TABS: SocietyTab[] = [
+  'activities',
+  'overview',
+  'announcements',
+  'members',
+  'executive',
+];
 
 export default function SocietyProfileScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  // `tab` lets callers deep-link a specific tab — the society cards' "View
+  // activities" action arrives here rather than filtering the list behind it.
+  const { id, tab: requestedTab } = useLocalSearchParams<{ id: string; tab?: string }>();
   const { user } = useAuth();
+  const { theme } = useTheme();
+  const s = useThemedStyles(makeStyles);
+  const { colors } = theme;
 
   const { society, memberCount, loading: societyLoading } = useFetchSocietyById(id);
   const { memberships } = useFetchUserSocieties(user?.id);
   const { events, loading: eventsLoading } = useFetchEventsBySociety(id);
+  const { members, loading: membersLoading } = useSocietyMembers(id);
   const { participationMap } = useUserParticipations(user?.id);
   const { universities } = useFetchUniversities();
 
   const { joinSociety, loading: joining } = useJoinSociety();
   const { leaveSociety, loading: leaving } = useLeaveSociety();
   const { updateSociety, loading: updating } = useUpdateSociety();
+  const { updateRole, loading: rolePending } = useUpdateMemberRole(id);
 
-  // Derived membership state
+  const [tab, setTab] = useState<SocietyTab>(() =>
+    SOCIETY_TABS.includes(requestedTab as SocietyTab)
+      ? (requestedTab as SocietyTab)
+      : 'activities',
+  );
+  const [activityFilter, setActivityFilter] = useState<ActivityFilter>('all');
+
+  // ── Membership / permissions ──────────────────────────────────────────────
   const userMembership = useMemo(
     () => memberships.find((m) => m.society_id === id) ?? null,
     [memberships, id],
   );
   const isMember = !!userMembership;
-  const isAdmin =
-    userMembership !== null &&
-    ADMIN_SOCIETY_ROLES.includes(userMembership.role_id as SocietyRoleIdEnum);
+  const isAdmin = isAdminRole(userMembership?.role_id);
+  const viewerRole = roleLabelFor(userMembership?.role_id);
+
+  /**
+   * Executive is admin-only, but a deep link can still request it and `isAdmin`
+   * only settles once memberships load. Falling back here keeps the tab bar and
+   * the body in agreement instead of showing a selected tab with nothing under it.
+   */
+  const activeTab: SocietyTab = tab === 'executive' && !isAdmin ? 'activities' : tab;
 
   const societyNameMap = useMemo(
     () => (society ? new Map([[society.id, society.name ?? '']]) : new Map<string, string>()),
     [society],
   );
   const universityNameMap = useMemo(
-    () => new Map(universities.map((u) => [u.id, u.name])),
+    () => new Map(universities.map((u) => [u.id, u.name ?? ''])),
     [universities],
   );
 
-  // Edit modal state
+  // ── Member split ──────────────────────────────────────────────────────────
+  const { leadership, generalMembers } = useMemo(() => {
+    const lead: SocietyMemberWithProfile[] = [];
+    const general: SocietyMemberWithProfile[] = [];
+    for (const m of members) {
+      (isLeadershipRole(m.role_id) ? lead : general).push(m);
+    }
+    return { leadership: lead, generalMembers: general };
+  }, [members]);
+
+  /**
+   * Society activities split by who hosts them: a SOCIETY-hosted event is
+   * official (Executive), a USER-hosted event carrying this society's id is
+   * member-led (Associate). Same derivation as the feed's organiser filter.
+   */
+  const filteredEvents = useMemo(() => {
+    if (activityFilter === 'all') return events;
+    const wanted =
+      activityFilter === 'exec' ? EventHostType.SOCIETY : EventHostType.USER;
+    return events.filter((e) => e.host_type === wanted);
+  }, [events, activityFilter]);
+
+  // ── Edit society modal ────────────────────────────────────────────────────
   const [showEdit, setShowEdit] = useState(false);
   const [editName, setEditName] = useState('');
   const [editDescription, setEditDescription] = useState('');
@@ -105,7 +176,13 @@ export default function SocietyProfileScreen() {
     }
     if (!id) return;
     updateSociety(
-      { id, name: editName, description: editDescription, category: editCategory, logoUri: editLogoUri },
+      {
+        id,
+        name: editName,
+        description: editDescription,
+        category: editCategory,
+        logoUri: editLogoUri,
+      },
       {
         onSuccess: () => setShowEdit(false),
         onError: (err) => Alert.alert('Error', err.message),
@@ -124,18 +201,37 @@ export default function SocietyProfileScreen() {
   };
 
   const handleLeave = () => {
+    Alert.alert('Leave society', `Are you sure you want to leave ${society?.name ?? 'this society'}?`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Leave',
+        style: 'destructive',
+        onPress: () =>
+          leaveSociety({ societyId: id }, { onError: (err) => Alert.alert('Error', err.message) }),
+      },
+    ]);
+  };
+
+  /** Promote a member to Committee, or demote them back. RLS is the real gate. */
+  const handleRoleChange = (m: SocietyMemberWithProfile, promote: boolean) => {
+    const name = memberName(m);
     Alert.alert(
-      'Leave Society',
-      `Are you sure you want to leave ${society?.name ?? 'this society'}?`,
+      promote ? 'Promote to committee' : 'Remove from committee',
+      promote
+        ? `Give ${name} committee privileges for this society?`
+        : `Return ${name} to a general member?`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Leave',
-          style: 'destructive',
+          text: promote ? 'Promote' : 'Demote',
+          style: promote ? 'default' : 'destructive',
           onPress: () =>
-            leaveSociety(
-              { societyId: id },
-              { onError: (err) => Alert.alert('Error', err.message) },
+            updateRole(
+              {
+                userId: m.user_id,
+                roleId: promote ? SocietyRoleIdEnum.EXEC : SocietyRoleIdEnum.MEMBER,
+              },
+              { onError: (err: Error) => Alert.alert('Could not update role', err.message) },
             ),
         },
       ],
@@ -145,14 +241,12 @@ export default function SocietyProfileScreen() {
   if (societyLoading) {
     return (
       <SafeAreaView style={s.container}>
-        <View style={s.header}>
-          <TouchableOpacity style={s.backBtn} onPress={() => router.back()}>
-            <ArrowLeft size={24} color="#1A1A1A" />
+        <View style={s.plainHeader}>
+          <TouchableOpacity style={s.backButton} onPress={() => router.back()}>
+            <ArrowLeft size={22} color={colors.textPrimary} />
           </TouchableOpacity>
         </View>
-        <View style={s.centred}>
-          <LoadingSpinner />
-        </View>
+        <LoadingSpinner />
       </SafeAreaView>
     );
   }
@@ -160,9 +254,9 @@ export default function SocietyProfileScreen() {
   if (!society) {
     return (
       <SafeAreaView style={s.container}>
-        <View style={s.header}>
-          <TouchableOpacity style={s.backBtn} onPress={() => router.back()}>
-            <ArrowLeft size={24} color="#1A1A1A" />
+        <View style={s.plainHeader}>
+          <TouchableOpacity style={s.backButton} onPress={() => router.back()}>
+            <ArrowLeft size={22} color={colors.textPrimary} />
           </TouchableOpacity>
         </View>
         <View style={s.centred}>
@@ -174,121 +268,410 @@ export default function SocietyProfileScreen() {
 
   const actionLoading = joining || leaving;
 
-  return (
-    <SafeAreaView style={s.container}>
-      {/* Header */}
-      <View style={s.header}>
-        <TouchableOpacity style={s.backBtn} onPress={() => router.back()}>
-          <ArrowLeft size={24} color="#1A1A1A" />
-        </TouchableOpacity>
-        <Text style={s.headerTitle} numberOfLines={1}>
-          {society.name}
-        </Text>
-        {isAdmin ? (
-          <TouchableOpacity style={s.editBtn} onPress={openEdit}>
-            <Pencil size={18} color="#FF6B35" />
-          </TouchableOpacity>
-        ) : (
-          <View style={s.headerSpacer} />
-        )}
-      </View>
+  const TABS: { key: SocietyTab; label: string }[] = [
+    { key: 'activities', label: 'Activities' },
+    { key: 'overview', label: 'Overview' },
+    { key: 'announcements', label: 'Announcements' },
+    { key: 'members', label: `Members (${members.length || memberCount})` },
+    ...(isAdmin ? [{ key: 'executive' as const, label: 'Executive' }] : []),
+  ];
 
-      <ScrollView
-        keyboardShouldPersistTaps="handled"
-        keyboardDismissMode="on-drag"
-        showsVerticalScrollIndicator={false}>
-        {/* Banner / Logo */}
-        {society.logo ? (
-          <Image source={{ uri: society.logo }} style={s.banner} resizeMode="cover" />
+  const renderMemberRow = (m: SocietyMemberWithProfile, showAdminControls: boolean) => {
+    const label = roleLabelFor(m.role_id);
+    const isLead = isLeadershipRole(m.role_id);
+    const tone = isLead ? colors.warningTone : colors.neutralTone;
+    const isOwner = m.role_id === SocietyRoleIdEnum.OWNER;
+    const isSelf = m.user_id === user?.id;
+
+    return (
+      <View key={m.user_id} style={s.memberRow}>
+        {m.profiles?.photo_url ? (
+          <Image source={{ uri: m.profiles.photo_url }} style={s.memberAvatar} />
         ) : (
-          <View style={[s.banner, s.bannerPlaceholder]}>
-            <Text style={s.bannerInitial}>{society.name?.charAt(0).toUpperCase() ?? '?'}</Text>
+          <View style={[s.memberAvatar, s.memberAvatarFallback]}>
+            <Text style={s.memberInitial}>{memberName(m).charAt(0).toUpperCase()}</Text>
           </View>
         )}
 
-        {/* Info Card */}
-        <View style={s.infoCard}>
-          <View style={s.nameCategoryRow}>
-            <Text style={s.societyName}>{society.name}</Text>
-            {society.category && (
-              <View
-                style={[
-                  s.categoryBadge,
-                  { backgroundColor: CATEGORY_COLORS[society.category] ?? '#F0F0F0' },
-                ]}
-              >
-                <Text
-                  style={[
-                    s.categoryText,
-                    { color: CATEGORY_TEXT[society.category] ?? '#666' },
-                  ]}
-                >
-                  {society.category}
-                </Text>
-              </View>
-            )}
-          </View>
-
-          <View style={s.memberRow}>
-            <Users size={14} color="#888" />
-            <Text style={s.memberText}>{memberCount} members</Text>
-          </View>
-
-          {society.description ? (
-            <Text style={s.description}>{society.description}</Text>
-          ) : null}
-
-          {/* Join / Leave */}
-          <View style={s.actionRow}>
-            {actionLoading ? (
-              <View style={[s.joinBtn, s.joinBtnLoading]}>
-                <ActivityIndicator color="#FFFFFF" size="small" />
-              </View>
-            ) : isMember ? (
-              <TouchableOpacity style={[s.joinBtn, s.joinBtnJoined]} onPress={handleLeave}>
-                <Text style={s.joinBtnText}>Member ✓</Text>
-              </TouchableOpacity>
-            ) : (
-              <TouchableOpacity style={s.joinBtn} onPress={handleJoin}>
-                <Text style={s.joinBtnText}>Join Society</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        </View>
-
-        {/* Upcoming Events */}
-        <View style={s.section}>
-          <View style={s.sectionHeader}>
-            <Text style={s.sectionTitle}>Upcoming Events</Text>
-            <Text style={s.sectionCount}>{events.length}</Text>
-          </View>
-
-          {eventsLoading ? (
-            <View style={s.centred}>
-              <LoadingSpinner />
-            </View>
-          ) : events.length === 0 ? (
-            <View style={s.emptyEvents}>
-              <Calendar size={36} color="#CCC" />
-              <Text style={s.emptyEventsText}>No upcoming events</Text>
-            </View>
-          ) : (
-            events.map((event) => (
-              <EventCard
-                key={event.id}
-                event={event}
-                societyNameMap={societyNameMap}
-                universityNameMap={universityNameMap}
-                participantStatus={participationMap.get(event.id) ?? null}
-              />
-            ))
+        <View style={s.memberText}>
+          <Text style={s.memberName} numberOfLines={1}>
+            {memberName(m)}
+            {isSelf ? ' (you)' : ''}
+          </Text>
+          {m.profiles?.first_name ? null : (
+            <Text style={s.memberMeta} numberOfLines={1}>
+              Profile hidden
+            </Text>
           )}
         </View>
 
-        <View style={{ height: 40 }} />
+        {/* Owners cannot be demoted — the RLS policy rejects it, so no button. */}
+        {showAdminControls && !isOwner && !isSelf ? (
+          <TouchableOpacity
+            style={[s.roleAction, isLead ? s.roleActionDemote : s.roleActionPromote]}
+            onPress={() => handleRoleChange(m, !isLead)}
+            disabled={rolePending}
+          >
+            {isLead ? (
+              <UserMinus size={12} color={colors.dangerTone.text} />
+            ) : (
+              <UserCheck size={12} color={colors.textOnAccent} />
+            )}
+            <Text style={[s.roleActionText, isLead && s.roleActionTextDemote]}>
+              {isLead ? 'Demote' : 'Promote'}
+            </Text>
+          </TouchableOpacity>
+        ) : (
+          <View style={[s.rolePill, { backgroundColor: tone.bg, borderColor: tone.border }]}>
+            {isLead && <Crown size={10} color={tone.solid} />}
+            <Text style={[s.rolePillText, { color: tone.text }]}>{label ?? 'Member'}</Text>
+          </View>
+        )}
+      </View>
+    );
+  };
+
+  return (
+    <SafeAreaView style={s.container} edges={['left', 'right']}>
+      <ScrollView
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={s.scrollContent}
+      >
+        {/* ── Hero banner ──────────────────────────────────────────────── */}
+        <LinearGradient
+          colors={bannerGradientFor(society.id, theme)}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={s.banner}
+        >
+          <LinearGradient colors={theme.gradient.imageScrim} style={StyleSheet.absoluteFill} />
+
+          <SafeAreaView edges={['top']} style={s.bannerTop}>
+            <TouchableOpacity style={s.backButton} onPress={() => router.back()}>
+              <ArrowLeft size={22} color={colors.textPrimary} />
+            </TouchableOpacity>
+
+            {viewerRole && (
+              <View
+                style={[
+                  s.viewerRolePill,
+                  {
+                    backgroundColor:
+                      viewerRole === 'Member' ? colors.accentTone.bg : colors.warningTone.bg,
+                    borderColor:
+                      viewerRole === 'Member'
+                        ? colors.accentTone.border
+                        : colors.warningTone.border,
+                  },
+                ]}
+              >
+                <ShieldCheck
+                  size={12}
+                  color={viewerRole === 'Member' ? colors.accentTone.solid : colors.warningTone.solid}
+                />
+                <Text
+                  style={[
+                    s.viewerRoleText,
+                    {
+                      color:
+                        viewerRole === 'Member'
+                          ? colors.accentTone.text
+                          : colors.warningTone.text,
+                    },
+                  ]}
+                >
+                  {viewerRole}
+                </Text>
+              </View>
+            )}
+
+            {isAdmin && (
+              <TouchableOpacity style={s.editButton} onPress={openEdit}>
+                <Pencil size={16} color={colors.accentHi} />
+              </TouchableOpacity>
+            )}
+          </SafeAreaView>
+
+          <View style={s.bannerBottom}>
+            {society.logo ? (
+              <Image source={{ uri: society.logo }} style={s.logo} />
+            ) : (
+              <View style={[s.logo, s.logoFallback]}>
+                <Text style={s.logoInitial}>{(society.name ?? '?').charAt(0).toUpperCase()}</Text>
+              </View>
+            )}
+            <View style={s.bannerText}>
+              <Text style={s.societyName} numberOfLines={2}>
+                {society.name ?? 'Untitled society'}
+              </Text>
+              <Text style={s.societyMeta}>
+                {[society.category, `${memberCount} members`].filter(Boolean).join(' · ')}
+              </Text>
+            </View>
+          </View>
+        </LinearGradient>
+
+        {/* ── Join / leave ─────────────────────────────────────────────── */}
+        <View style={s.joinRow}>
+          {actionLoading ? (
+            <View style={[s.joinBtn, s.joinBtnBusy]}>
+              <ActivityIndicator size="small" color={colors.textOnAccent} />
+            </View>
+          ) : isMember ? (
+            <TouchableOpacity style={[s.joinBtn, s.joinBtnJoined]} onPress={handleLeave}>
+              <CheckCircle2 size={16} color={colors.accentTone.text} />
+              <Text style={s.joinBtnJoinedText}>Joined society</Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity style={[s.joinBtn, s.joinBtnPrimary]} onPress={handleJoin}>
+              <Plus size={16} color={colors.textOnAccent} strokeWidth={3} />
+              <Text style={s.joinBtnPrimaryText}>Join society</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* ── Tabs ─────────────────────────────────────────────────────── */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={s.tabsWrap}
+          contentContainerStyle={s.tabsRow}
+        >
+          {TABS.map((t) => (
+            <TouchableOpacity
+              key={t.key}
+              style={[s.tabBtn, activeTab === t.key && s.tabBtnActive]}
+              onPress={() => setTab(t.key)}
+            >
+              <Text style={[s.tabBtnText, activeTab === t.key && s.tabBtnTextActive]}>{t.label}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+
+        <View style={s.body}>
+          {/* ── Tab 1 · Activities ─────────────────────────────────────── */}
+          {activeTab === 'activities' && (
+            <>
+              <SegmentedTabs
+                tabs={[
+                  { key: 'all' as const, label: `All (${events.length})` },
+                  { key: 'exec' as const, label: 'Official' },
+                  { key: 'associate' as const, label: 'Member-led' },
+                ]}
+                activeTab={activityFilter}
+                onTabChange={setActivityFilter}
+                style={s.filterTabs}
+              />
+
+              {eventsLoading ? (
+                <ActivityIndicator color={colors.accent} style={s.inlineLoader} />
+              ) : filteredEvents.length === 0 ? (
+                <EmptyState
+                  emoji="📅"
+                  title="No activities yet"
+                  subtitle={
+                    activityFilter === 'all'
+                      ? 'This society has nothing scheduled right now.'
+                      : 'Nothing matches this filter — try “All”.'
+                  }
+                  primaryAction={
+                    isAdmin
+                      ? { label: 'Host an activity', onPress: () => router.push('/create') }
+                      : undefined
+                  }
+                />
+              ) : (
+                filteredEvents.map((event) => (
+                  <EventCard
+                    key={event.id}
+                    event={event}
+                    societyNameMap={societyNameMap}
+                    universityNameMap={universityNameMap}
+                    participantStatus={participationMap.get(event.id) ?? null}
+                  />
+                ))
+              )}
+            </>
+          )}
+
+          {/* ── Tab 2 · Overview ───────────────────────────────────────── */}
+          {activeTab === 'overview' && (
+            <>
+              <Text style={s.sectionLabel}>About {society.name}</Text>
+              <View style={s.panel}>
+                <Text style={s.panelBody}>
+                  {society.description?.trim() || 'This society has not added a description yet.'}
+                </Text>
+              </View>
+
+              <View style={s.sectionLabelRow}>
+                <Crown size={13} color={colors.warningTone.solid} />
+                <Text style={s.sectionLabel}>Executive committee ({leadership.length})</Text>
+              </View>
+              {membersLoading ? (
+                <ActivityIndicator color={colors.accent} style={s.inlineLoader} />
+              ) : leadership.length === 0 ? (
+                <View style={s.panel}>
+                  <Text style={s.panelMuted}>No committee members listed.</Text>
+                </View>
+              ) : (
+                leadership.map((m) => renderMemberRow(m, false))
+              )}
+
+              <Text style={s.sectionLabel}>Society stats</Text>
+              <View style={s.statsRow}>
+                <View style={s.statCard}>
+                  <Text style={[s.statValue, { color: colors.accentText }]}>{memberCount}</Text>
+                  <Text style={s.statLabel}>Members</Text>
+                </View>
+                <View style={s.statCard}>
+                  <Text style={[s.statValue, { color: colors.successTone.text }]}>
+                    {events.length}
+                  </Text>
+                  <Text style={s.statLabel}>Activities</Text>
+                </View>
+                <View style={s.statCard}>
+                  <Text style={[s.statValue, s.statValueSmall, { color: colors.infoTone.text }]}>
+                    {society.category ?? '—'}
+                  </Text>
+                  <Text style={s.statLabel}>Category</Text>
+                </View>
+              </View>
+            </>
+          )}
+
+          {/* ── Tab 3 · Announcements (blocked on AC-24) ───────────────── */}
+          {activeTab === 'announcements' && (
+            <EmptyState
+              emoji="📢"
+              title="Announcements are coming soon"
+              subtitle={
+                ANNOUNCEMENTS_ENABLED
+                  ? 'No announcements have been posted yet.'
+                  : 'Society announcements need a place to live in the database. This lands with AC-24.'
+              }
+            />
+          )}
+
+          {/* ── Tab 4 · Members ────────────────────────────────────────── */}
+          {activeTab === 'members' && (
+            <>
+              {membersLoading ? (
+                <ActivityIndicator color={colors.accent} style={s.inlineLoader} />
+              ) : members.length === 0 ? (
+                <EmptyState
+                  emoji="👥"
+                  title="No members yet"
+                  subtitle="Be the first to join this society."
+                />
+              ) : (
+                <>
+                  <View style={s.sectionLabelRow}>
+                    <Crown size={13} color={colors.warningTone.solid} />
+                    <Text style={s.sectionLabel}>
+                      Officers &amp; committee ({leadership.length})
+                    </Text>
+                  </View>
+                  {leadership.length === 0 ? (
+                    <View style={s.panel}>
+                      <Text style={s.panelMuted}>No committee members listed.</Text>
+                    </View>
+                  ) : (
+                    leadership.map((m) => renderMemberRow(m, false))
+                  )}
+
+                  <Text style={s.sectionLabel}>General members ({generalMembers.length})</Text>
+                  {generalMembers.length === 0 ? (
+                    <View style={s.panel}>
+                      <Text style={s.panelMuted}>No general members yet.</Text>
+                    </View>
+                  ) : (
+                    generalMembers.map((m) => renderMemberRow(m, false))
+                  )}
+                </>
+              )}
+            </>
+          )}
+
+          {/* ── Tab 5 · Executive (admins only) ────────────────────────── */}
+          {activeTab === 'executive' && isAdmin && (
+            <>
+              <LinearGradient
+                colors={[colors.warningTone.bg, colors.surface]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={s.execBanner}
+              >
+                <View style={s.execBadge}>
+                  <Crown size={18} color={colors.warningTone.solid} />
+                </View>
+                <View style={s.execBannerText}>
+                  <Text style={s.execTitle}>Executive portal</Text>
+                  <Text style={s.execSubtitle}>
+                    Management tools for officers and committee members.
+                  </Text>
+                </View>
+              </LinearGradient>
+
+              <View style={s.sectionLabelRow}>
+                <Award size={13} color={colors.accentHi} />
+                <Text style={s.sectionLabel}>Quick actions</Text>
+              </View>
+
+              <TouchableOpacity style={s.execAction} onPress={() => router.push('/create')}>
+                <Crown size={16} color={colors.warningTone.solid} />
+                <View style={s.execActionText}>
+                  <Text style={s.execActionTitle}>Host an official activity</Text>
+                  <Text style={s.execActionSub}>Publish an event under this society</Text>
+                </View>
+                <ChevronRight size={16} color={colors.textFaint} />
+              </TouchableOpacity>
+
+              <TouchableOpacity style={s.execAction} onPress={openEdit}>
+                <Pencil size={16} color={colors.accentHi} />
+                <View style={s.execActionText}>
+                  <Text style={s.execActionTitle}>Edit society profile</Text>
+                  <Text style={s.execActionSub}>Name, description, category and logo</Text>
+                </View>
+                <ChevronRight size={16} color={colors.textFaint} />
+              </TouchableOpacity>
+
+              <View style={[s.execAction, s.execActionDisabled]}>
+                <Megaphone size={16} color={colors.textFaint} />
+                <View style={s.execActionText}>
+                  <Text style={[s.execActionTitle, s.execActionTitleDisabled]}>
+                    Post an announcement
+                  </Text>
+                  <Text style={s.execActionSub}>Available once AC-24 adds announcements</Text>
+                </View>
+              </View>
+
+              <View style={s.sectionLabelRow}>
+                <Users size={13} color={colors.accentHi} />
+                <Text style={s.sectionLabel}>Manage members ({members.length})</Text>
+              </View>
+              <Text style={s.execHint}>
+                Promote a member to committee, or return them to a general member. Only the
+                owner and president can change roles — the database enforces it.
+              </Text>
+
+              {membersLoading ? (
+                <ActivityIndicator color={colors.accent} style={s.inlineLoader} />
+              ) : members.length === 0 ? (
+                <View style={s.panel}>
+                  <Text style={s.panelMuted}>No members to manage yet.</Text>
+                </View>
+              ) : (
+                members.map((m) => renderMemberRow(m, true))
+              )}
+            </>
+          )}
+        </View>
       </ScrollView>
 
-      {/* Edit Modal (admin only) */}
+      {/* ── Edit society modal (admins only) ───────────────────────────── */}
       <Modal
         visible={showEdit}
         animationType="slide"
@@ -298,33 +681,33 @@ export default function SocietyProfileScreen() {
         <SafeAreaView style={s.modalContainer}>
           <View style={s.modalHeader}>
             <TouchableOpacity onPress={() => setShowEdit(false)}>
-              <Text style={s.cancelText}>Cancel</Text>
+              <Text style={s.modalCancel}>Cancel</Text>
             </TouchableOpacity>
-            <Text style={s.modalTitle}>Edit Society</Text>
-            <View style={{ width: 60 }} />
+            <Text style={s.modalTitle}>Edit society</Text>
+            <View style={s.modalHeaderSpacer} />
           </View>
 
           <ScrollView
-        keyboardShouldPersistTaps="handled"
-        keyboardDismissMode="on-drag"
-        style={s.modalBody} contentContainerStyle={{ paddingBottom: 40 }}>
-            {/* Logo image picker */}
-            <Text style={s.fieldLabel}>Banner Image</Text>
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
+            style={s.modalBody}
+            contentContainerStyle={s.modalBodyContent}
+          >
+            <Text style={s.fieldLabel}>Society logo</Text>
             <ImagePicker
               selectedImage={editLogoUri ?? society.logo ?? undefined}
               onImageSelected={setEditLogoUri}
               onImageRemoved={() => setEditLogoUri(undefined)}
-              placeholder="Add Society Banner"
+              placeholder="Add society logo"
             />
-            <View style={{ height: 20 }} />
 
             <TextInputField
-              label="Society Name *"
+              label="Society name *"
               value={editName}
               onChangeText={setEditName}
-              placeholder="e.g., Photography Society"
+              placeholder="e.g. Photography Society"
+              style={s.fieldSpacing}
             />
-            <View style={{ height: 16 }} />
 
             <TextInputField
               label="Description"
@@ -334,11 +717,10 @@ export default function SocietyProfileScreen() {
               multiline
               numberOfLines={4}
               multilineHeight={120}
+              style={s.fieldSpacing}
             />
-            <View style={{ height: 16 }} />
 
-            {/* Category chips */}
-            <Text style={s.fieldLabel}>Category</Text>
+            <Text style={[s.fieldLabel, s.fieldSpacing]}>Category</Text>
             <View style={s.categoryChips}>
               {SOCIETY_CATEGORIES.map((cat) => (
                 <TouchableOpacity
@@ -355,7 +737,7 @@ export default function SocietyProfileScreen() {
           </ScrollView>
 
           <View style={s.modalFooter}>
-            <Button label="Save Changes" loading={updating} onPress={handleSaveEdit} />
+            <Button label="Save changes" loading={updating} onPress={handleSaveEdit} />
           </View>
         </SafeAreaView>
       </Modal>
@@ -363,144 +745,288 @@ export default function SocietyProfileScreen() {
   );
 }
 
-const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8F9FA' },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
-  },
-  backBtn: {
-    padding: 8,
-    borderRadius: 10,
-    backgroundColor: '#F8F9FA',
-  },
-  headerTitle: {
-    flex: 1,
-    fontSize: 17,
-    fontWeight: '600',
-    color: '#1A1A1A',
-    textAlign: 'center',
-    marginHorizontal: 8,
-  },
-  editBtn: {
-    padding: 8,
-    borderRadius: 10,
-    backgroundColor: '#FFF4F0',
-  },
-  headerSpacer: { width: 40 },
-  centred: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingTop: 80 },
-  errorText: { fontSize: 16, color: '#666' },
-  banner: { width: '100%', height: 180 },
-  bannerPlaceholder: {
-    backgroundColor: '#FF6B35',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  bannerInitial: { fontSize: 72, fontWeight: '700', color: 'rgba(255,255,255,0.6)' },
-  infoCard: {
-    backgroundColor: '#FFFFFF',
-    marginHorizontal: 16,
-    marginTop: -24,
-    borderRadius: 20,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 4,
-  },
-  nameCategoryRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: 10,
-    marginBottom: 8,
-  },
-  societyName: { fontSize: 22, fontWeight: '700', color: '#1A1A1A', flexShrink: 1 },
-  categoryBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10 },
-  categoryText: { fontSize: 12, fontWeight: '600' },
-  memberRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginBottom: 12,
-  },
-  memberText: { fontSize: 14, color: '#888' },
-  description: { fontSize: 15, color: '#444', lineHeight: 22, marginBottom: 16 },
-  actionRow: { marginTop: 4 },
-  joinBtn: {
-    backgroundColor: '#FF6B35',
-    borderRadius: 14,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  joinBtnJoined: { backgroundColor: '#16A34A' },
-  joinBtnLoading: { backgroundColor: '#FF6B35' },
-  joinBtnText: { fontSize: 15, fontWeight: '700', color: '#FFFFFF' },
-  section: { paddingHorizontal: 16, paddingTop: 24 },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 12,
-  },
-  sectionTitle: { fontSize: 18, fontWeight: '600', color: '#1A1A1A' },
-  sectionCount: {
-    fontSize: 13,
-    color: '#888',
-    backgroundColor: '#F0F0F0',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 10,
-  },
-  emptyEvents: { alignItems: 'center', paddingVertical: 40, gap: 10 },
-  emptyEventsText: { fontSize: 15, color: '#AAA' },
-  // Modal
-  modalContainer: { flex: 1, backgroundColor: '#FFFFFF' },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
-  },
-  modalTitle: { fontSize: 18, fontWeight: '600', color: '#1A1A1A' },
-  cancelText: { fontSize: 16, color: '#FF6B35', fontWeight: '600' },
-  modalBody: { flex: 1, paddingHorizontal: 20, paddingTop: 20 },
-  modalFooter: {
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#F0F0F0',
-  },
-  fieldLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#1A1A1A',
-    marginBottom: 8,
-  },
-  categoryChips: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginTop: 4,
-  },
-  catChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: '#F8F9FA',
-    borderWidth: 1,
-    borderColor: '#E9ECEF',
-  },
-  catChipActive: { backgroundColor: '#FF6B35', borderColor: '#FF6B35' },
-  catChipText: { fontSize: 13, fontWeight: '600', color: '#666' },
-  catChipTextActive: { color: '#FFFFFF' },
-});
+const makeStyles = (t: Theme) =>
+  StyleSheet.create({
+    container: { flex: 1, backgroundColor: t.colors.canvas },
+    scrollContent: { paddingBottom: t.spacing.xxl * 3 },
+    plainHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: t.spacing.lg,
+      paddingVertical: t.spacing.md,
+    },
+    centred: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 80 },
+    errorText: { ...t.typography.body, color: t.colors.textMuted },
+
+    // ── Hero ────────────────────────────────────────────────────────────
+    banner: { minHeight: 210, justifyContent: 'space-between' },
+    bannerTop: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: t.spacing.sm,
+      paddingHorizontal: t.spacing.lg,
+      paddingTop: t.spacing.sm,
+    },
+    backButton: {
+      width: 38,
+      height: 38,
+      borderRadius: 19,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: t.colors.surface,
+      borderWidth: 1,
+      borderColor: t.colors.border,
+    },
+    viewerRolePill: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      marginLeft: 'auto',
+      paddingHorizontal: t.spacing.md,
+      paddingVertical: 5,
+      borderRadius: t.radius.pill,
+      borderWidth: 1,
+    },
+    viewerRoleText: { ...t.typography.badge, fontSize: 10 },
+    editButton: {
+      width: 38,
+      height: 38,
+      borderRadius: 19,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: t.colors.accentTone.bg,
+      borderWidth: 1,
+      borderColor: t.colors.accentTone.border,
+    },
+    bannerBottom: {
+      flexDirection: 'row',
+      alignItems: 'flex-end',
+      gap: t.spacing.md,
+      padding: t.spacing.lg,
+    },
+    logo: {
+      width: 64,
+      height: 64,
+      borderRadius: t.radius.card,
+      borderWidth: 3,
+      borderColor: t.colors.surface,
+    },
+    logoFallback: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: t.colors.surfaceAlt,
+    },
+    logoInitial: { ...t.typography.h1, color: t.colors.textPrimary },
+    bannerText: { flex: 1, gap: 3 },
+    societyName: { ...t.typography.h2, color: t.colors.textPrimary },
+    societyMeta: { ...t.typography.badge, fontSize: 11, color: t.colors.accentText },
+
+    // ── Join row ────────────────────────────────────────────────────────
+    joinRow: { paddingHorizontal: t.spacing.lg, paddingTop: t.spacing.md },
+    joinBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
+      paddingVertical: t.spacing.md,
+      borderRadius: t.radius.chip,
+      borderWidth: 1,
+      borderColor: 'transparent',
+    },
+    joinBtnPrimary: { backgroundColor: t.colors.accent, ...t.shadow.accentGlow },
+    joinBtnPrimaryText: { ...t.typography.button, color: t.colors.textOnAccent },
+    joinBtnJoined: {
+      backgroundColor: t.colors.accentTone.bg,
+      borderColor: t.colors.accentTone.border,
+    },
+    joinBtnJoinedText: { ...t.typography.button, color: t.colors.accentTone.text },
+    joinBtnBusy: { backgroundColor: t.colors.accent },
+
+    // ── Tabs ────────────────────────────────────────────────────────────
+    tabsWrap: {
+      flexGrow: 0,
+      marginTop: t.spacing.lg,
+      borderBottomWidth: 1,
+      borderBottomColor: t.colors.border,
+    },
+    tabsRow: {
+      flexDirection: 'row',
+      gap: 6,
+      paddingHorizontal: t.spacing.lg,
+      paddingBottom: t.spacing.md,
+    },
+    tabBtn: {
+      paddingHorizontal: t.spacing.lg,
+      paddingVertical: t.spacing.sm,
+      borderRadius: t.radius.chip,
+    },
+    tabBtnActive: { backgroundColor: t.colors.accent },
+    tabBtnText: { ...t.typography.badge, fontSize: 12, color: t.colors.textMuted },
+    tabBtnTextActive: { color: t.colors.textOnAccent },
+
+    body: { paddingHorizontal: t.spacing.lg, paddingTop: t.spacing.lg, gap: t.spacing.sm },
+    filterTabs: { marginBottom: t.spacing.md },
+    inlineLoader: { marginVertical: t.spacing.xl },
+
+    sectionLabel: { ...t.typography.microLabel, color: t.colors.accentHi, marginTop: t.spacing.md },
+    sectionLabelRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      marginTop: t.spacing.md,
+    },
+
+    panel: {
+      backgroundColor: t.colors.surface,
+      borderRadius: t.radius.card,
+      borderWidth: 1,
+      borderColor: t.colors.border,
+      padding: t.spacing.lg,
+    },
+    panelBody: { ...t.typography.body, color: t.colors.textBody },
+    panelMuted: { ...t.typography.caption, color: t.colors.textMuted, fontStyle: 'italic' },
+
+    // ── Stats ───────────────────────────────────────────────────────────
+    statsRow: { flexDirection: 'row', gap: t.spacing.sm },
+    statCard: {
+      flex: 1,
+      alignItems: 'center',
+      gap: 2,
+      paddingVertical: t.spacing.md,
+      borderRadius: t.radius.card,
+      backgroundColor: t.colors.surface,
+      borderWidth: 1,
+      borderColor: t.colors.border,
+    },
+    statValue: { ...t.typography.h2 },
+    statValueSmall: { fontSize: 14 },
+    statLabel: { ...t.typography.microLabel, fontSize: 9, color: t.colors.textMuted },
+
+    // ── Member rows ─────────────────────────────────────────────────────
+    memberRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: t.spacing.md,
+      padding: t.spacing.md,
+      borderRadius: t.radius.card,
+      backgroundColor: t.colors.surface,
+      borderWidth: 1,
+      borderColor: t.colors.border,
+    },
+    memberAvatar: { width: 38, height: 38, borderRadius: 19 },
+    memberAvatarFallback: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: t.colors.surfaceAlt,
+    },
+    memberInitial: { ...t.typography.bodyStrong, color: t.colors.textPrimary },
+    memberText: { flex: 1, gap: 1 },
+    memberName: { ...t.typography.bodyStrong, color: t.colors.textPrimary },
+    memberMeta: { ...t.typography.caption, fontSize: 11, color: t.colors.textFaint },
+    rolePill: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      paddingHorizontal: t.spacing.sm,
+      paddingVertical: 3,
+      borderRadius: t.radius.sm,
+      borderWidth: 1,
+    },
+    rolePillText: { ...t.typography.badge, fontSize: 10 },
+    roleAction: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      paddingHorizontal: t.spacing.md,
+      paddingVertical: 6,
+      borderRadius: t.radius.sm,
+      borderWidth: 1,
+    },
+    roleActionPromote: { backgroundColor: t.colors.accent, borderColor: t.colors.accent },
+    roleActionDemote: {
+      backgroundColor: t.colors.dangerTone.bg,
+      borderColor: t.colors.dangerTone.border,
+    },
+    roleActionText: { ...t.typography.badge, fontSize: 10, color: t.colors.textOnAccent },
+    roleActionTextDemote: { color: t.colors.dangerTone.text },
+
+    // ── Executive portal ────────────────────────────────────────────────
+    execBanner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: t.spacing.md,
+      padding: t.spacing.lg,
+      borderRadius: t.radius.card,
+      borderWidth: 1,
+      borderColor: t.colors.warningTone.border,
+    },
+    execBadge: {
+      width: 42,
+      height: 42,
+      borderRadius: t.radius.chip,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: t.colors.warningTone.bg,
+      borderWidth: 1,
+      borderColor: t.colors.warningTone.border,
+    },
+    execBannerText: { flex: 1, gap: 2 },
+    execTitle: { ...t.typography.h3, color: t.colors.textPrimary },
+    execSubtitle: { ...t.typography.caption, color: t.colors.textBody },
+    execHint: { ...t.typography.caption, color: t.colors.textMuted, lineHeight: 17 },
+    execAction: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: t.spacing.md,
+      padding: t.spacing.md,
+      borderRadius: t.radius.card,
+      backgroundColor: t.colors.surface,
+      borderWidth: 1,
+      borderColor: t.colors.border,
+    },
+    execActionDisabled: { opacity: 0.55 },
+    execActionText: { flex: 1, gap: 2 },
+    execActionTitle: { ...t.typography.bodyStrong, color: t.colors.textPrimary },
+    execActionTitleDisabled: { color: t.colors.textFaint },
+    execActionSub: { ...t.typography.caption, fontSize: 11, color: t.colors.textMuted },
+
+    // ── Edit modal ──────────────────────────────────────────────────────
+    modalContainer: { flex: 1, backgroundColor: t.colors.canvas },
+    modalHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: t.spacing.lg,
+      paddingVertical: t.spacing.lg,
+      borderBottomWidth: 1,
+      borderBottomColor: t.colors.border,
+    },
+    modalTitle: { ...t.typography.h3, color: t.colors.textPrimary },
+    modalCancel: { ...t.typography.button, color: t.colors.accentText },
+    modalHeaderSpacer: { width: 56 },
+    modalBody: { flex: 1, paddingHorizontal: t.spacing.lg },
+    modalBodyContent: { paddingTop: t.spacing.lg, paddingBottom: t.spacing.xxl },
+    fieldLabel: { ...t.typography.label, color: t.colors.textPrimary, marginBottom: t.spacing.sm },
+    fieldSpacing: { marginTop: t.spacing.lg },
+    categoryChips: { flexDirection: 'row', flexWrap: 'wrap', gap: t.spacing.sm },
+    catChip: {
+      paddingHorizontal: t.spacing.lg,
+      paddingVertical: t.spacing.sm,
+      borderRadius: t.radius.pill,
+      backgroundColor: t.colors.surface,
+      borderWidth: 1,
+      borderColor: t.colors.border,
+    },
+    catChipActive: {
+      backgroundColor: t.colors.accentTone.bg,
+      borderColor: t.colors.accentTone.border,
+    },
+    catChipText: { ...t.typography.label, color: t.colors.textMuted },
+    catChipTextActive: { color: t.colors.accentTone.text },
+    modalFooter: {
+      paddingHorizontal: t.spacing.lg,
+      paddingVertical: t.spacing.lg,
+      borderTopWidth: 1,
+      borderTopColor: t.colors.border,
+    },
+  });
