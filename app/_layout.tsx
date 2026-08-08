@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Stack } from 'expo-router';
+import { Stack, router, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 import { useAuth } from '@/hooks/useAuth';
@@ -21,23 +21,57 @@ import { setupReactQueryFocus } from '@/lib/reactQueryFocus';
 
 function AppNavigator({ fontsLoaded }: { fontsLoaded: boolean }) {
   const { session, initialising, profileLoaded, needsOnboarding } = useAuth();
+  const segments = useSegments();
+
+  const signedIn = !!session;
+  const rootSegment = segments[0] as string | undefined;
 
   // Only two conditions may replace the whole tree, and both are one-shot:
   // fonts loading, and the cold-start session/profile resolve. Neither flips
   // back to true later, so background refetches can no longer unmount the app.
-  if (!fontsLoaded || initialising) {
-    return <LoadingSpinner />;
-  }
-  if (session && !profileLoaded) {
+  const ready = fontsLoaded && !initialising && (!session || profileLoaded);
+
+  /**
+   * Keeps the URL inside whichever group the guards currently expose.
+   *
+   * The guards below remove unavailable groups, but removing a group does NOT
+   * move the user off a route inside it — the URL simply stops matching and
+   * `+not-found` catches it. That produced two dead ends:
+   *
+   *   * sign-up left the URL on `/auth/register` while the session made the
+   *     `auth` group disappear;
+   *   * finishing onboarding left it on `/onboarding/profile` while the new
+   *     profile row made the `onboarding` group disappear.
+   *
+   * Both showed "This screen doesn't exist". This effect is deliberately keyed
+   * only on `ready` and the three booleans that decide group membership, plus
+   * the top-level segment — never on `user`/`profile`, which is what made an
+   * earlier version of this re-fire on every background refetch.
+   */
+  useEffect(() => {
+    if (!ready) return;
+
+    const inAuth = rootSegment === 'auth';
+    const inOnboarding = rootSegment === 'onboarding';
+
+    if (!signedIn) {
+      if (!inAuth) router.replace('/auth/login');
+      return;
+    }
+    if (needsOnboarding) {
+      if (!inOnboarding) router.replace('/onboarding');
+      return;
+    }
+    // Signed in and onboarded: auth and onboarding are both behind us.
+    if (inAuth || inOnboarding) router.replace('/(tabs)');
+  }, [ready, signedIn, needsOnboarding, rootSegment]);
+
+  if (!ready) {
     return <LoadingSpinner />;
   }
 
-  const signedIn = !!session;
-
-  // Route protection is declarative: expo-router keeps unavailable groups out of
-  // the navigation state and falls back to the first available screen. There are
-  // no imperative router calls here — mixing the two is what produced the random
-  // redirects (an effect keyed on `user` re-ran on every profile refetch).
+  // The guards keep unavailable groups out of the navigation state; the effect
+  // above keeps the *current route* inside an available one. Both are needed.
   return (
     <>
       <Stack screenOptions={{ headerShown: false }}>

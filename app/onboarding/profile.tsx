@@ -98,9 +98,9 @@ export default function OnboardingScreen() {
     setStep((prev) => prev - 1);
   };
 
-  const handleSkip = () => {
-    router.replace('/(tabs)');
-  };
+  // There is no "skip" path. Onboarding is what writes the `profiles` row, and
+  // the route guard keys off that row existing — so skipping could never reach
+  // the app, it only bounced back here.
 
   const handleFinish = async () => {
     try {
@@ -116,8 +116,9 @@ export default function OnboardingScreen() {
         photoUri: photoUri ?? undefined,
       });
 
-      // No navigation here — once the profile row exists the route guard in
-      // app/_layout.tsx releases the onboarding group and swaps to the app.
+      // No navigation here. `onboardUser` seeds the profile query, which flips
+      // `needsOnboarding` false, and the redirect effect in app/_layout.tsx
+      // moves us to `(tabs)`. Replacing from here as well raced that effect.
     } catch (e) {
       setError('Something went wrong while saving your profile. Please try again.');
     } finally {
@@ -427,7 +428,6 @@ export default function OnboardingScreen() {
                   style={styles.footerButton}
                 />
               </View>
-              <Button label="Skip for now" variant="ghost" onPress={handleSkip} style={styles.skipButton} />
             </View>
           </View>
         </ScrollView>
@@ -626,9 +626,6 @@ const makeStyles = (t: Theme) =>
     },
     footerButton: {
       flex: 1,
-    },
-    skipButton: {
-      marginTop: 4,
     },
     photoSection: {
       marginTop: t.spacing.sm,
