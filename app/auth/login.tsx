@@ -1,4 +1,5 @@
-import { View, Text, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, Image } from 'react-native';
+import { appVariant } from '@/constants/appVariant';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState } from 'react';
 import { Link } from 'expo-router';
@@ -9,6 +10,9 @@ import { Button } from '@/components/ui/Button';
 import { TextInputField } from '@/components/ui/TextInputField';
 import { FormAlert } from '@/components/ui/FormAlert';
 import { DismissKeyboardView } from '@/components/ui/DismissKeyboardView';
+
+const AC_LOGO = require('@/assets/images/activCampus/logo.png');
+const isActivCampus = appVariant === 'activCampus';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -44,11 +48,27 @@ export default function LoginScreen() {
       >
         <DismissKeyboardView style={styles.content}>
           <View style={styles.header}>
-            <View style={styles.logo}>
-              <Text style={styles.logoText}>🏀</Text>
-            </View>
+            {isActivCampus ? (
+              // The full wordmark lockup — this is the first screen a user sees,
+              // so it carries the brand rather than a bare mark.
+              <Image
+                source={AC_LOGO}
+                resizeMode="contain"
+                style={styles.brandLogo}
+                accessibilityRole="image"
+                accessibilityLabel="Active Campus"
+              />
+            ) : (
+              <View style={styles.logo}>
+                <Text style={styles.logoText}>🏀</Text>
+              </View>
+            )}
             <Text style={styles.title}>Welcome Back</Text>
-            <Text style={styles.subtitle}>Sign in to find courts and connect with players</Text>
+            <Text style={styles.subtitle}>
+              {isActivCampus
+                ? 'Sign in to find what’s happening on campus'
+                : 'Sign in to find courts and connect with players'}
+            </Text>
           </View>
 
           <View style={styles.form}>
@@ -129,6 +149,13 @@ const styles = StyleSheet.create({
   },
   logoText: {
     fontSize: 32,
+  },
+  // The artwork is a square lockup with its own internal padding, so it needs
+  // no circular chip behind it the way the emoji does.
+  brandLogo: {
+    width: 160,
+    height: 160,
+    marginBottom: 8,
   },
   title: {
     fontSize: 28,

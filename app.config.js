@@ -12,6 +12,13 @@ const VARIANTS = {
     scheme: 'basketballmeetup',
     applicationId: 'com.xale11.basketballmeetupapp',
     easProjectId: '8a11d484-17b7-4a98-8803-2f8b72c5166c',
+    // Still the stock Expo placeholder — Basketball Meetup has no artwork of
+    // its own yet. Deliberately not sharing ActivCampus's: these ship as two
+    // separate store listings under different bundle ids.
+    icon: './assets/images/icon.png',
+    adaptiveIcon: null,
+    adaptiveIconBackground: '#FFFFFF',
+    favicon: './assets/images/favicon.png',
     locationPermission:
       'This app uses location to show nearby basketball courts and help you find courts near you.',
     photosPermission:
@@ -23,6 +30,12 @@ const VARIANTS = {
     scheme: 'activcampus',
     applicationId: 'com.xale11.activcampus',
     easProjectId: '65428b97-c675-43a5-8d52-56fd9191e5d3',
+    icon: './assets/images/activCampus/icon.png',
+    adaptiveIcon: './assets/images/activCampus/adaptive-icon.png',
+    // Deep teal, so the Android mask's surround reads as brand rather than
+    // as a white gap around the mark.
+    adaptiveIconBackground: '#0d3d3d',
+    favicon: './assets/images/activCampus/favicon.png',
     locationPermission:
       'This app uses location to show events happening near you on campus.',
     photosPermission:
@@ -68,7 +81,7 @@ export default {
     scheme: variant.scheme,
     version: '1.0.0',
     orientation: 'portrait',
-    icon: './assets/images/icon.png',
+    icon: variant.icon,
     // The UI is hardcoded light (white surfaces, dark text). 'automatic' lets iOS
     // render native controls in dark appearance over them — white text on white.
     userInterfaceStyle: 'light',
@@ -88,6 +101,17 @@ export default {
     android: {
       package: variant.applicationId,
       permissions: ['ACCESS_FINE_LOCATION', 'ACCESS_COARSE_LOCATION'],
+      // Omitted when the variant has no adaptive foreground — an adaptiveIcon
+      // block with a null foregroundImage fails the prebuild rather than
+      // falling back to `icon`.
+      ...(variant.adaptiveIcon
+        ? {
+            adaptiveIcon: {
+              foregroundImage: variant.adaptiveIcon,
+              backgroundColor: variant.adaptiveIconBackground,
+            },
+          }
+        : {}),
       config: {
         googleMaps: {
           apiKey: googleMapsApiKey,
@@ -97,7 +121,7 @@ export default {
     web: {
       bundler: 'metro',
       output: 'single',
-      favicon: './assets/images/favicon.png',
+      favicon: variant.favicon,
     },
     plugins: [
       'expo-router',

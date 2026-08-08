@@ -1,6 +1,15 @@
-import { View, Text, StyleSheet } from 'react-native';
-import Svg, { Defs, LinearGradient, Stop, Path } from 'react-native-svg';
+import { View, Text, StyleSheet, Image } from 'react-native';
 import { fontFamily } from '@/constants/theme';
+
+/**
+ * The supplied brand mark, replacing the SVG port of the web reference's
+ * `Logo.tsx`. The artwork is authoritative now, so the hand-traced paths and
+ * their gradient stops are gone rather than kept as a second source of truth.
+ *
+ * `logo-mark.png` is the textless variant — the wordmark below is rendered as
+ * type so it stays crisp at every size and can follow `lightText`.
+ */
+const LOGO_MARK = require('@/assets/images/activCampus/logo-mark.png');
 
 /**
  * teal-600. The mark is a fixed brand asset, not themed chrome — the SVG
@@ -10,12 +19,19 @@ import { fontFamily } from '@/constants/theme';
 const TEAL_600 = '#0D9488';
 const TEAL_600_80 = 'rgba(13, 148, 136, 0.8)';
 
-/** Mirrors the reference's sizeMap: icon px, title px, gap px. */
+/**
+ * icon px, title px, gap px.
+ *
+ * `icon` is the box the mark is fitted into, not its drawn height: the artwork
+ * is wider than it is tall, so `contain` letterboxes it and the mark renders at
+ * roughly 70% of this value. The numbers are sized up from the web reference's
+ * sizeMap to compensate.
+ */
 const SIZES = {
-  sm: { icon: 28, title: 16, tagline: 9, gap: 8 },
-  md: { icon: 38, title: 20, tagline: 10, gap: 10 },
-  lg: { icon: 52, title: 24, tagline: 11, gap: 12 },
-  xl: { icon: 72, title: 30, tagline: 12, gap: 16 },
+  sm: { icon: 34, title: 16, tagline: 9, gap: 8 },
+  md: { icon: 46, title: 20, tagline: 10, gap: 10 },
+  lg: { icon: 62, title: 24, tagline: 11, gap: 12 },
+  xl: { icon: 86, title: 30, tagline: 12, gap: 16 },
 } as const;
 
 interface AC_LogoProps {
@@ -27,9 +43,7 @@ interface AC_LogoProps {
 }
 
 /**
- * The ActivCampus arrowhead mark and wordmark, ported from the web reference's
- * `Logo.tsx` to react-native-svg. Paths and gradient stops are unchanged so it
- * stays pixel-identical; only the SVG dialect differs.
+ * The ActivCampus arrowhead mark, optionally with its wordmark.
  *
  * The wordmark is a two-line lockup — "ACTIVE CAMPUS" over a
  * "STUDENT ACTIVITY NETWORK" tagline — not a single word.
@@ -42,48 +56,15 @@ export function AC_Logo({
   const s = SIZES[size];
 
   const icon = (
-    <Svg width={s.icon} height={s.icon} viewBox="0 0 200 200" fill="none">
-      <Defs>
-        <LinearGradient
-          id="acGrad"
-          x1="20"
-          y1="20"
-          x2="180"
-          y2="180"
-          gradientUnits="userSpaceOnUse"
-        >
-          <Stop offset="0%" stopColor="#0d9488" />
-          <Stop offset="50%" stopColor="#0f766e" />
-          <Stop offset="100%" stopColor="#042f2e" />
-        </LinearGradient>
-        <LinearGradient
-          id="acAccent"
-          x1="100"
-          y1="20"
-          x2="180"
-          y2="160"
-          gradientUnits="userSpaceOnUse"
-        >
-          <Stop offset="0%" stopColor="#2dd4bf" />
-          <Stop offset="100%" stopColor="#0d9488" />
-        </LinearGradient>
-      </Defs>
-
-      {/* Outer triangle, left wing */}
-      <Path
-        d="M 100,20 L 25,145 C 20,154 26,165 36,165 L 90,165 L 90,95 L 60,135 L 45,122 L 90,62 L 90,20 Z"
-        fill="url(#acGrad)"
-      />
-      {/* Centre vertical needle */}
-      <Path d="M 100,18 L 108,125 L 100,165 L 92,125 Z" fill="#14b8a6" />
-      {/* Right wing */}
-      <Path
-        d="M 100,20 L 100,62 L 145,122 L 130,135 L 100,95 L 100,165 L 164,165 C 174,165 180,154 175,145 Z"
-        fill="url(#acAccent)"
-      />
-      {/* Bottom notch */}
-      <Path d="M 100,138 L 118,172 L 100,162 L 82,172 Z" fill="#f0fdfa" />
-    </Svg>
+    <Image
+      source={LOGO_MARK}
+      // The artwork is wider than it is tall, so `contain` keeps it from being
+      // stretched into the square the old SVG viewBox occupied.
+      resizeMode="contain"
+      style={{ width: s.icon, height: s.icon }}
+      accessibilityRole="image"
+      accessibilityLabel="Active Campus"
+    />
   );
 
   if (!showText) return <View style={styles.row}>{icon}</View>;
