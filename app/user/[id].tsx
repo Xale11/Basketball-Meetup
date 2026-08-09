@@ -21,8 +21,11 @@ import { useRemoveFriend } from '@/hooks/friends/useRemoveFriend';
 import { useAuth } from '@/hooks/useAuth';
 import { FriendshipStatus } from '@/types/friends';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
+import { useTheme, useThemedStyles, Theme } from '@/hooks/useTheme';
 
 export default function UserProfileScreen() {
+  const { theme } = useTheme();
+  const s = useThemedStyles(makeStyles);
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user: currentUser } = useAuth();
 
@@ -52,7 +55,7 @@ export default function UserProfileScreen() {
       <SafeAreaView style={s.container}>
         <View style={s.header}>
           <TouchableOpacity style={s.backBtn} onPress={() => router.back()}>
-            <ArrowLeft size={22} color="#1A1A1A" />
+            <ArrowLeft size={22} color={theme.colors.textPrimary} />
           </TouchableOpacity>
         </View>
         <View style={s.loadingWrap}>
@@ -138,12 +141,12 @@ export default function UserProfileScreen() {
 
   const renderFriendButton = () => {
     if (isSelf) return null;
-    if (actionBusy) return <ActivityIndicator color="#FF6B35" style={s.actionLoader} />;
+    if (actionBusy) return <ActivityIndicator color={theme.colors.accent} style={s.actionLoader} />;
 
     if (isFriends) {
       return (
         <TouchableOpacity style={[s.actionBtn, s.actionBtnGreen]} onPress={handleRemove}>
-          <UserCheck size={18} color="#FFFFFF" />
+          <UserCheck size={18} color={theme.colors.textOnAccent} />
           <Text style={s.actionBtnText}>Friends — Remove</Text>
         </TouchableOpacity>
       );
@@ -152,7 +155,7 @@ export default function UserProfileScreen() {
     if (isSentByMe) {
       return (
         <TouchableOpacity style={[s.actionBtn, s.actionBtnGrey]} onPress={handleCancelRequest}>
-          <Clock size={18} color="#555" />
+          <Clock size={18} color={theme.colors.textBody} />
           <Text style={[s.actionBtnText, s.actionBtnTextDark]}>Request Sent — Cancel</Text>
         </TouchableOpacity>
       );
@@ -161,12 +164,12 @@ export default function UserProfileScreen() {
     if (isReceivedByMe) {
       return (
         <View style={s.respondRow}>
-          <TouchableOpacity style={[s.actionBtn, s.actionBtnGreen, { flex: 1 }]} onPress={handleAccept}>
-            <UserCheck size={18} color="#FFFFFF" />
+          <TouchableOpacity style={[s.actionBtn, s.actionBtnGreen, s.actionBtnFlex]} onPress={handleAccept}>
+            <UserCheck size={18} color={theme.colors.textOnAccent} />
             <Text style={s.actionBtnText}>Accept</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[s.actionBtn, s.actionBtnRed, { flex: 1 }]} onPress={handleDecline}>
-            <UserX size={18} color="#FFFFFF" />
+          <TouchableOpacity style={[s.actionBtn, s.actionBtnRed, s.actionBtnFlex]} onPress={handleDecline}>
+            <UserX size={18} color={theme.colors.textOnAccent} />
             <Text style={s.actionBtnText}>Decline</Text>
           </TouchableOpacity>
         </View>
@@ -175,7 +178,7 @@ export default function UserProfileScreen() {
 
     return (
       <TouchableOpacity style={s.actionBtn} onPress={handleAddFriend}>
-        <UserPlus size={18} color="#FFFFFF" />
+        <UserPlus size={18} color={theme.colors.textOnAccent} />
         <Text style={s.actionBtnText}>Add Friend</Text>
       </TouchableOpacity>
     );
@@ -185,10 +188,10 @@ export default function UserProfileScreen() {
     <SafeAreaView style={s.container}>
       <View style={s.header}>
         <TouchableOpacity style={s.backBtn} onPress={() => router.back()}>
-          <ArrowLeft size={22} color="#1A1A1A" />
+          <ArrowLeft size={22} color={theme.colors.textPrimary} />
         </TouchableOpacity>
         <Text style={s.headerTitle}>Profile</Text>
-        <View style={{ width: 40 }} />
+        <View style={s.headerSpacer} />
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.body}>
@@ -198,7 +201,7 @@ export default function UserProfileScreen() {
             <Image source={{ uri: profile.photo_url }} style={s.avatar} />
           ) : (
             <View style={[s.avatar, s.avatarFallback]}>
-              <User size={44} color="#9CA3AF" />
+              <User size={44} color={theme.colors.textMuted} />
             </View>
           )}
           <Text style={s.name}>{profile.first_name} {profile.last_name}</Text>
@@ -220,67 +223,83 @@ export default function UserProfileScreen() {
   );
 }
 
-const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8F9FA' },
-  loadingWrap: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  errorText: { fontSize: 16, color: '#666' },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
-  },
-  backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#F8F9FA',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerTitle: { fontSize: 18, fontWeight: '600', color: '#1A1A1A' },
-  body: { paddingHorizontal: 20, paddingTop: 32, paddingBottom: 60 },
-  avatarSection: { alignItems: 'center', marginBottom: 24 },
-  avatar: { width: 100, height: 100, borderRadius: 50, marginBottom: 16 },
-  avatarFallback: {
-    backgroundColor: '#F3F4F6',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  name: { fontSize: 24, fontWeight: '700', color: '#1A1A1A', marginBottom: 4 },
-  course: { fontSize: 15, color: '#666' },
-  actionSection: { marginBottom: 24 },
-  actionLoader: { alignSelf: 'center' },
-  actionBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: '#FF6B35',
-    borderRadius: 16,
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-  },
-  actionBtnText: { fontSize: 16, fontWeight: '600', color: '#FFFFFF' },
-  actionBtnTextDark: { color: '#555' },
-  actionBtnGreen: { backgroundColor: '#16A34A' },
-  actionBtnRed: { backgroundColor: '#DC2626' },
-  actionBtnGrey: { backgroundColor: '#E5E7EB' },
-  respondRow: { flexDirection: 'row', gap: 12 },
-  bioSection: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  bioTitle: { fontSize: 16, fontWeight: '700', color: '#1A1A1A', marginBottom: 8 },
-  bio: { fontSize: 15, color: '#444', lineHeight: 22 },
-});
+const makeStyles = (t: Theme) =>
+  StyleSheet.create({
+    container: { flex: 1, backgroundColor: t.colors.canvas },
+    loadingWrap: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+    errorText: { ...t.typography.body, color: t.colors.textMuted },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: t.spacing.lg,
+      paddingVertical: t.spacing.md,
+      backgroundColor: t.colors.surface,
+      borderBottomWidth: 1,
+      borderBottomColor: t.colors.chromeBorder,
+    },
+    backBtn: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: t.colors.surfaceAlt,
+      borderWidth: 1,
+      borderColor: t.colors.border,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    headerTitle: { ...t.typography.h3, color: t.colors.textPrimary },
+    headerSpacer: { width: 40 },
+    body: {
+      paddingHorizontal: t.spacing.lg,
+      paddingTop: t.spacing.xxl,
+      paddingBottom: 60,
+    },
+    avatarSection: { alignItems: 'center', marginBottom: t.spacing.xl },
+    avatar: {
+      width: 100,
+      height: 100,
+      borderRadius: 50,
+      marginBottom: t.spacing.lg,
+      borderWidth: 2,
+      borderColor: t.colors.accent,
+    },
+    avatarFallback: {
+      backgroundColor: t.colors.surfaceAlt,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    name: { ...t.typography.h1, color: t.colors.textPrimary, marginBottom: 4 },
+    course: { ...t.typography.body, color: t.colors.textMuted },
+    actionSection: { marginBottom: t.spacing.xl },
+    actionLoader: { alignSelf: 'center' },
+    actionBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: t.spacing.sm,
+      backgroundColor: t.colors.accent,
+      borderRadius: t.radius.card,
+      paddingVertical: 14,
+      paddingHorizontal: t.spacing.lg,
+    },
+    actionBtnFlex: { flex: 1 },
+    actionBtnText: { ...t.typography.button, fontSize: 15, color: t.colors.textOnAccent },
+    actionBtnTextDark: { color: t.colors.textBody },
+    actionBtnGreen: { backgroundColor: t.colors.successTone.solid },
+    actionBtnRed: { backgroundColor: t.colors.dangerTone.solid },
+    // "Request sent" is a pending, cancellable state — a neutral surface, so it
+    // does not compete with the primary action's accent fill.
+    actionBtnGrey: { backgroundColor: t.colors.surfaceAlt },
+    respondRow: { flexDirection: 'row', gap: t.spacing.md },
+    bioSection: {
+      backgroundColor: t.colors.surface,
+      borderRadius: t.radius.card,
+      padding: t.spacing.lg,
+      borderWidth: 1,
+      borderColor: t.colors.border,
+      ...t.shadow.md,
+    },
+    bioTitle: { ...t.typography.h3, fontSize: 15, color: t.colors.textPrimary, marginBottom: t.spacing.sm },
+    bio: { ...t.typography.body, color: t.colors.textBody, lineHeight: 22 },
+  });

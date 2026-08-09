@@ -2,6 +2,7 @@ import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
 import { router } from 'expo-router';
 import { FriendProfile } from '@/types/friends';
 import { Users } from 'lucide-react-native';
+import { useTheme, useThemedStyles, Theme } from '@/hooks/useTheme';
 
 interface Props {
   friends: FriendProfile[];
@@ -11,6 +12,8 @@ interface Props {
 const MAX_DEFAULT = 3;
 
 export function FriendsAttending({ friends, maxVisible = MAX_DEFAULT }: Props) {
+  const { theme } = useTheme();
+  const s = useThemedStyles(makeStyles);
   if (friends.length === 0) return null;
 
   const visible = friends.slice(0, maxVisible);
@@ -19,7 +22,7 @@ export function FriendsAttending({ friends, maxVisible = MAX_DEFAULT }: Props) {
   return (
     <View style={s.container}>
       <View style={s.titleRow}>
-        <Users size={16} color="#FF6B35" />
+        <Users size={16} color={theme.colors.accentHi} />
         <Text style={s.title}>Friends Going</Text>
       </View>
 
@@ -57,41 +60,51 @@ export function FriendsAttending({ friends, maxVisible = MAX_DEFAULT }: Props) {
   );
 }
 
-const s = StyleSheet.create({
-  container: {
-    backgroundColor: '#FFF4EE',
-    borderRadius: 14,
-    padding: 14,
-    marginBottom: 20,
-  },
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginBottom: 10,
-  },
-  title: { fontSize: 15, fontWeight: '700', color: '#FF6B35' },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
-  avatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    borderWidth: 2,
-    borderColor: '#FFFFFF',
-    marginRight: -8,
-  },
-  avatarFallback: {
-    backgroundColor: '#FF6B35',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  avatarInitial: { fontSize: 14, fontWeight: '700', color: '#FFFFFF' },
-  overflowBadge: {
-    backgroundColor: '#E0E0E0',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: -8,
-  },
-  overflowText: { fontSize: 11, fontWeight: '700', color: '#555' },
-  label: { fontSize: 13, color: '#444', marginLeft: 16, flex: 1, flexWrap: 'wrap' },
-});
+const makeStyles = (t: Theme) =>
+  StyleSheet.create({
+    container: {
+      backgroundColor: t.colors.accentTone.bg,
+      borderWidth: 1,
+      borderColor: t.colors.accentTone.border,
+      borderRadius: t.radius.card,
+      padding: t.spacing.md + 2,
+      marginBottom: t.spacing.lg,
+    },
+    titleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      marginBottom: 10,
+    },
+    title: { ...t.typography.h3, fontSize: 14, color: t.colors.accentTone.text },
+    row: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
+    avatar: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      borderWidth: 2,
+      // Ring in the card colour so overlapping avatars read as separate discs.
+      borderColor: t.colors.surface,
+      marginRight: -8,
+    },
+    avatarFallback: {
+      backgroundColor: t.colors.accent,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    avatarInitial: { ...t.typography.label, color: t.colors.textOnAccent },
+    overflowBadge: {
+      backgroundColor: t.colors.surfaceAlt,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginRight: -8,
+    },
+    overflowText: { ...t.typography.badge, fontSize: 11, color: t.colors.textBody },
+    label: {
+      ...t.typography.caption,
+      color: t.colors.textBody,
+      marginLeft: t.spacing.lg,
+      flex: 1,
+      flexWrap: 'wrap',
+    },
+  });

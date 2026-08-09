@@ -13,8 +13,11 @@ import { ArrowLeft, Calendar, MapPin, User, X } from 'lucide-react-native';
 import { useReceivedEventInvites } from '@/hooks/events/useReceivedEventInvites';
 import { useRespondEventInvite } from '@/hooks/events/useRespondEventInvite';
 import { EventInviteStatus, ReceivedEventInvite } from '@/types/event';
+import { useTheme, useThemedStyles, Theme } from '@/hooks/useTheme';
 
 export default function EventInvitesScreen() {
+  const { theme } = useTheme();
+  const s = useThemedStyles(makeStyles);
   const { invites, loading } = useReceivedEventInvites();
   const { respond, loading: responding } = useRespondEventInvite();
 
@@ -37,12 +40,12 @@ export default function EventInvitesScreen() {
         >
           <Text style={s.eventName} numberOfLines={2}>{event.name}</Text>
           <View style={s.metaRow}>
-            <Calendar size={13} color="#888" />
+            <Calendar size={13} color={theme.colors.textMuted} />
             <Text style={s.metaText}>{fmtDate(event.start_date)} · {fmtTime(event.start_date)}</Text>
           </View>
           {event.address ? (
             <View style={s.metaRow}>
-              <MapPin size={13} color="#888" />
+              <MapPin size={13} color={theme.colors.textMuted} />
               <Text style={s.metaText} numberOfLines={1}>{event.address}</Text>
             </View>
           ) : null}
@@ -54,7 +57,7 @@ export default function EventInvitesScreen() {
             <Image source={{ uri: inviter.photo_url }} style={s.avatar} />
           ) : (
             <View style={[s.avatar, s.avatarFallback]}>
-              <User size={14} color="#9CA3AF" />
+              <User size={14} color={theme.colors.textMuted} />
             </View>
           )}
           <Text style={s.inviterText}>
@@ -78,9 +81,9 @@ export default function EventInvitesScreen() {
             }
           >
             {responding ? (
-              <ActivityIndicator size="small" color="#888" />
+              <ActivityIndicator size="small" color={theme.colors.textMuted} />
             ) : (
-              <X size={18} color="#888" />
+              <X size={18} color={theme.colors.textMuted} />
             )}
           </TouchableOpacity>
         </View>
@@ -92,14 +95,14 @@ export default function EventInvitesScreen() {
     <SafeAreaView style={s.container}>
       <View style={s.header}>
         <TouchableOpacity style={s.backBtn} onPress={() => router.back()}>
-          <ArrowLeft size={22} color="#1A1A1A" />
+          <ArrowLeft size={22} color={theme.colors.textPrimary} />
         </TouchableOpacity>
         <Text style={s.headerTitle}>Event Invites</Text>
         <View style={{ width: 40 }} />
       </View>
 
       {loading ? (
-        <View style={s.center}><ActivityIndicator color="#FF6B35" /></View>
+        <View style={s.center}><ActivityIndicator color={theme.colors.accent} /></View>
       ) : invites.length === 0 ? (
         <View style={s.center}>
           <Text style={s.emptyTitle}>No pending invites</Text>
@@ -120,78 +123,86 @@ export default function EventInvitesScreen() {
   );
 }
 
-const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8F9FA' },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
-  },
-  backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#F8F9FA',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerTitle: { fontSize: 18, fontWeight: '600', color: '#1A1A1A' },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32 },
-  emptyTitle: { fontSize: 18, fontWeight: '600', color: '#1A1A1A', marginBottom: 8 },
-  emptySubtitle: { fontSize: 14, color: '#888', textAlign: 'center' },
-  list: { padding: 16 },
-  card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    elevation: 2,
-  },
-  eventInfo: { marginBottom: 10 },
-  eventName: { fontSize: 16, fontWeight: '700', color: '#1A1A1A', marginBottom: 6 },
-  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 3 },
-  metaText: { fontSize: 13, color: '#666', flex: 1 },
-  inviterRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingVertical: 10,
-    borderTopWidth: 1,
-    borderTopColor: '#F0F0F0',
-    marginBottom: 12,
-  },
-  avatar: { width: 28, height: 28, borderRadius: 14 },
-  avatarFallback: {
-    backgroundColor: '#F3F4F6',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  inviterText: { fontSize: 13, color: '#888' },
-  inviterName: { fontWeight: '600', color: '#444' },
-  actions: { flexDirection: 'row', gap: 10, alignItems: 'center' },
-  viewBtn: {
-    flex: 1,
-    backgroundColor: '#FF6B35',
-    borderRadius: 12,
-    paddingVertical: 10,
-    alignItems: 'center',
-  },
-  viewBtnText: { fontSize: 14, fontWeight: '700', color: '#FFFFFF' },
-  declineBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#F3F4F6',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-});
+const makeStyles = (t: Theme) =>
+  StyleSheet.create({
+    container: { flex: 1, backgroundColor: t.colors.canvas },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: t.spacing.lg,
+      paddingVertical: t.spacing.md,
+      backgroundColor: t.colors.surface,
+      borderBottomWidth: 1,
+      borderBottomColor: t.colors.chromeBorder,
+    },
+    backBtn: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: t.colors.surfaceAlt,
+      borderWidth: 1,
+      borderColor: t.colors.border,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    headerTitle: { ...t.typography.h3, color: t.colors.textPrimary },
+    center: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: t.spacing.xxl,
+    },
+    emptyTitle: { ...t.typography.h3, color: t.colors.textPrimary, marginBottom: t.spacing.sm },
+    emptySubtitle: { ...t.typography.body, color: t.colors.textMuted, textAlign: 'center' },
+    list: { padding: t.spacing.lg },
+    card: {
+      backgroundColor: t.colors.surface,
+      borderRadius: t.radius.card,
+      padding: t.spacing.lg,
+      marginBottom: t.spacing.md,
+      borderWidth: 1,
+      borderColor: t.colors.border,
+      ...t.shadow.md,
+    },
+    eventInfo: { marginBottom: 10 },
+    eventName: { ...t.typography.cardTitle, fontSize: 15, marginBottom: 6 },
+    metaRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 3 },
+    metaText: { ...t.typography.caption, color: t.colors.textMuted, flex: 1 },
+    inviterRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: t.spacing.sm,
+      paddingVertical: 10,
+      borderTopWidth: 1,
+      borderTopColor: t.colors.border,
+      marginBottom: t.spacing.md,
+    },
+    avatar: { width: 28, height: 28, borderRadius: 14 },
+    avatarFallback: {
+      backgroundColor: t.colors.surfaceAlt,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    inviterText: { ...t.typography.caption, color: t.colors.textMuted },
+    inviterName: { color: t.colors.textPrimary, fontFamily: t.typography.label.fontFamily },
+    actions: { flexDirection: 'row', gap: 10, alignItems: 'center' },
+    viewBtn: {
+      flex: 1,
+      backgroundColor: t.colors.accent,
+      borderRadius: t.radius.chip,
+      paddingVertical: 10,
+      alignItems: 'center',
+    },
+    viewBtnText: { ...t.typography.button, fontSize: 13, color: t.colors.textOnAccent },
+    declineBtn: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: t.colors.surfaceAlt,
+      borderWidth: 1,
+      borderColor: t.colors.borderStrong,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+  });

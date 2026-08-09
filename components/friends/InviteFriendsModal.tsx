@@ -16,6 +16,7 @@ import { useEventFriends } from '@/hooks/friends/useEventFriends';
 import { useEventInvitees } from '@/hooks/friends/useEventInvitees';
 import { useInviteFriendToEvent } from '@/hooks/friends/useInviteFriendToEvent';
 import { FriendProfile } from '@/types/friends';
+import { useTheme, useThemedStyles, Theme } from '@/hooks/useTheme';
 
 interface Props {
   visible: boolean;
@@ -24,6 +25,8 @@ interface Props {
 }
 
 export function InviteFriendsModal({ visible, eventId, onClose }: Props) {
+  const { theme } = useTheme();
+  const s = useThemedStyles(makeStyles);
   const { friends, loading: friendsLoading } = useFriends();
   const { friends: attending } = useEventFriends(eventId);
   const { inviteeIds } = useEventInvitees(eventId);
@@ -57,12 +60,12 @@ export function InviteFriendsModal({ visible, eventId, onClose }: Props) {
           <View style={s.header}>
             <Text style={s.title}>Invite Friends</Text>
             <TouchableOpacity style={s.closeBtn} onPress={onClose}>
-              <AntDesign name="close" size={20} color="#1A1A1A" />
+              <AntDesign name="close" size={20} color={theme.colors.textPrimary} />
             </TouchableOpacity>
           </View>
 
           {friendsLoading ? (
-            <ActivityIndicator color="#FF6B35" style={s.loader} />
+            <ActivityIndicator color={theme.colors.accent} style={s.loader} />
           ) : friends.length === 0 ? (
             <View style={s.empty}>
               <Text style={s.emptyText}>You have no friends to invite yet.</Text>
@@ -124,59 +127,79 @@ export function InviteFriendsModal({ visible, eventId, onClose }: Props) {
   );
 }
 
-const s = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    justifyContent: 'flex-end',
-  },
-  sheet: {
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 20,
-    paddingBottom: 40,
-    maxHeight: '70%',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  title: { fontSize: 20, fontWeight: '700', color: '#1A1A1A' },
-  closeBtn: { padding: 6, borderRadius: 16, backgroundColor: '#F8F9FA' },
-  loader: { marginTop: 32 },
-  empty: { alignItems: 'center', paddingVertical: 32 },
-  emptyText: { fontSize: 15, color: '#888' },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
-    gap: 12,
-  },
-  avatar: { width: 44, height: 44, borderRadius: 22 },
-  avatarFallback: {
-    backgroundColor: '#FF6B35',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  avatarInitial: { fontSize: 16, fontWeight: '700', color: '#FFFFFF' },
-  nameCol: { flex: 1 },
-  name: { fontSize: 15, fontWeight: '600', color: '#1A1A1A' },
-  sub: { fontSize: 13, color: '#888', marginTop: 2 },
-  inviteBtn: {
-    backgroundColor: '#FF6B35',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-  },
-  inviteBtnText: { fontSize: 13, fontWeight: '600', color: '#FFFFFF' },
-  badge: { borderRadius: 12, paddingHorizontal: 12, paddingVertical: 6 },
-  badgeGoing: { backgroundColor: '#F0FDF4' },
-  badgeTextGoing: { fontSize: 13, fontWeight: '600', color: '#16A34A' },
-  badgeInvited: { backgroundColor: '#F3F4F6' },
-  badgeTextInvited: { fontSize: 13, fontWeight: '600', color: '#888' },
-});
+const makeStyles = (t: Theme) =>
+  StyleSheet.create({
+    overlay: {
+      flex: 1,
+      backgroundColor: t.colors.overlay,
+      justifyContent: 'flex-end',
+    },
+    sheet: {
+      backgroundColor: t.colors.surface,
+      borderTopLeftRadius: t.radius.hero,
+      borderTopRightRadius: t.radius.hero,
+      borderTopWidth: 1,
+      borderColor: t.colors.chromeBorder,
+      padding: t.spacing.lg,
+      paddingBottom: t.spacing.xxl,
+      maxHeight: '70%',
+    },
+    header: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: t.spacing.lg,
+    },
+    title: { ...t.typography.h2, color: t.colors.textPrimary },
+    closeBtn: {
+      padding: 6,
+      borderRadius: t.radius.card,
+      backgroundColor: t.colors.surfaceAlt,
+      borderWidth: 1,
+      borderColor: t.colors.border,
+    },
+    loader: { marginTop: t.spacing.xxl },
+    empty: { alignItems: 'center', paddingVertical: t.spacing.xxl },
+    emptyText: { ...t.typography.body, color: t.colors.textMuted },
+    row: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: t.spacing.md,
+      borderBottomWidth: 1,
+      borderBottomColor: t.colors.border,
+      gap: t.spacing.md,
+    },
+    avatar: { width: 44, height: 44, borderRadius: 22 },
+    avatarFallback: {
+      backgroundColor: t.colors.accent,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    avatarInitial: { ...t.typography.h3, fontSize: 15, color: t.colors.textOnAccent },
+    nameCol: { flex: 1 },
+    name: { ...t.typography.bodyStrong, fontSize: 15, color: t.colors.textPrimary },
+    sub: { ...t.typography.caption, color: t.colors.textMuted, marginTop: 2 },
+    inviteBtn: {
+      backgroundColor: t.colors.accent,
+      borderRadius: t.radius.chip,
+      paddingHorizontal: t.spacing.lg,
+      paddingVertical: t.spacing.sm,
+    },
+    inviteBtnText: { ...t.typography.button, fontSize: 13, color: t.colors.textOnAccent },
+    badge: {
+      borderRadius: t.radius.chip,
+      paddingHorizontal: t.spacing.md,
+      paddingVertical: 6,
+      borderWidth: 1,
+    },
+    badgeGoing: {
+      backgroundColor: t.colors.successTone.bg,
+      borderColor: t.colors.successTone.border,
+    },
+    badgeTextGoing: { ...t.typography.badge, fontSize: 12, color: t.colors.successTone.text },
+    badgeInvited: {
+      backgroundColor: t.colors.neutralTone.bg,
+      borderColor: t.colors.neutralTone.border,
+    },
+    badgeTextInvited: { ...t.typography.badge, fontSize: 12, color: t.colors.neutralTone.text },
+  });

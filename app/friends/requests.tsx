@@ -13,8 +13,11 @@ import { ArrowLeft, UserCheck, UserX, User } from 'lucide-react-native';
 import { usePendingRequests } from '@/hooks/friends/usePendingRequests';
 import { useRespondFriendRequest } from '@/hooks/friends/useRespondFriendRequest';
 import { FriendshipStatus, FriendshipWithRequester } from '@/types/friends';
+import { useTheme, useThemedStyles, Theme } from '@/hooks/useTheme';
 
 export default function FriendRequestsScreen() {
+  const { theme } = useTheme();
+  const s = useThemedStyles(makeStyles);
   const { requests, loading } = usePendingRequests();
   const { respond, loading: responding } = useRespondFriendRequest();
 
@@ -29,7 +32,7 @@ export default function FriendRequestsScreen() {
             <Image source={{ uri: req.photo_url }} style={s.avatar} />
           ) : (
             <View style={[s.avatar, s.avatarFallback]}>
-              <User size={20} color="#9CA3AF" />
+              <User size={20} color={theme.colors.textMuted} />
             </View>
           )}
         </TouchableOpacity>
@@ -48,9 +51,9 @@ export default function FriendRequestsScreen() {
             }
           >
             {responding ? (
-              <ActivityIndicator size="small" color="#FFFFFF" />
+              <ActivityIndicator size="small" color={theme.colors.textOnAccent} />
             ) : (
-              <UserCheck size={18} color="#FFFFFF" />
+              <UserCheck size={18} color={theme.colors.textOnAccent} />
             )}
           </TouchableOpacity>
           <TouchableOpacity
@@ -60,7 +63,7 @@ export default function FriendRequestsScreen() {
               respond({ friendshipId: item.id, status: FriendshipStatus.DECLINED })
             }
           >
-            <UserX size={18} color="#555" />
+            <UserX size={18} color={theme.colors.textBody} />
           </TouchableOpacity>
         </View>
       </View>
@@ -71,14 +74,14 @@ export default function FriendRequestsScreen() {
     <SafeAreaView style={s.container}>
       <View style={s.header}>
         <TouchableOpacity style={s.backBtn} onPress={() => router.back()}>
-          <ArrowLeft size={22} color="#1A1A1A" />
+          <ArrowLeft size={22} color={theme.colors.textPrimary} />
         </TouchableOpacity>
         <Text style={s.headerTitle}>Friend Requests</Text>
-        <View style={{ width: 40 }} />
+        <View style={s.headerSpacer} />
       </View>
 
       {loading ? (
-        <View style={s.center}><ActivityIndicator color="#FF6B35" /></View>
+        <View style={s.center}><ActivityIndicator color={theme.colors.accent} /></View>
       ) : requests.length === 0 ? (
         <View style={s.center}>
           <Text style={s.emptyTitle}>No pending requests</Text>
@@ -97,62 +100,76 @@ export default function FriendRequestsScreen() {
   );
 }
 
-const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8F9FA' },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
-  },
-  backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#F8F9FA',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerTitle: { fontSize: 18, fontWeight: '600', color: '#1A1A1A' },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32 },
-  emptyTitle: { fontSize: 18, fontWeight: '600', color: '#1A1A1A', marginBottom: 8 },
-  emptySubtitle: { fontSize: 14, color: '#888', textAlign: 'center' },
-  list: { padding: 16 },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 14,
-    padding: 14,
-    marginBottom: 10,
-    gap: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 1,
-  },
-  avatar: { width: 48, height: 48, borderRadius: 24 },
-  avatarFallback: {
-    backgroundColor: '#F3F4F6',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  info: { flex: 1 },
-  name: { fontSize: 15, fontWeight: '600', color: '#1A1A1A', marginBottom: 2 },
-  sub: { fontSize: 13, color: '#888' },
-  actions: { flexDirection: 'row', gap: 8 },
-  btn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  btnAccept: { backgroundColor: '#16A34A' },
-  btnDecline: { backgroundColor: '#F3F4F6' },
-});
+const makeStyles = (t: Theme) =>
+  StyleSheet.create({
+    container: { flex: 1, backgroundColor: t.colors.canvas },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: t.spacing.lg,
+      paddingVertical: t.spacing.md,
+      backgroundColor: t.colors.surface,
+      borderBottomWidth: 1,
+      borderBottomColor: t.colors.chromeBorder,
+    },
+    backBtn: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: t.colors.surfaceAlt,
+      borderWidth: 1,
+      borderColor: t.colors.border,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    headerTitle: { ...t.typography.h3, color: t.colors.textPrimary },
+    headerSpacer: { width: 40 },
+    center: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: t.spacing.xxl,
+    },
+    emptyTitle: { ...t.typography.h3, color: t.colors.textPrimary, marginBottom: t.spacing.sm },
+    emptySubtitle: { ...t.typography.body, color: t.colors.textMuted, textAlign: 'center' },
+    list: { padding: t.spacing.lg },
+    row: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: t.colors.surface,
+      borderRadius: t.radius.card,
+      padding: t.spacing.md + 2,
+      marginBottom: 10,
+      gap: t.spacing.md,
+      borderWidth: 1,
+      borderColor: t.colors.border,
+      ...t.shadow.sm,
+    },
+    avatar: { width: 48, height: 48, borderRadius: 24 },
+    avatarFallback: {
+      backgroundColor: t.colors.surfaceAlt,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    info: { flex: 1 },
+    name: { ...t.typography.bodyStrong, fontSize: 15, color: t.colors.textPrimary, marginBottom: 2 },
+    sub: { ...t.typography.caption, color: t.colors.textMuted },
+    actions: { flexDirection: 'row', gap: t.spacing.sm },
+    btn: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: 'transparent',
+    },
+    btnAccept: { backgroundColor: t.colors.successTone.solid },
+    // Declining is the quieter action, so it stays a neutral surface rather
+    // than taking the danger tone.
+    btnDecline: {
+      backgroundColor: t.colors.surfaceAlt,
+      borderColor: t.colors.borderStrong,
+    },
+  });

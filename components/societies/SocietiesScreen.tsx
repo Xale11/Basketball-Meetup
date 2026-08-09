@@ -36,24 +36,6 @@ import { useLeaveSociety } from '@/hooks/societies/useLeaveSociety';
 import { AC_SocietyCard } from '@/components/societies/AC_SocietyCard';
 
 
-const CATEGORY_COLORS: Record<string, string> = {
-  Arts: '#FFF4E8',
-  Tech: '#E8F0FF',
-  Sport: '#E8F5E8',
-  Academic: '#F4E8FF',
-  Social: '#FFF0F5',
-  Other: '#F0F0F0',
-};
-
-const CATEGORY_TEXT: Record<string, string> = {
-  Arts: '#FF9F40',
-  Tech: '#4A6CF7',
-  Sport: '#28A745',
-  Academic: '#9B59B6',
-  Social: '#E84393',
-  Other: '#666666',
-};
-
 export default function SocietiesScreen() {
   const { user } = useAuth();
   const { theme } = useTheme();
