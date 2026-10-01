@@ -10,7 +10,20 @@ export const usePendingRequests = () => {
     queryKey: qk.friends.pending(user?.id),
     queryFn: () => getPendingFriendRequests(user!.id),
     enabled: !!user?.id,
-    staleTime: 1000 * 60 * 2, // 2 min — requests should feel relatively fresh
+    /**
+     * Incoming requests are written by *another* user, so nothing on this
+     * device can invalidate them — no mutation here ever fires. Cache
+     * invalidation can only ever refresh the sender's view.
+     *
+     * Previously 2 minutes of `staleTime` and no interval, which meant a
+     * request could be invisible for minutes, and indefinitely if the
+     * recipient was already sitting on the requests screen (no remount, no
+     * focus change, nothing to trigger a refetch). Polling is what makes it
+     * arrive on its own.
+     */
+    staleTime: 0,
+    refetchInterval: 1000 * 20,
+    refetchIntervalInBackground: false,
   });
 
   return {

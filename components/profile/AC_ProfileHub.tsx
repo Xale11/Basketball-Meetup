@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   Image,
   ActivityIndicator,
-  RefreshControl,
   Switch,
   Alert,
   TextInput,
@@ -42,6 +41,7 @@ import { qk } from '@/lib/queryKeys';
 import { supabase } from '@/api/supabase';
 import { AC_AppHeader } from '@/components/activCampus/AC_AppHeader';
 import { SegmentedTabs } from '@/components/ui/SegmentedTabs';
+import { ThemedRefreshControl } from '@/components/ui/ThemedRefreshControl';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { EventCard } from '@/components/events/EventCard';
 import { TextInputField } from '@/components/ui/TextInputField';
@@ -197,11 +197,7 @@ export function AC_ProfileHub() {
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
         refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={theme.colors.accent}
-          />
+          <ThemedRefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
         {/* ── Header card ──────────────────────────────────────────────── */}
@@ -412,7 +408,7 @@ export function AC_ProfileHub() {
               <ChevronRight size={18} color={theme.colors.textFaint} />
             </TouchableOpacity>
 
-            <Text style={s.sectionLabel}>Connections ({friends.length})</Text>
+            <Text style={s.sectionLabel}>Connections</Text>
             {friends.length === 0 ? (
               <EmptyState
                 emoji="👋"

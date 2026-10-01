@@ -479,3 +479,25 @@ export const fetchEventAttendees = async (eventId: string): Promise<FriendProfil
 
   return ((data ?? []) as any[]).map((r) => r.profiles).filter(Boolean) as FriendProfile[]
 }
+
+/**
+ * Deletes an event.
+ *
+ * Ownership is enforced by the `Organisers can delete their own events` RLS
+ * policy, not here — a non-owner's delete matches zero rows, which is why the
+ * count is checked rather than assumed.
+ *
+ * Participants, images, tickets and invites cascade; see
+ * supabase/migrations/20260809123629_events_delete_policy_and_cascades.sql.
+ */
+export const deleteEvent = async (eventId: string): Promise<void> => {
+  const { error, count } = await supabase
+    .from('events')
+    .delete({ count: 'exact' })
+    .eq('id', eventId)
+
+  if (error) throwSupabaseError('events.api deleteEvent', error)
+  if (!count) {
+    throw new Error('You can only delete activities you created.')
+  }
+}

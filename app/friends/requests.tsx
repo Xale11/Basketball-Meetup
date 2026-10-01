@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
 } from 'react-native';
+import { ThemedRefreshControl } from '@/components/ui/ThemedRefreshControl';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { ArrowLeft, UserCheck, UserX, User } from 'lucide-react-native';
@@ -14,12 +15,15 @@ import { usePendingRequests } from '@/hooks/friends/usePendingRequests';
 import { useRespondFriendRequest } from '@/hooks/friends/useRespondFriendRequest';
 import { FriendshipStatus, FriendshipWithRequester } from '@/types/friends';
 import { useTheme, useThemedStyles, Theme } from '@/hooks/useTheme';
+import { useRefreshQueries } from '@/hooks/useRefreshQueries';
+import { qk } from '@/lib/queryKeys';
 
 export default function FriendRequestsScreen() {
   const { theme } = useTheme();
   const s = useThemedStyles(makeStyles);
   const { requests, loading } = usePendingRequests();
   const { respond, loading: responding } = useRespondFriendRequest();
+  const { refreshing, onRefresh } = useRefreshQueries([qk.friends.all]);
 
   const renderRequest = ({ item }: { item: FriendshipWithRequester }) => {
     const req = item.requester;
@@ -94,6 +98,9 @@ export default function FriendRequestsScreen() {
           renderItem={renderRequest}
           contentContainerStyle={s.list}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <ThemedRefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
         />
       )}
     </SafeAreaView>

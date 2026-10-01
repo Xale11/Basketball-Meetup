@@ -1,4 +1,4 @@
-import { View, StyleSheet, SectionList, RefreshControl, TextInput, TouchableOpacity, Text, ScrollView } from 'react-native';
+import { View, StyleSheet, SectionList, TextInput, TouchableOpacity, Text, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Zap, Clock, CalendarDays, Search, X, Building2, Crown, User } from 'lucide-react-native';
 import type { LucideIcon } from 'lucide-react-native';
@@ -6,6 +6,7 @@ import { useMemo, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/hooks/useAuth';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { ThemedRefreshControl } from '@/components/ui/ThemedRefreshControl';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { SegmentedTabs } from '@/components/ui/SegmentedTabs';
 import { SectionHeader } from '@/components/ui/SectionHeader';
@@ -449,11 +450,7 @@ export default function ActivCampusHome() {
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
           refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              tintColor={theme.colors.accent}
-            />
+            <ThemedRefreshControl refreshing={refreshing} onRefresh={onRefresh} />
           }
           renderSectionHeader={({ section }) => (
             <View style={s.sectionHeaderWrap}>

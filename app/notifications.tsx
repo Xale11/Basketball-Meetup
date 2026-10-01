@@ -13,12 +13,15 @@ import {
 } from 'lucide-react-native';
 import { LucideIcon } from 'lucide-react-native';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { ThemedRefreshControl } from '@/components/ui/ThemedRefreshControl';
 import {
   useNotifications,
   useMarkNotificationsRead,
 } from '@/hooks/notifications/useNotifications';
 import { Notification, NotificationType } from '@/types/notification';
 import { useTheme, useThemedStyles, Theme } from '@/hooks/useTheme';
+import { useRefreshQueries } from '@/hooks/useRefreshQueries';
+import { qk } from '@/lib/queryKeys';
 
 /** Icon and tint per notification type. */
 const TYPE_META: Record<NotificationType, { icon: LucideIcon; tone: keyof Theme['colors'] }> = {
@@ -48,6 +51,7 @@ export default function NotificationsScreen() {
 
   const { notifications, loading } = useNotifications();
   const { markRead, markAllRead, removeNotification } = useMarkNotificationsRead();
+  const { refreshing, onRefresh } = useRefreshQueries([qk.notifications.all]);
 
   const hasUnread = notifications.some((n) => !n.read);
 
@@ -89,7 +93,13 @@ export default function NotificationsScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={s.listContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={s.listContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <ThemedRefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
         {loading ? (
           <ActivityIndicator color={colors.accent} style={s.loader} />
         ) : notifications.length === 0 ? (

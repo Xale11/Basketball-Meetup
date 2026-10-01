@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
 } from 'react-native';
+import { ThemedRefreshControl } from '@/components/ui/ThemedRefreshControl';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { ArrowLeft, Calendar, MapPin, User, X } from 'lucide-react-native';
@@ -14,10 +15,13 @@ import { useReceivedEventInvites } from '@/hooks/events/useReceivedEventInvites'
 import { useRespondEventInvite } from '@/hooks/events/useRespondEventInvite';
 import { EventInviteStatus, ReceivedEventInvite } from '@/types/event';
 import { useTheme, useThemedStyles, Theme } from '@/hooks/useTheme';
+import { useRefreshQueries } from '@/hooks/useRefreshQueries';
+import { qk } from '@/lib/queryKeys';
 
 export default function EventInvitesScreen() {
   const { theme } = useTheme();
   const s = useThemedStyles(makeStyles);
+  const { refreshing, onRefresh } = useRefreshQueries([qk.eventInvites.all]);
   const { invites, loading } = useReceivedEventInvites();
   const { respond, loading: responding } = useRespondEventInvite();
 
@@ -117,6 +121,9 @@ export default function EventInvitesScreen() {
           renderItem={renderInvite}
           contentContainerStyle={s.list}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <ThemedRefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
         />
       )}
     </SafeAreaView>

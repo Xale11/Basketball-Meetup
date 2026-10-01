@@ -35,6 +35,11 @@ export const useUnreadNotificationCount = () => {
     queryKey: qk.notifications.unreadCount(user?.id),
     queryFn: () => getUnreadNotificationCount(user!.id),
     enabled: !!user?.id,
+    // Written server-side by other people's actions, so — like pending friend
+    // requests — no local mutation can invalidate it. It has to poll.
+    staleTime: 0,
+    refetchInterval: 1000 * 30,
+    refetchIntervalInBackground: false,
   });
 
   return { count: query.data ?? 0, loading: !!user?.id && query.isPending };

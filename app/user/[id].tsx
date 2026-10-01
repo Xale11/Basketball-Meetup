@@ -8,6 +8,7 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
+import { ThemedRefreshControl } from '@/components/ui/ThemedRefreshControl';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { ArrowLeft, User, UserPlus, UserCheck, UserX, Clock } from 'lucide-react-native';
@@ -22,6 +23,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { FriendshipStatus } from '@/types/friends';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { useTheme, useThemedStyles, Theme } from '@/hooks/useTheme';
+import { useRefreshQueries } from '@/hooks/useRefreshQueries';
 
 export default function UserProfileScreen() {
   const { theme } = useTheme();
@@ -41,6 +43,7 @@ export default function UserProfileScreen() {
   const { sendRequest, loading: sending } = useSendFriendRequest();
   const { respond, loading: responding } = useRespondFriendRequest();
   const { removeFriend, loading: removing } = useRemoveFriend();
+  const { refreshing, onRefresh } = useRefreshQueries([qk.users.detail(id), qk.friends.all]);
 
   if (profileLoading) {
     return (
@@ -194,7 +197,13 @@ export default function UserProfileScreen() {
         <View style={s.headerSpacer} />
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.body}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={s.body}
+        refreshControl={
+          <ThemedRefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
         {/* Avatar */}
         <View style={s.avatarSection}>
           {profile.photo_url ? (

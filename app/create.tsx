@@ -1,7 +1,7 @@
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useState } from 'react';
-import { router } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { router, useLocalSearchParams } from 'expo-router';
 import { MapPin, Users, Globe, Lock, Clock, Building, X, Coins } from 'lucide-react-native';
 import {
   GooglePlacesAutocomplete,
@@ -19,6 +19,9 @@ import {
   EVENT_CATEGORY_LABEL,
 } from '@/types/event';
 import { useCreateEvent } from '@/hooks/events/useCreateEvent';
+import { useUpdateEvent } from '@/hooks/events/useUpdateEvent';
+import { useFetchEvent } from '@/hooks/events/useFetchEvent';
+import { ToggleRow } from '@/components/ui/ToggleRow';
 import { useFetchUserSocieties } from '@/hooks/societies/useFetchUserSocieties';
 import { useAuth } from '@/hooks/useAuth';
 import DateTimeInput from '@/components/DateTimeInput';
@@ -75,6 +78,7 @@ const INITIAL_FORM: CreateEventForm = {
   booking_mode: EventBookingMode.FREE,
   price_from: null,
   currency: null,
+  auto_join: true,
 };
 
 /** Formats the gap between start and end as the redesign's duration hint. */
@@ -96,6 +100,11 @@ export default function CreateScreen() {
   const styles = useThemedStyles(makeStyles);
   const { colors } = theme;
 
+  // `eventId` switches this screen into edit mode. Same form, same validation;
+  // only the submit target and a couple of fields differ.
+  const { eventId } = useLocalSearchParams<{ eventId?: string }>();
+  const isEditing = !!eventId;
+
   const [form, setForm] = useState<CreateEventForm>(INITIAL_FORM);
   const [tagDraft, setTagDraft] = useState('');
   const [hasMaxParticipants, setHasMaxParticipants] = useState(false);
@@ -105,7 +114,42 @@ export default function CreateScreen() {
   const { user } = useAuth();
   const placesRequest = useGooglePlacesRequest();
   const { memberships } = useFetchUserSocieties(user?.id);
-  const { createEvent, loading } = useCreateEvent();
+  const { createEvent, loading: creating } = useCreateEvent();
+  const { updateEvent, loading: updating } = useUpdateEvent();
+  const { event: existing, loading: loadingExisting } = useFetchEvent(eventId);
+  const loading = creating || updating;
+
+  // Prefill once the event arrives. Keyed on the id rather than the object so a
+  // background refetch cannot overwrite edits already typed into the form.
+  useEffect(() => {
+    if (!existing) return;
+    setForm({
+      name: existing.name,
+      description: existing.description,
+      category: existing.category,
+      tags: existing.tags ?? [],
+      start_date: existing.start_date,
+      end_date: existing.end_date,
+      is_online: existing.is_online,
+      address: existing.address,
+      latitude: existing.latitude,
+      longitude: existing.longitude,
+      visibility: existing.visibility,
+      join_policy: existing.join_policy ?? EventJoinPolicy.OPEN,
+      max_participants: existing.max_participants,
+      host_type: existing.host_type,
+      society_id: existing.society_id,
+      university_id: existing.university_id,
+      banner_image_url: existing.banner_image_url,
+      banner_image_uri: null,
+      gallery_image_uris: [],
+      booking_mode: existing.booking_mode ?? EventBookingMode.FREE,
+      price_from: existing.price_from,
+      currency: existing.currency,
+    });
+    setHasMaxParticipants(existing.max_participants != null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [existing?.id]);
 
   const needsSociety =
     form.host_type === EventHostType.SOCIETY ||
@@ -169,8 +213,21 @@ export default function CreateScreen() {
     return Object.keys(errors).length === 0;
   };
 
-  const handleCreate = () => {
+  const handleSubmit = () => {
     if (!validate()) return;
+
+    if (isEditing && eventId) {
+      updateEvent(eventId, { ...form, university_id: user?.university_id ?? null }, {
+        onSuccess: () => {
+          Alert.alert('Saved', 'Your changes are live.', [
+            { text: 'Done', onPress: () => router.back() },
+          ]);
+        },
+        onError: (err) => Alert.alert('Error', err.message),
+      });
+      return;
+    }
+
     createEvent(
       { ...form, university_id: user?.university_id ?? null },
       {
@@ -198,8 +255,10 @@ export default function CreateScreen() {
       {/* Modal chrome — this is a presented sheet, so it needs its own dismiss. */}
       <View style={styles.header}>
         <View style={styles.headerText}>
-          <Text style={styles.title}>Host an activity</Text>
-          <Text style={styles.subtitle}>Bring people together on campus</Text>
+          <Text style={styles.title}>{isEditing ? 'Edit activity' : 'Host an activity'}</Text>
+          <Text style={styles.subtitle}>
+            {isEditing ? 'Update the details below' : 'Bring people together on campus'}
+          </Text>
         </View>
         <TouchableOpacity
           style={styles.closeButton}
@@ -584,6 +643,20 @@ export default function CreateScreen() {
           )}
         </View>
 
+        {/* Attend your own activity. Create-only: editing cannot retroactively
+            change whether you attended, and the host may since have left. */}
+        {!isEditing && (
+          <View style={styles.section}>
+            <ToggleRow
+              label="Join this activity"
+              sublabel="Add yourself to the attendee list when you publish"
+              value={form.auto_join !== false}
+              onValueChange={(val) => setForm((p) => ({ ...p, auto_join: val }))}
+              style={styles.autoJoinRow}
+            />
+          </View>
+        )}
+
         {/* Banner Image */}
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>Banner image</Text>
@@ -599,7 +672,11 @@ export default function CreateScreen() {
       </ScrollView>
 
       <View style={styles.footer}>
-        <Button label="Publish activity" onPress={handleCreate} loading={loading} />
+        <Button
+          label={isEditing ? 'Save changes' : 'Publish activity'}
+          onPress={handleSubmit}
+          loading={loading}
+        />
       </View>
     </SafeAreaView>
   );
@@ -699,6 +776,14 @@ const makeStyles = (t: Theme) =>
       color: t.colors.textBody,
     },
     googleSeparator: { height: 1, backgroundColor: t.colors.border },
+
+    autoJoinRow: {
+      padding: t.spacing.lg,
+      borderRadius: t.radius.card,
+      backgroundColor: t.colors.surface,
+      borderWidth: 1,
+      borderColor: t.colors.border,
+    },
 
     // Category and tag chips (AC-21).
     chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: t.spacing.sm },

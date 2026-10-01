@@ -1,10 +1,11 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState } from 'react';
 import { Search, Filter, Plus } from 'lucide-react-native';
 import { EventCard } from '@/components/events/EventCard';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { TabBar } from '@/components/ui/TabBar';
+import { ThemedRefreshControl } from '@/components/ui/ThemedRefreshControl';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { EventFormModal } from '@/components/events/EventFormModal';
 import { CreateEventForm, Event, EventHostType } from '@/types/event';
@@ -140,7 +141,7 @@ export default function EventsScreen() {
         style={styles.content}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FF6B35" />
+          <ThemedRefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
         {eventsLoading ? (
