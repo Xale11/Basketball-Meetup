@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
 import { theme } from '@/constants/theme';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Settings, Pencil as Edit, ChevronRight, CreditCard, Bell, Shield, User, Camera, Users, UserPlus, Calendar } from 'lucide-react-native';
@@ -17,6 +17,7 @@ import { AC_AppHeader } from '@/components/activCampus/AC_AppHeader';
 import { EditProfileModal } from '@/components/profile/EditProfileModal';
 import { ActivitySection } from '@/components/profile/ActivitySection';
 import { Button } from '@/components/ui/Button';
+import { ThemedRefreshControl } from '@/components/ui/ThemedRefreshControl';
 import { SectionCard } from '@/components/ui/SectionCard';
 import { useState } from 'react';
 import { useRefreshQueries } from '@/hooks/useRefreshQueries';
@@ -85,7 +86,7 @@ export default function BM_ProfileScreen() {
         style={styles.content}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} />
+          <ThemedRefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
         {/* Profile Header */}

@@ -1,9 +1,10 @@
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Alert, ActivityIndicator, Share } from 'react-native';
+import { ThemedRefreshControl } from '@/components/ui/ThemedRefreshControl';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme, useThemedStyles, Theme } from '@/hooks/useTheme';
-import { ArrowLeft, Clock, MapPin, Users, Globe, Calendar, Building2, User, UserPlus, ShieldCheck, Sparkles, Coins, Share2 } from 'lucide-react-native';
+import { ArrowLeft, Clock, MapPin, Users, Globe, Calendar, Building2, User, UserPlus, ShieldCheck, Sparkles, Coins, Share2, Pencil, Trash2 } from 'lucide-react-native';
 import { useFetchEvent } from '@/hooks/events/useFetchEvent';
 import { useFetchSocietiesByUniId } from '@/hooks/societies/useFetchSocietiesByUniId';
 import { useFetchUniversities } from '@/hooks/universities/useFetchUniversities';
@@ -20,6 +21,9 @@ import { InviteFriendsModal } from '@/components/friends/InviteFriendsModal';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { EventBookingMode, EventHostType, EventInviteStatus, EventJoinPolicy, EventParticipantStatus, EventVisibility } from '@/types/event';
 import { useMemo, useState, type ReactNode } from 'react';
+import { useDeleteEvent } from '@/hooks/events/useDeleteEvent';
+import { useRefreshQueries } from '@/hooks/useRefreshQueries';
+import { qk } from '@/lib/queryKeys';
 
 export default function EventDetailScreen() {
   const { theme } = useTheme();
@@ -40,6 +44,8 @@ export default function EventDetailScreen() {
   const { respond: respondEventInvite } = useRespondEventInvite();
   const { attendees } = useEventAttendees(id);
   const [showInviteModal, setShowInviteModal] = useState(false);
+  const { refreshing, onRefresh } = useRefreshQueries([qk.events.detail(id), qk.friends.all]);
+  const { deleteEvent, loading: deleting } = useDeleteEvent();
 
   const societyName = useMemo(() => {
     if (!event?.society_id) return null;
@@ -122,6 +128,32 @@ export default function EventDetailScreen() {
     );
   };
 
+  const isOrganiser = !!user?.id && event.created_by_user_id === user.id;
+
+  const handleDelete = () => {
+    Alert.alert(
+      'Delete activity',
+      `Delete “${event.name}”? Everyone who joined will lose their place. This cannot be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () =>
+            deleteEvent(
+              { eventId: event.id },
+              {
+                // Navigate off before the detail query is dropped, otherwise
+                // this screen re-renders against a deleted event.
+                onSuccess: () => router.back(),
+                onError: (err: Error) => Alert.alert('Could not delete', err.message),
+              },
+            ),
+        },
+      ],
+    );
+  };
+
   const handleShare = async () => {
     try {
       const when = new Date(event.start_date).toLocaleString('en-GB', {
@@ -166,7 +198,33 @@ export default function EventDetailScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false}>
+      {/* Organiser-only controls, mirrored on the right of the banner. */}
+      {isOrganiser && (
+        <View style={styles.ownerOverlay}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => router.push({ pathname: '/create', params: { eventId: event.id } })}
+            accessibilityLabel="Edit activity"
+          >
+            <Pencil size={19} color={theme.colors.textPrimary} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.backButton, styles.deleteButton]}
+            onPress={handleDelete}
+            disabled={deleting}
+            accessibilityLabel="Delete activity"
+          >
+            <Trash2 size={19} color={theme.colors.dangerTone.text} />
+          </TouchableOpacity>
+        </View>
+      )}
+
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <ThemedRefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
         {/* Banner */}
         {event.banner_image_url ? (
           <Image source={{ uri: event.banner_image_url }} style={styles.banner} resizeMode="cover" />
@@ -478,6 +536,17 @@ const makeStyles = (t: Theme) =>
     top: 56,
     left: 16,
     zIndex: 10,
+  },
+  ownerOverlay: {
+    position: 'absolute',
+    top: 56,
+    right: 16,
+    zIndex: 10,
+    flexDirection: 'row',
+    gap: t.spacing.sm,
+  },
+  deleteButton: {
+    borderColor: t.colors.dangerTone.border,
   },
   backButton: {
     width: 40,

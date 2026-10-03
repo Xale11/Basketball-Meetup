@@ -12,7 +12,18 @@ import { QueryClient } from '@tanstack/react-query'
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 1000 * 60 * 5,
+      /**
+       * 30s, down from 5 minutes.
+       *
+       * Five minutes meant a screen you navigated back to served cached data
+       * without refetching, so newly created events and incoming friend
+       * requests could stay invisible for minutes with nothing the user could
+       * do about it. At 30s, any screen you return to refetches, which is what
+       * makes the app feel live. Queries that need to be fresher than that set
+       * their own `staleTime: 0` and a `refetchInterval` — see
+       * `usePendingRequests` and `useNotifications`.
+       */
+      staleTime: 1000 * 30,
       gcTime: 1000 * 60 * 30,
       retry: 2,
       refetchOnReconnect: true,

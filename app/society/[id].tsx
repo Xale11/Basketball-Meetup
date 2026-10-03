@@ -45,6 +45,7 @@ import { useUserParticipations } from '@/hooks/events/useUserParticipations';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { EventCard } from '@/components/events/EventCard';
 import { Button } from '@/components/ui/Button';
+import { ThemedRefreshControl } from '@/components/ui/ThemedRefreshControl';
 import { TextInputField } from '@/components/ui/TextInputField';
 import { ImagePicker } from '@/components/ImagePicker';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -54,6 +55,8 @@ import { SocietyMemberWithProfile } from '@/api/societies.api';
 import { SOCIETY_CATEGORIES, SocietyRoleIdEnum, ADMIN_SOCIETY_ROLES } from '@/types/societies';
 import { EventHostType } from '@/types/event';
 import { useTheme, useThemedStyles, Theme } from '@/hooks/useTheme';
+import { useRefreshQueries } from '@/hooks/useRefreshQueries';
+import { qk } from '@/lib/queryKeys';
 
 type SocietyTab = 'activities' | 'overview' | 'announcements' | 'members' | 'executive';
 type ActivityFilter = 'all' | 'exec' | 'associate';
@@ -110,6 +113,11 @@ export default function SocietyProfileScreen() {
       : 'activities',
   );
   const [activityFilter, setActivityFilter] = useState<ActivityFilter>('all');
+  const { refreshing, onRefresh } = useRefreshQueries([
+    qk.societies.detail(id),
+    qk.societies.announcements(id),
+    qk.events.bySociety(id),
+  ]);
 
   // ── Membership / permissions ──────────────────────────────────────────────
   const userMembership = useMemo(
@@ -387,6 +395,9 @@ export default function SocietyProfileScreen() {
         keyboardDismissMode="on-drag"
         showsVerticalScrollIndicator={false}
         contentContainerStyle={s.scrollContent}
+        refreshControl={
+          <ThemedRefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
       >
         {/* ── Hero banner ──────────────────────────────────────────────── */}
         <LinearGradient

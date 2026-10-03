@@ -12,8 +12,11 @@ import { LoadingSpinner } from '@/components/LoadingSpinner';
 import InteractiveMap, { hostTypeColors } from '@/components/BM_InteractiveMap';
 import { EventCard } from '@/components/events/EventCard';
 import { SectionHeader } from '@/components/ui/SectionHeader';
+import { ThemedRefreshControl } from '@/components/ui/ThemedRefreshControl';
 import { Event, EventBookingMode, EventHostType } from '@/types/event';
 import { useTheme, useThemedStyles, Theme } from '@/hooks/useTheme';
+import { useRefreshQueries } from '@/hooks/useRefreshQueries';
+import { qk } from '@/lib/queryKeys';
 
 type TimeFilter = 'Now' | 'Today' | 'This Week';
 type CostFilter = 'All' | 'Free' | 'Paid';
@@ -54,6 +57,7 @@ export default function MapScreen() {
   const [costFilter, setCostFilter] = useState<CostFilter>('All');
   const [activityFilter, setActivityFilter] = useState<ActivityFilter>('All');
   const [showFullScreen, setShowFullScreen] = useState(false);
+  const { refreshing, onRefresh } = useRefreshQueries([qk.events.all]);
 
   const now = new Date();
   const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -113,7 +117,12 @@ export default function MapScreen() {
         </View>
       )}
 
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <ThemedRefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
         <View style={mapContainerStyle}>
           <InteractiveMap events={filteredEvents} participationMap={participationMap} />
 

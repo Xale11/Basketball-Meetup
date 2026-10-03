@@ -233,6 +233,16 @@ export interface CreateEventForm {
   description: string | null
   category: EventCategory | null
   tags: string[]
+  /**
+   * Add the creator to the attendee list on publish. Defaults to true when
+   * omitted.
+   *
+   * Not a column on `events` — it is a one-shot instruction to `useCreateEvent`,
+   * which inserts the `event_participants` row after the insert succeeds. Only
+   * meaningful on create; the edit flow hides it, since you cannot retroactively
+   * un-attend by editing.
+   */
+  auto_join?: boolean
   start_date: string
   end_date: string
   is_online: boolean

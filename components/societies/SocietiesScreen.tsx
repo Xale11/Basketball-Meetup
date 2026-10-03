@@ -7,7 +7,6 @@ import {
   Modal,
   TextInput,
   Alert,
-  RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState, useMemo } from 'react';
@@ -27,6 +26,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { EventCard } from '@/components/events/EventCard';
 import { Button } from '@/components/ui/Button';
+import { ThemedRefreshControl } from '@/components/ui/ThemedRefreshControl';
 import { TextInputField } from '@/components/ui/TextInputField';
 import { ImagePicker } from '@/components/ImagePicker';
 import { SOCIETY_CATEGORIES } from '@/types/societies';
@@ -272,7 +272,7 @@ export default function SocietiesScreen() {
         style={styles.content}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.colors.accent} />
+          <ThemedRefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
 

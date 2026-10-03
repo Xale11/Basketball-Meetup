@@ -13,5 +13,12 @@
     ".expo/types/**/*.ts",
     "expo-env.d.ts",
     "nativewind-env.d.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    // Standalone Vite/web design prototype with its own package.json and
+    // dependencies (lucide-react, vite) that are not installed here. It is not
+    // imported by the app, so type-checking it only produces phantom errors.
+    "active-campus-ui-redesign"
   ]
 }
