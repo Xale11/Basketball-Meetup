@@ -14,14 +14,14 @@ The Stripe implementation planner (path: Stripe only → in-app → physical goo
 
 | Topic | What we do |
 |---|---|
-| Customer access in the sheet | Use a **CustomerSession** client secret (current recommendation), not an ephemeral key |
-| Payment methods | `automatic_payment_methods: { enabled: true }` with `payment_method_options.card.capture_method: 'manual'`, so only cards are held; Link and other methods follow Dashboard settings |
+| Customer in the sheet | Each player gets a Stripe Customer on the server (for reconciliation), but the sheet only needs the PaymentIntent client secret. We don't save cards, so no CustomerSession or ephemeral key is needed. |
+| Payment methods | Students: `automatic_payment_methods: { enabled: true }` with top-level `capture_method` (`manual` while Reserved), so Stripe only offers methods that can be held. Demo players: `payment_method_types: ['card']`, because server-side confirmation needs a return URL when redirect methods are possible. |
 | Authorisation lifetime | Card holds last **7 days** (Visa, customer-initiated). The demo uses minutes. For production, the 6–12h window is well within this. Never hold past `capture_before` on the charge. |
 | Apple Pay | Not available in Expo Go. Cards (and Google Pay on a dev build) are enough for the demo. |
 | iOS return URL | Pass `urlScheme: 'activcampus'` (the app's existing scheme) to `StripeProvider` / `initPaymentSheet` for 3DS redirects |
-| Simulated players | Server-side `paymentIntents.create({ confirm: true, payment_method: 'pm_card_visa', automatic_payment_methods: { enabled: true, allow_redirects: 'never' } })` |
+| Simulated players | Create a card-only PI → attach it → `paymentIntents.confirm(id, { payment_method: 'pm_card_visa' })`. The result is applied straight away; the webhook later arrives as a harmless duplicate. |
 | Idempotency | Every create, capture, cancel and refund call passes an `idempotencyKey` derived from our own ids |
-| API version | Pin `apiVersion` in the Stripe client so behaviour doesn't drift |
+| API version | Pinned through the SDK version (`npm:stripe@22.6.2`), which fixes the API version it sends |
 
 ---
 
@@ -61,26 +61,31 @@ The Stripe implementation planner (path: Stripe only → in-app → physical goo
 
 ---
 
-## Step 2: Edge Functions
+## Step 2: Edge Functions ✅ done (2026-10-25), except the Stripe webhook endpoint (you)
 
-1. `supabase/functions/_shared/AC_stripe.ts`: picks keys by `STRIPE_MODE` (default `test` → `STRIPE_SECRET_KEY_TEST` / `STRIPE_WEBHOOK_SECRET_TEST`; `live` → `_LIVE`) and refuses to start if the key prefix does not match the mode. Stripe client (`npm:stripe`, pinned `apiVersion`, `Stripe.createFetchHttpClient()`), plus the service-role Supabase client and CORS/`json()` helpers copied from `google-places/index.ts`.
-2. `supabase/functions/ac-court-sessions/index.ts`, with actions:
-   - `create` → `ac_create_session`
-   - `join` → `ac_reserve_place` → get or create the Stripe Customer (id stored on the participant / looked up by `metadata.supabase_user_id`) → CustomerSession → PaymentIntent (GBP, manual card capture before confirmation, automatic after; metadata `event_id`, `participant_id`; idempotency `join-<participant_id>`) → returns `{ paymentIntentClientSecret, customerSessionClientSecret, customerId }`
-   - `cancel`: if a payment was authorised before confirmation → `paymentIntents.cancel`
-   - `rejoin`: the free path, or the `join` flow
-   - Demo only (`AC_DEMO_MODE`, organiser only): `simulate_player`, `expire_hold_now`, `close_registration_now`
-   - `tick` (header `x-cron-secret`): hold expiry → cancel PIs; cutoff → close → split → `refunds.create({ payment_intent, amount })` with idempotency `refund-<participant_id>`; retry failures
-   - Shared `onMinimumReached(eventId)`: capture every AUTHORISED PI (idempotency `capture-<participant_id>`) → `CONFIRMED` → notify
-3. `supabase/functions/ac-stripe-webhook/index.ts` (JWT verification **off**):
-   - `stripe.webhooks.constructEventAsync(rawBody, sig, STRIPE_WEBHOOK_SECRET_<MODE>)`
-   - Insert into `ac_stripe_events`; on a duplicate, return 200
-   - Handle `payment_intent.amount_capturable_updated`, `payment_intent.succeeded`, `payment_intent.payment_failed`, `payment_intent.canceled`, `charge.refunded`, `refund.updated`
-4. Deploy both with `deploy_edge_function`.
-5. **You:** in Stripe test mode, go to **Developers → Webhooks → Add endpoint** → `https://<project-ref>.supabase.co/functions/v1/ac-stripe-webhook`, select the 6 events above, and copy the signing secret into the Supabase secret `STRIPE_WEBHOOK_SECRET_TEST`.
-6. I set `AC_CRON_SECRET` and add the `pg_cron` job (every minute → `pg_net` POST `{action:'tick'}`). The secret is read from Vault, not hard-coded.
+Built and deployed (Supabase CLI, `--use-api`):
 
-**Check:** a test session created through the function; a simulated player's PI shows **Uncaptured** in the Stripe Dashboard; the webhook delivery log shows 200s; a resent event is a no-op.
+| Function | JWT | What it does |
+|---|---|---|
+| `ac-court-sessions` | on | Actions `create`, `join` (also handles the free rejoin), `cancel`. Demo controls (`AC_DEMO_MODE` + organiser only): `simulate_player` (1–5 demo players pay with `pm_card_visa`), `expire_hold_now`, `close_registration_now`. |
+| `ac-stripe-webhook` | **off** | Verifies `Stripe-Signature` with `STRIPE_WEBHOOK_SECRET_<MODE>`, records the event id in `ac_stripe_events` (a duplicate returns 200), then applies it. Ignores PaymentIntents without `metadata.kind = ac_court_commitment`. |
+| `ac-court-tick` | **off** | Needs the `x-cron-secret` header (= `AC_CRON_SECRET`). Releases payments abandoned for 20 min, expires unfilled holds, finishes stuck confirmations, closes registration and retries refunds. |
+
+- Shared logic is in `supabase/functions/_shared/AC_courtBooking.ts`. It picks keys by `STRIPE_MODE` (default `test`), refuses a key that doesn't match the mode, and uses idempotency keys `ac-join-/ac-capture-/ac-refund-/ac-void-<id>`.
+- `join` returns `{ needsPayment, paymentIntentClientSecret, amountPence, captureMethod }`, or `{ needsPayment: false }` for a free rejoin. Errors come back as `{ error: { code, message } }`, e.g. `AC_FULL`, `AC_SLOT_TAKEN` or `AC_CLOSED`, and the message is safe to show.
+- `pg_cron` job `ac-court-tick` runs every minute (migration `20261025230209_ac_court_tick_schedule.sql`). It reads the URL and secret from Vault (`ac_project_url`, `ac_cron_secret`).
+
+**Verified against Stripe test mode:**
+- 10 players held → exactly one confirmation → 10 captures. 2 late joiners charged immediately. Close → £12.50 each, 12 refunds of £2.50 `succeeded` in Stripe → session `COMPLETED`.
+- Unfilled reservation → 3 holds cancelled in Stripe (£0 taken) → session `CANCELLED`.
+- Cron returns 200s every minute. Unsigned or badly signed webhooks get 400; the tick without the secret gets 403; sessions without a login get 401.
+
+**Still to do (you):** in Stripe **test mode**, go to **Developers → Webhooks → Add endpoint**:
+- URL: `https://qgjvihcvzjurvoltltif.supabase.co/functions/v1/ac-stripe-webhook`
+- Events: `payment_intent.amount_capturable_updated`, `payment_intent.succeeded`, `payment_intent.payment_failed`, `payment_intent.canceled`, `refund.created`, `refund.updated`, `refund.failed`
+- Copy the signing secret (`whsec_…`) into the Supabase secret `STRIPE_WEBHOOK_SECRET_TEST`
+
+Demo payments don't depend on the webhook, since their results are applied straight away. A real student paying through the PaymentSheet does.
 
 ---
 
@@ -91,7 +96,7 @@ The Stripe implementation planner (path: Stripe only → in-app → physical goo
 3. `types/AC_courtBooking.ts`: `Venue`, `CourtSession`, `SessionParticipant`, `CalendarBooking`, and the status enums.
 4. `api/AC_courtBooking.api.ts`: reads (`from('ac_…')`) and function calls (`functions.invoke('ac-court-sessions')`), using `throwSupabaseError`.
 5. `lib/queryKeys.ts`: add `qk.courtBooking.{all, session(eventId), venues, calendar(weekStart)}`.
-6. `hooks/courtBooking/`: `AC_useVenues`, `AC_useCourtSession`, `AC_useBookingCalendar`, `AC_useCreateCourtSession`, `AC_useJoinCourtSession` (invoke → `initPaymentSheet({ merchantDisplayName: 'ActivCampus', paymentIntentClientSecret, customerSessionClientSecret, customerId, returnURL: 'activcampus://stripe-redirect' })` → `presentPaymentSheet`), `AC_useCancelCourtPlace`, `AC_useRejoinCourtSession`, `AC_useDemoControls`.
+6. `hooks/courtBooking/`: `AC_useVenues`, `AC_useCourtSession`, `AC_useBookingCalendar`, `AC_useCreateCourtSession`, `AC_useJoinCourtSession` (invoke `join` → if `needsPayment`: `initPaymentSheet({ merchantDisplayName: 'ActivCampus', paymentIntentClientSecret, returnURL: 'activcampus://stripe-redirect' })` → `presentPaymentSheet`; also used for Rejoin), `AC_useCancelCourtPlace`, `AC_useDemoControls`.
 7. `.env.example`: add `EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY`, `EXPO_PUBLIC_DEMO_MODE`.
 
 **Check:** `npx tsc --noEmit` and `yarn lint` pass; the app still boots in Expo Go.
