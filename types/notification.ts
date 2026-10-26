@@ -14,6 +14,10 @@ export enum NotificationType {
   JOIN = 'JOIN',
   SOCIETY = 'SOCIETY',
   ANNOUNCEMENT = 'ANNOUNCEMENT',
+  /** Court booking confirmed or released (ActivCampus court bookings). */
+  BOOKING = 'BOOKING',
+  /** Court booking payments: refunds, place filled, registration closed. */
+  PAYMENT = 'PAYMENT',
 }
 
 export interface Notification {

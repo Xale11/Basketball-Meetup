@@ -78,4 +78,13 @@ export const qk = {
     all: ['courts'] as const,
     list: () => ['courts', 'list'] as const,
   },
+
+  /** ActivCampus court bookings (AC_ prefix). */
+  courtBooking: {
+    all: ['courtBooking'] as const,
+    venues: (universityId: Id) => ['courtBooking', 'venues', universityId] as const,
+    session: (eventId: Id) => ['courtBooking', 'session', eventId] as const,
+    /** Calendar week, keyed by the week's start as an ISO date. */
+    calendar: (weekStart: string) => ['courtBooking', 'calendar', weekStart] as const,
+  },
 } as const

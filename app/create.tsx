@@ -2,7 +2,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Alert } f
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useEffect, useState } from 'react';
 import { router, useLocalSearchParams } from 'expo-router';
-import { MapPin, Users, Globe, Lock, Clock, Building, X, Coins } from 'lucide-react-native';
+import { MapPin, Users, Globe, Lock, Clock, Building, X, Coins, CalendarClock } from 'lucide-react-native';
 import {
   GooglePlacesAutocomplete,
   GooglePlaceDetail,
@@ -32,6 +32,9 @@ import { SegmentedTabs } from '@/components/ui/SegmentedTabs';
 import { Button } from '@/components/ui/Button';
 import { TextInputField } from '@/components/ui/TextInputField';
 import { useTheme, useThemedStyles, Theme } from '@/hooks/useTheme';
+
+/** How a paid activity charges: a fixed ticket price, or a split court booking (ActivCampus). */
+type PaidKind = 'fixed' | 'split';
 
 /** A tag is a short free-text label; the row is capped to keep cards readable. */
 const MAX_TAGS = 5;
@@ -108,6 +111,7 @@ export default function CreateScreen() {
   const [form, setForm] = useState<CreateEventForm>(INITIAL_FORM);
   const [tagDraft, setTagDraft] = useState('');
   const [hasMaxParticipants, setHasMaxParticipants] = useState(false);
+  const [paidKind, setPaidKind] = useState<PaidKind>('fixed');
   const [dateError, setDateError] = useState<string | null>(null);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
@@ -156,6 +160,7 @@ export default function CreateScreen() {
     form.visibility === EventVisibility.SOCIETY_ONLY;
 
   const isPaid = form.booking_mode === EventBookingMode.TICKETED;
+  const isSplitCourt = isPaid && !isEditing && paidKind === 'split';
   const duration = durationLabel(form.start_date, form.end_date);
 
   /** Clears one field's error without disturbing the others. */
@@ -213,7 +218,25 @@ export default function CreateScreen() {
     return Object.keys(errors).length === 0;
   };
 
+  /**
+   * "Split court cost" doesn't publish from here. The court-booking screen
+   * creates the event once a court is reserved, so hand over what's been
+   * entered so far and let it prefill.
+   */
+  const continueToCourtBooking = () => {
+    router.push({
+      pathname: '/court-booking/new',
+      params: {
+        name: form.name.trim(),
+        description: form.description ?? '',
+        startsAt: form.start_date,
+        endsAt: form.end_date,
+      },
+    });
+  };
+
   const handleSubmit = () => {
+    if (isSplitCourt) return continueToCourtBooking();
     if (!validate()) return;
 
     if (isEditing && eventId) {
@@ -491,7 +514,38 @@ export default function CreateScreen() {
             }
           />
 
-          {isPaid && (
+          {/* Paid comes in two kinds. "Split court cost" hands over to the
+              court-booking flow (ActivCampus), which reserves a university
+              court and divides its price between players. */}
+          {isPaid && !isEditing && (
+            <View style={styles.subSection}>
+              <SegmentedTabs
+                tabs={[
+                  { key: 'fixed', label: 'Fixed price' },
+                  { key: 'split', label: 'Split court cost' },
+                ]}
+                activeTab={paidKind}
+                onTabChange={(kind) => setPaidKind(kind as PaidKind)}
+              />
+            </View>
+          )}
+
+          {isSplitCourt && (
+            <View style={[styles.subSection, styles.courtEntry]}>
+              <View style={styles.courtEntryIcon}>
+                <CalendarClock size={20} color={colors.accentTone.solid} />
+              </View>
+              <View style={styles.courtEntryText}>
+                <Text style={styles.courtEntryTitle}>Book a university court</Text>
+                <Text style={styles.courtEntrySub}>
+                  The court is reserved while players commit. Everyone pays at most the court price ÷ the
+                  minimum players, and less as more people join. Next you'll pick the court.
+                </Text>
+              </View>
+            </View>
+          )}
+
+          {isPaid && !isSplitCourt && (
             <View style={styles.subSection}>
               <TextInputField
                 icon={Coins}
@@ -673,7 +727,7 @@ export default function CreateScreen() {
 
       <View style={styles.footer}>
         <Button
-          label={isEditing ? 'Save changes' : 'Publish activity'}
+          label={isEditing ? 'Save changes' : isSplitCourt ? 'Continue to court booking' : 'Publish activity'}
           onPress={handleSubmit}
           loading={loading}
         />
@@ -711,6 +765,28 @@ const makeStyles = (t: Theme) =>
 
     content: { flex: 1, paddingHorizontal: t.spacing.lg },
     section: { marginTop: t.spacing.xl },
+
+    courtEntry: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: t.spacing.md,
+      padding: t.spacing.lg,
+      borderRadius: t.radius.card,
+      backgroundColor: t.colors.accentTone.bg,
+      borderWidth: 1,
+      borderColor: t.colors.accentTone.border,
+    },
+    courtEntryIcon: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: t.colors.surface,
+    },
+    courtEntryText: { flex: 1, gap: 2 },
+    courtEntryTitle: { ...t.typography.bodyStrong, color: t.colors.textPrimary },
+    courtEntrySub: { ...t.typography.caption, color: t.colors.textMuted },
     sectionLabel: { ...t.typography.h3, color: t.colors.textPrimary, marginBottom: 4 },
     sectionSubLabel: { ...t.typography.caption, color: t.colors.textMuted, marginBottom: 10 },
     sectionNote: { ...t.typography.caption, color: t.colors.textMuted, marginTop: t.spacing.sm },

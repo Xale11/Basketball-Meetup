@@ -18,6 +18,7 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from '@/providers/AuthProvider';
 import { queryClient } from '@/lib/queryClient';
 import { setupReactQueryFocus } from '@/lib/reactQueryFocus';
+import { AC_StripeRoot } from '@/components/activCampus/courtBooking/AC_StripeRoot';
 
 function AppNavigator({ fontsLoaded }: { fontsLoaded: boolean }) {
   const { session, initialising, profileLoaded, needsOnboarding } = useAuth();
@@ -81,6 +82,8 @@ function AppNavigator({ fontsLoaded }: { fontsLoaded: boolean }) {
               pushed by the tab bar's floating (+). */}
           <Stack.Screen name="create" options={{ presentation: 'modal' }} />
           <Stack.Screen name="notifications" options={{ presentation: 'modal' }} />
+          {/* ActivCampus court bookings. */}
+          <Stack.Screen name="court-booking/new" options={{ presentation: 'modal' }} />
           <Stack.Screen name="event" />
           <Stack.Screen name="user" />
           <Stack.Screen name="friends" />
@@ -125,7 +128,9 @@ export default function RootLayout() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <AppNavigator fontsLoaded={!!fontsLoaded} />
+        <AC_StripeRoot>
+          <AppNavigator fontsLoaded={!!fontsLoaded} />
+        </AC_StripeRoot>
       </AuthProvider>
     </QueryClientProvider>
   );

@@ -153,7 +153,7 @@ async function simulatePlayers(userId: string, body: Body) {
       continue;
     }
 
-    const intent = await paymentIntentFor(eventId, player.id, reservation, { cardOnly: true });
+    const intent = await paymentIntentFor(eventId, player.id, reservation, { noRedirects: true });
     const confirmed = await stripe().paymentIntents.confirm(
       intent.id,
       { payment_method: 'pm_card_visa' },

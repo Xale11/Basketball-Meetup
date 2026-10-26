@@ -189,7 +189,7 @@ export async function paymentIntentFor(
   eventId: string,
   userId: string,
   reservation: Reservation,
-  options: { cardOnly?: boolean } = {},
+  options: { noRedirects?: boolean } = {},
 ): Promise<Stripe.PaymentIntent> {
   if (reservation.stripe_payment_intent_id) {
     return await stripe().paymentIntents.retrieve(reservation.stripe_payment_intent_id);
@@ -205,11 +205,12 @@ export async function paymentIntentFor(
       customer: customerId,
       capture_method: reservation.capture_method,
       // Students get whatever the Dashboard enables (capture_method filters
-      // out methods that can't be held). Server-confirmed demo payments are
-      // card-only, since Stripe requires a return_url when redirects are possible.
-      ...(options.cardOnly
-        ? { payment_method_types: ['card'] }
-        : { automatic_payment_methods: { enabled: true } }),
+      // out methods that can't be held). Server-confirmed demo payments rule
+      // out redirect-based methods, since confirming one without a return_url
+      // fails. (Not payment_method_types: API 2026-09-30 rejects it.)
+      automatic_payment_methods: options.noRedirects
+        ? { enabled: true, allow_redirects: 'never' }
+        : { enabled: true },
       description: `ActivCampus court booking: ${event?.name ?? eventId}`,
       metadata: {
         kind: PI_KIND,

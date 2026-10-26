@@ -141,6 +141,10 @@ export default {
           photosPermission: variant.photosPermission,
         },
       ],
+      // Court-booking payments (ActivCampus). The plugin crashes without an
+      // options object. No merchantIdentifier yet: Apple Pay needs one plus a
+      // dev build, and isn't part of the demo.
+      ['@stripe/stripe-react-native', { enableGooglePay: false }],
     ],
     experiments: {
       typedRoutes: true,

@@ -19,7 +19,7 @@ The Stripe implementation planner (path: Stripe only → in-app → physical goo
 | Authorisation lifetime | Card holds last **7 days** (Visa, customer-initiated). The demo uses minutes. For production, the 6–12h window is well within this. Never hold past `capture_before` on the charge. |
 | Apple Pay | Not available in Expo Go. Cards (and Google Pay on a dev build) are enough for the demo. |
 | iOS return URL | Pass `urlScheme: 'activcampus'` (the app's existing scheme) to `StripeProvider` / `initPaymentSheet` for 3DS redirects |
-| Simulated players | Create a card-only PI → attach it → `paymentIntents.confirm(id, { payment_method: 'pm_card_visa' })`. The result is applied straight away; the webhook later arrives as a harmless duplicate. |
+| Simulated players | Create a PI with `automatic_payment_methods: { enabled: true, allow_redirects: 'never' }` → attach it → `paymentIntents.confirm(id, { payment_method: 'pm_card_visa' })`. The result is applied straight away; the webhook later arrives as a harmless duplicate. Don't use `payment_method_types`: the account's default API version (2026-09-30) rejects it. |
 | Idempotency | Every create, capture, cancel and refund call passes an `idempotencyKey` derived from our own ids |
 | API version | Pinned through the SDK version (`npm:stripe@22.6.2`), which fixes the API version it sends |
 
@@ -89,7 +89,16 @@ Demo payments don't depend on the webhook, since their results are applied strai
 
 ---
 
-## Step 3: App data layer
+## Step 3: App data layer ✅ done (2026-10-25)
+
+As built:
+- `@stripe/stripe-react-native@0.50.3` (the version Expo SDK 54 pins; it's in Expo Go). The config plugin is `['@stripe/stripe-react-native', { enableGooglePay: false }]`, because it crashes without an options object.
+- The SDK has no web build, so payment code is split by platform: `lib/AC_paymentSheet.ts` / `.web.ts` and `components/activCampus/courtBooking/AC_StripeRoot.tsx` / `.web.tsx`.
+- Join and Rejoin are one hook (`AC_useJoinCourtSession`), because the server's `join` handles the free rejoin.
+- `NotificationType` gained `BOOKING` and `PAYMENT`, with icons on the notifications screen.
+- Checks: no type errors in the new or changed app files (the app tsconfig also picks up `supabase/functions`, which it can't type; those files pass `deno check`). Android bundles. Web export fails on `react-native-maps`, not on these files. `yarn lint` can't run because ESLint isn't installed.
+
+Original checklist:
 
 1. `npx expo install @stripe/stripe-react-native`. Add `'@stripe/stripe-react-native'` to `plugins` in `app.config.js` (merchant id is optional, since there's no Apple Pay in Expo Go).
 2. `app/_layout.tsx`: wrap the tree in `StripeProvider` (`publishableKey`, `urlScheme: 'activcampus'`) on native only.
@@ -103,7 +112,17 @@ Demo payments don't depend on the webhook, since their results are applied strai
 
 ---
 
-## Step 4: Student screens (`components/activCampus/courtBooking/`)
+## Step 4: Student screens (`components/activCampus/courtBooking/`) ✅ built (2026-10-26), awaiting on-device test
+
+As built:
+- **Entry:** in `app/create.tsx`, Cost → **Paid** → **Fixed price | Split court cost** (create mode only). "Split court cost" swaps the price field for an explainer, and the footer becomes **Continue to court booking**. That opens `app/court-booking/new.tsx` (modal) prefilled with the name, description and start/end entered so far.
+- **Create screen:** court cards with prices, start time (`DateTimeInput`) plus duration chips (1 h / 1 h 30 / 2 h), min/max steppers, a reservation window (demo: 5 min, 15 min, 1 h, 6 h, 12 h; otherwise 6 h, 12 h) and a live cost-split summary. On success it closes both sheets and opens the event.
+- **Event screen** (`app/event/[id].tsx`): when `AC_useCourtSession` finds a session, `AC_CourtSessionPanel` sits above "About". It shows status (Reserved with a live countdown / Court booked / Registration closed / Not booked), progress to the minimum, the cost split (court, most you pay, share right now) and "Your place". The footer button becomes `AC_CourtSessionAction`: Join · hold £X / Join · pay £X / Finish paying / Rejoin · no extra charge / Cancel my place, with `AC_CancelConfirmSheet` (phase-specific consequences + **Confirm cancellation**). The Cost stat shows the current share. Edit/Delete are hidden for court sessions.
+- **Demo controls** (`AC_DemoControls`, organiser + demo mode): +1 player, +5 players, Expire hold now, Close registration now.
+- One function, `lib/AC_courtSessionState.ts`, decides the phase, the action and the "your place" text. `lib/AC_courtPricing.ts` handles the money formatting.
+- The "View on booking calendar" link is deferred to step 5, when the calendar route exists.
+
+Original checklist:
 
 1. `app/create.tsx`: add a "Book a university court" entry → `router.push('/court-booking/new')`.
 2. `app/court-booking/new.tsx` + `AC_CreateCourtSessionForm`: venue chips, `DateTimeInput` for start/end, min/max steppers, hold window (default 15 min in demo), a live commitment summary, and a clash error message.

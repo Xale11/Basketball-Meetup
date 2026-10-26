@@ -8,6 +8,8 @@ import {
   Clock,
   Users,
   Megaphone,
+  CalendarCheck,
+  Coins,
   CheckCheck,
   Trash2,
 } from 'lucide-react-native';
@@ -30,6 +32,8 @@ const TYPE_META: Record<NotificationType, { icon: LucideIcon; tone: keyof Theme[
   [NotificationType.JOIN]: { icon: Users, tone: 'successTone' },
   [NotificationType.SOCIETY]: { icon: Users, tone: 'infoTone' },
   [NotificationType.ANNOUNCEMENT]: { icon: Megaphone, tone: 'infoTone' },
+  [NotificationType.BOOKING]: { icon: CalendarCheck, tone: 'successTone' },
+  [NotificationType.PAYMENT]: { icon: Coins, tone: 'accentTone' },
 };
 
 function relativeTime(iso: string): string {

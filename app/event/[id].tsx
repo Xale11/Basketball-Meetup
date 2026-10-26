@@ -24,6 +24,12 @@ import { useMemo, useState, type ReactNode } from 'react';
 import { useDeleteEvent } from '@/hooks/events/useDeleteEvent';
 import { useRefreshQueries } from '@/hooks/useRefreshQueries';
 import { qk } from '@/lib/queryKeys';
+import { AC_useCourtSession } from '@/hooks/courtBooking/AC_useCourtSession';
+import { AC_useNow } from '@/hooks/courtBooking/AC_useNow';
+import { courtViewState } from '@/lib/AC_courtSessionState';
+import { formatPence } from '@/lib/AC_courtPricing';
+import { AC_CourtSessionPanel } from '@/components/activCampus/courtBooking/AC_CourtSessionPanel';
+import { AC_CourtSessionAction } from '@/components/activCampus/courtBooking/AC_CourtSessionAction';
 
 export default function EventDetailScreen() {
   const { theme } = useTheme();
@@ -44,7 +50,14 @@ export default function EventDetailScreen() {
   const { respond: respondEventInvite } = useRespondEventInvite();
   const { attendees } = useEventAttendees(id);
   const [showInviteModal, setShowInviteModal] = useState(false);
-  const { refreshing, onRefresh } = useRefreshQueries([qk.events.detail(id), qk.friends.all]);
+  // ActivCampus court bookings: null for ordinary events.
+  const { courtSession, myParticipant } = AC_useCourtSession(id);
+  const now = AC_useNow(1000, !!courtSession);
+  const { refreshing, onRefresh } = useRefreshQueries([
+    qk.events.detail(id),
+    qk.friends.all,
+    qk.courtBooking.session(id),
+  ]);
   const { deleteEvent, loading: deleting } = useDeleteEvent();
 
   const societyName = useMemo(() => {
@@ -129,6 +142,7 @@ export default function EventDetailScreen() {
   };
 
   const isOrganiser = !!user?.id && event.created_by_user_id === user.id;
+  const courtView = courtSession ? courtViewState(courtSession, myParticipant, now) : null;
 
   const handleDelete = () => {
     Alert.alert(
@@ -198,8 +212,10 @@ export default function EventDetailScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Organiser-only controls, mirrored on the right of the banner. */}
-      {isOrganiser && (
+      {/* Organiser-only controls, mirrored on the right of the banner. Hidden
+          for court bookings: editing the time or deleting the event would
+          bypass the booking and payment rules. */}
+      {isOrganiser && !courtSession && (
         <View style={styles.ownerOverlay}>
           <TouchableOpacity
             style={styles.backButton}
@@ -282,7 +298,9 @@ export default function EventDetailScreen() {
                 <Text style={styles.statLabel}>Cost</Text>
               </View>
               <Text style={styles.statValue}>
-                {isFree ? 'FREE' : `£${event.price_from ?? ''}`}
+                {courtView
+                  ? `${formatPence(courtView.currentShare)} each`
+                  : isFree ? 'FREE' : `£${event.price_from ?? ''}`}
               </Text>
             </View>
 
@@ -315,6 +333,16 @@ export default function EventDetailScreen() {
               </Text>
             </View>
           </View>
+
+          {courtSession && courtView && (
+            <AC_CourtSessionPanel
+              detail={courtSession}
+              mine={myParticipant}
+              view={courtView}
+              now={now}
+              isOrganiser={isOrganiser}
+            />
+          )}
 
           {/* About — always shown, with a placeholder when empty. */}
           <View style={styles.section}>
@@ -408,7 +436,9 @@ export default function EventDetailScreen() {
             <Text style={styles.inviteBtnText}>Invite</Text>
           </TouchableOpacity>
         )}
-        {actionLoading ? (
+        {courtSession && courtView ? (
+          <AC_CourtSessionAction detail={courtSession} view={courtView} />
+        ) : actionLoading ? (
           <View style={[styles.joinButton, styles.joinButtonLoading]}>
             <ActivityIndicator color={theme.colors.textOnAccent} />
           </View>
