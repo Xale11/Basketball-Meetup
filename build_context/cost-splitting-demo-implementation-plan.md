@@ -186,7 +186,7 @@ Follow the existing pattern (e.g. `hooks/events/useJoinEvent.ts`): `loading` plu
 
 **Create:** add a "Book a university court" entry to `app/create.tsx` → new route `app/court-booking/new.tsx` → `AC_CreateCourtSessionForm`:
 - Venue picker → date and start/end time (reusing `components/DateTimeInput.tsx`) → name/description. If the slot clashes, show "That court is already reserved at this time".
-- Min/max players, plus the hold window. Demo default is 15 min; production target is 6–12h.
+- Min/max players, plus the reservation window: 6 h (default) or 12 h. In a demo, "Expire hold now" ends it early.
 - A live summary: court cost, **commitment per player**, and "price drops to £X if max players join".
 - On submit → navigate to the event.
 
@@ -231,7 +231,7 @@ Add `EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY` and `EXPO_PUBLIC_DEMO_MODE` to `.env.ex
 - Cancel after confirmation → new joiner → the original is `REPLACED`. Rejoin by a `CANCELLED_LIABLE` player is free; rejoin by a `REPLACED` player needs a new payment; rejoin when full is rejected.
 
 **End to end (device, Stripe test mode):**
-1. Create a session (Court 1, £150, min 10, max 20, 15-min hold). The calendar shows an amber Reserved block.
+1. Create a session (Court 1, £150, min 10, max 20, 6 h reservation). The calendar shows an amber Reserved block.
 2. Pay yourself (test card `4242…`) + simulate 9 players. The calendar block turns green; all 10 PIs are captured exactly once in Stripe.
 3. Add 2 late joiners (immediate capture). Cancel one player and confirm the dialog → simulate a replacement. The canceller gets a full refund.
 4. **Close registration now** → 12 eligible → £12.50 each → £2.50 partial refunds are visible in the Stripe dashboard → session `COMPLETED`.

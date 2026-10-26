@@ -326,174 +326,8 @@ export default function CreateScreen() {
           />
         </View>
 
-        {/* Category */}
-        <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Category</Text>
-          <Text style={styles.sectionSubLabel}>Helps people find this in Discover</Text>
-          <View style={styles.chipWrap}>
-            {EVENT_CATEGORIES.map((cat) => {
-              const active = form.category === cat;
-              return (
-                <TouchableOpacity
-                  key={cat}
-                  style={[styles.chip, active && styles.chipActive]}
-                  onPress={() =>
-                    setForm((p) => ({ ...p, category: active ? null : (cat as EventCategory) }))
-                  }
-                >
-                  <Text style={[styles.chipText, active && styles.chipTextActive]}>
-                    {EVENT_CATEGORY_LABEL[cat]}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        </View>
-
-        {/* Tags */}
-        <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Tags</Text>
-          <Text style={styles.sectionSubLabel}>
-            Up to {MAX_TAGS} short labels, e.g. “Beginners”, “Casual”
-          </Text>
-
-          {form.tags.length > 0 && (
-            <View style={styles.chipWrap}>
-              {form.tags.map((tag) => (
-                <TouchableOpacity
-                  key={tag}
-                  style={[styles.chip, styles.chipActive]}
-                  onPress={() => removeTag(tag)}
-                >
-                  <Text style={[styles.chipText, styles.chipTextActive]}>{tag}</Text>
-                  <X size={11} color={theme.colors.accentTone.text} />
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
-
-          {form.tags.length < MAX_TAGS && (
-            <TextInputField
-              value={tagDraft}
-              onChangeText={setTagDraft}
-              placeholder="Add a tag and press enter"
-              maxLength={24}
-              returnKeyType="done"
-              onSubmitEditing={addTag}
-              blurOnSubmit={false}
-              style={styles.tagField}
-            />
-          )}
-        </View>
-
-        {/* Date & Time */}
-        <View style={styles.section}>
-          <View style={styles.sectionLabelRow}>
-            <Text style={styles.sectionLabel}>When? *</Text>
-            {duration && (
-              <View style={styles.durationPill}>
-                <Clock size={11} color={colors.accentTone.text} />
-                <Text style={styles.durationText}>{duration}</Text>
-              </View>
-            )}
-          </View>
-          <View style={styles.dateTimeRow}>
-            <DateTimeInput
-              label="Start"
-              defaultValue="Select start"
-              initialValue={form.start_date || undefined}
-              onChange={(val) => {
-                setForm((p) => {
-                  const newEnd = p.end_date && p.end_date <= val ? '' : p.end_date;
-                  if (p.end_date && p.end_date <= val) {
-                    setDateError('End time must be after start time.');
-                  } else {
-                    setDateError(null);
-                  }
-                  return { ...p, start_date: val, end_date: newEnd };
-                });
-                clearError('start_date');
-                return true;
-              }}
-            />
-            <Text style={styles.dateSeparator}>to</Text>
-            <DateTimeInput
-              label="End"
-              defaultValue="Select end"
-              initialValue={form.end_date || undefined}
-              onChange={(val) => {
-                if (form.start_date && val <= form.start_date) {
-                  setDateError('End time must be after start time.');
-                  return false;
-                }
-                setDateError(null);
-                setForm((p) => ({ ...p, end_date: val }));
-                clearError('end_date');
-                return true;
-              }}
-            />
-          </View>
-          {(dateError || formErrors.start_date || formErrors.end_date) && (
-            <Text style={styles.fieldError}>
-              {dateError || formErrors.start_date || formErrors.end_date}
-            </Text>
-          )}
-        </View>
-
-        {/* Location */}
-        <View style={styles.section}>
-          <View style={styles.sectionLabelRow}>
-            <Text style={styles.sectionLabel}>Where? {form.is_online ? '' : '*'}</Text>
-            <View style={styles.onlineToggle}>
-              <Text style={styles.onlineToggleLabel}>Online</Text>
-              <Switch
-                value={form.is_online}
-                onValueChange={(val) =>
-                  setForm((p) => ({
-                    ...p,
-                    is_online: val,
-                    address: val ? null : p.address,
-                    latitude: val ? null : p.latitude,
-                    longitude: val ? null : p.longitude,
-                  }))
-                }
-                trackColor={{ false: colors.surfaceAlt, true: colors.accent }}
-                thumbColor={colors.textPrimary}
-              />
-            </View>
-          </View>
-          {!form.is_online && (
-            <View
-              style={[
-                styles.addressInputWrapper,
-                formErrors.address ? styles.addressInputError : null,
-              ]}
-            >
-              <MapPin size={18} color={colors.textMuted} style={styles.addressIcon} />
-              <GooglePlacesAutocomplete
-                placeholder="Search for a venue or address"
-                debounce={300}
-                fetchDetails={true}
-                {...placesRequest}
-                textInputProps={{ placeholderTextColor: colors.textFaint }}
-                query={{ language: 'en' }}
-                onPress={(_, details) => addLocationToForm(details ?? null)}
-                enablePoweredByContainer={false}
-                styles={{
-                  textInput: styles.googleInput,
-                  container: styles.googleContainer,
-                  listView: styles.googleListView,
-                  row: styles.googleRow,
-                  description: styles.googleDescription,
-                  separator: styles.googleSeparator,
-                }}
-              />
-            </View>
-          )}
-          {formErrors.address && <Text style={styles.fieldError}>{formErrors.address}</Text>}
-        </View>
-
-        {/* Cost */}
+        {/* Cost — asked early, because choosing "Split court cost" hides the
+            fields below that a court booking sets for itself. */}
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>Cost</Text>
           <Text style={styles.sectionSubLabel}>Is this free to attend?</Text>
@@ -568,159 +402,346 @@ export default function CreateScreen() {
           )}
         </View>
 
-        {/* Visibility */}
-        <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Visibility</Text>
-          <Text style={styles.sectionSubLabel}>Who can see this activity?</Text>
-          <OptionCardList
-            options={VISIBILITY_OPTIONS}
-            selected={form.visibility}
-            onSelect={(value) => {
-              const newNeedsSociety =
-                form.host_type === EventHostType.SOCIETY ||
-                value === EventVisibility.SOCIETY_ONLY;
-              setForm((p) => ({
-                ...p,
-                visibility: value,
-                university_id: user?.university_id ?? null,
-                society_id: newNeedsSociety ? (memberships[0]?.society_id ?? null) : null,
-              }));
-            }}
-          />
-        </View>
+        {/* A court booking is always Sports, with no tags. */}
+        {!isSplitCourt && (
+          <>
+            {/* Category */}
+            <View style={styles.section}>
+              <Text style={styles.sectionLabel}>Category</Text>
+              <Text style={styles.sectionSubLabel}>Helps people find this in Discover</Text>
+              <View style={styles.chipWrap}>
+                {EVENT_CATEGORIES.map((cat) => {
+                  const active = form.category === cat;
+                  return (
+                    <TouchableOpacity
+                      key={cat}
+                      style={[styles.chip, active && styles.chipActive]}
+                      onPress={() =>
+                        setForm((p) => ({ ...p, category: active ? null : (cat as EventCategory) }))
+                      }
+                    >
+                      <Text style={[styles.chipText, active && styles.chipTextActive]}>
+                        {EVENT_CATEGORY_LABEL[cat]}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
 
-        {/* Join Policy */}
-        <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Who can join?</Text>
-          <Text style={styles.sectionSubLabel}>How do people get in?</Text>
-          <OptionCardList
-            options={JOIN_POLICY_OPTIONS}
-            selected={form.join_policy}
-            onSelect={(value) => setForm((p) => ({ ...p, join_policy: value }))}
-          />
-        </View>
+            {/* Tags */}
+            <View style={styles.section}>
+              <Text style={styles.sectionLabel}>Tags</Text>
+              <Text style={styles.sectionSubLabel}>
+                Up to {MAX_TAGS} short labels, e.g. “Beginners”, “Casual”
+              </Text>
 
-        {/* Host Type */}
-        <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Hosted by</Text>
-          <Text style={styles.sectionSubLabel}>Who is organising this activity?</Text>
-          <OptionCardList
-            options={HOST_TYPE_OPTIONS}
-            selected={form.host_type}
-            onSelect={(value) => {
-              const newNeedsSociety =
-                value === EventHostType.SOCIETY ||
-                form.visibility === EventVisibility.SOCIETY_ONLY;
-              setForm((p) => ({
-                ...p,
-                host_type: value,
-                university_id: user?.university_id ?? null,
-                society_id: newNeedsSociety ? (memberships[0]?.society_id ?? null) : null,
-              }));
-            }}
-          />
+              {form.tags.length > 0 && (
+                <View style={styles.chipWrap}>
+                  {form.tags.map((tag) => (
+                    <TouchableOpacity
+                      key={tag}
+                      style={[styles.chip, styles.chipActive]}
+                      onPress={() => removeTag(tag)}
+                    >
+                      <Text style={[styles.chipText, styles.chipTextActive]}>{tag}</Text>
+                      <X size={11} color={theme.colors.accentTone.text} />
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
 
-          {needsSociety && memberships.length > 1 && (
-            <View style={styles.subSection}>
-              <Text style={styles.subSectionLabel}>Which society?</Text>
-              <PillSelector
-                options={societyPillOptions}
-                selected={form.society_id ?? ''}
-                onSelect={(value) => {
-                  setForm((p) => ({ ...p, society_id: value }));
-                  clearError('society_id');
-                }}
-              />
-              {formErrors.society_id && (
-                <Text style={styles.fieldError}>{formErrors.society_id}</Text>
+              {form.tags.length < MAX_TAGS && (
+                <TextInputField
+                  value={tagDraft}
+                  onChangeText={setTagDraft}
+                  placeholder="Add a tag and press enter"
+                  maxLength={24}
+                  returnKeyType="done"
+                  onSubmitEditing={addTag}
+                  blurOnSubmit={false}
+                  style={styles.tagField}
+                />
               )}
             </View>
-          )}
-
-          {needsSociety && memberships.length === 1 && (
-            <View style={styles.autoPopulatedTag}>
-              <Text style={styles.autoPopulatedLabel}>Society</Text>
-              <Text style={styles.autoPopulatedValue}>
-                {memberships[0].societies.name ?? 'Untitled society'}
-              </Text>
-            </View>
-          )}
-
-          {needsSociety && memberships.length === 0 && (
-            <Text style={styles.sectionNote}>You're not a member of any society yet.</Text>
-          )}
-        </View>
-
-        {/* Max Participants */}
-        <View style={styles.section}>
-          <View style={styles.sectionLabelRow}>
-            <View style={styles.sectionLabelStack}>
-              <Text style={styles.sectionLabel}>Max participants</Text>
-              <Text style={styles.sectionSubLabel}>Leave off for unlimited</Text>
-            </View>
-            <Switch
-              value={hasMaxParticipants}
-              onValueChange={(val) => {
-                setHasMaxParticipants(val);
-                setForm((p) => ({ ...p, max_participants: val ? 10 : null }));
-              }}
-              trackColor={{ false: colors.surfaceAlt, true: colors.accent }}
-              thumbColor={colors.textPrimary}
-            />
-          </View>
-          {hasMaxParticipants && (
-            <View style={styles.counterRow}>
-              <TouchableOpacity
-                style={styles.counterButton}
-                onPress={() =>
-                  setForm((p) => ({
-                    ...p,
-                    max_participants: Math.max(2, (p.max_participants ?? 10) - 1),
-                  }))
-                }
-              >
-                <Text style={styles.counterButtonText}>−</Text>
-              </TouchableOpacity>
-              <View style={styles.counterValueContainer}>
-                <Users size={16} color={colors.textMuted} />
-                <Text style={styles.counterValue}>{form.max_participants ?? 10}</Text>
-              </View>
-              <TouchableOpacity
-                style={styles.counterButton}
-                onPress={() =>
-                  setForm((p) => ({ ...p, max_participants: (p.max_participants ?? 10) + 1 }))
-                }
-              >
-                <Text style={styles.counterButtonText}>+</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-        </View>
-
-        {/* Attend your own activity. Create-only: editing cannot retroactively
-            change whether you attended, and the host may since have left. */}
-        {!isEditing && (
-          <View style={styles.section}>
-            <ToggleRow
-              label="Join this activity"
-              sublabel="Add yourself to the attendee list when you publish"
-              value={form.auto_join !== false}
-              onValueChange={(val) => setForm((p) => ({ ...p, auto_join: val }))}
-              style={styles.autoJoinRow}
-            />
-          </View>
+          </>
         )}
 
-        {/* Banner Image */}
-        <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Banner image</Text>
-          <ImagePicker
-            placeholder="Add a banner photo"
-            selectedImage={form.banner_image_uri ?? form.banner_image_url ?? undefined}
-            onImageSelected={(uri) => setForm((p) => ({ ...p, banner_image_uri: uri }))}
-            onImageRemoved={() => setForm((p) => ({ ...p, banner_image_uri: null }))}
-          />
-        </View>
+        {/* The court-booking screen asks for the time itself. */}
+        {!isSplitCourt && (
+          <>
+            {/* Date & Time */}
+            <View style={styles.section}>
+              <View style={styles.sectionLabelRow}>
+                <Text style={styles.sectionLabel}>When? *</Text>
+                {duration && (
+                  <View style={styles.durationPill}>
+                    <Clock size={11} color={colors.accentTone.text} />
+                    <Text style={styles.durationText}>{duration}</Text>
+                  </View>
+                )}
+              </View>
+              <View style={styles.dateTimeRow}>
+                <DateTimeInput
+                  label="Start"
+                  defaultValue="Select start"
+                  initialValue={form.start_date || undefined}
+                  onChange={(val) => {
+                    setForm((p) => {
+                      const newEnd = p.end_date && p.end_date <= val ? '' : p.end_date;
+                      if (p.end_date && p.end_date <= val) {
+                        setDateError('End time must be after start time.');
+                      } else {
+                        setDateError(null);
+                      }
+                      return { ...p, start_date: val, end_date: newEnd };
+                    });
+                    clearError('start_date');
+                    return true;
+                  }}
+                />
+                <Text style={styles.dateSeparator}>to</Text>
+                <DateTimeInput
+                  label="End"
+                  defaultValue="Select end"
+                  initialValue={form.end_date || undefined}
+                  onChange={(val) => {
+                    if (form.start_date && val <= form.start_date) {
+                      setDateError('End time must be after start time.');
+                      return false;
+                    }
+                    setDateError(null);
+                    setForm((p) => ({ ...p, end_date: val }));
+                    clearError('end_date');
+                    return true;
+                  }}
+                />
+              </View>
+              {(dateError || formErrors.start_date || formErrors.end_date) && (
+                <Text style={styles.fieldError}>
+                  {dateError || formErrors.start_date || formErrors.end_date}
+                </Text>
+              )}
+            </View>
+          </>
+        )}
+
+        {/* The court is the location. */}
+        {!isSplitCourt && (
+          <>
+            {/* Location */}
+            <View style={styles.section}>
+              <View style={styles.sectionLabelRow}>
+                <Text style={styles.sectionLabel}>Where? {form.is_online ? '' : '*'}</Text>
+                <View style={styles.onlineToggle}>
+                  <Text style={styles.onlineToggleLabel}>Online</Text>
+                  <Switch
+                    value={form.is_online}
+                    onValueChange={(val) =>
+                      setForm((p) => ({
+                        ...p,
+                        is_online: val,
+                        address: val ? null : p.address,
+                        latitude: val ? null : p.latitude,
+                        longitude: val ? null : p.longitude,
+                      }))
+                    }
+                    trackColor={{ false: colors.surfaceAlt, true: colors.accent }}
+                    thumbColor={colors.textPrimary}
+                  />
+                </View>
+              </View>
+              {!form.is_online && (
+                <View
+                  style={[
+                    styles.addressInputWrapper,
+                    formErrors.address ? styles.addressInputError : null,
+                  ]}
+                >
+                  <MapPin size={18} color={colors.textMuted} style={styles.addressIcon} />
+                  <GooglePlacesAutocomplete
+                    placeholder="Search for a venue or address"
+                    debounce={300}
+                    fetchDetails={true}
+                    {...placesRequest}
+                    textInputProps={{ placeholderTextColor: colors.textFaint }}
+                    query={{ language: 'en' }}
+                    onPress={(_, details) => addLocationToForm(details ?? null)}
+                    enablePoweredByContainer={false}
+                    styles={{
+                      textInput: styles.googleInput,
+                      container: styles.googleContainer,
+                      listView: styles.googleListView,
+                      row: styles.googleRow,
+                      description: styles.googleDescription,
+                      separator: styles.googleSeparator,
+                    }}
+                  />
+                </View>
+              )}
+              {formErrors.address && <Text style={styles.fieldError}>{formErrors.address}</Text>}
+            </View>
+          </>
+        )}
+
+        {/* Court bookings are public and open, capped by their max players, and hosted by you. */}
+        {!isSplitCourt && (
+          <>
+            {/* Visibility */}
+            <View style={styles.section}>
+              <Text style={styles.sectionLabel}>Visibility</Text>
+              <Text style={styles.sectionSubLabel}>Who can see this activity?</Text>
+              <OptionCardList
+                options={VISIBILITY_OPTIONS}
+                selected={form.visibility}
+                onSelect={(value) => {
+                  const newNeedsSociety =
+                    form.host_type === EventHostType.SOCIETY ||
+                    value === EventVisibility.SOCIETY_ONLY;
+                  setForm((p) => ({
+                    ...p,
+                    visibility: value,
+                    university_id: user?.university_id ?? null,
+                    society_id: newNeedsSociety ? (memberships[0]?.society_id ?? null) : null,
+                  }));
+                }}
+              />
+            </View>
+
+            {/* Join Policy */}
+            <View style={styles.section}>
+              <Text style={styles.sectionLabel}>Who can join?</Text>
+              <Text style={styles.sectionSubLabel}>How do people get in?</Text>
+              <OptionCardList
+                options={JOIN_POLICY_OPTIONS}
+                selected={form.join_policy}
+                onSelect={(value) => setForm((p) => ({ ...p, join_policy: value }))}
+              />
+            </View>
+
+            {/* Host Type */}
+            <View style={styles.section}>
+              <Text style={styles.sectionLabel}>Hosted by</Text>
+              <Text style={styles.sectionSubLabel}>Who is organising this activity?</Text>
+              <OptionCardList
+                options={HOST_TYPE_OPTIONS}
+                selected={form.host_type}
+                onSelect={(value) => {
+                  const newNeedsSociety =
+                    value === EventHostType.SOCIETY ||
+                    form.visibility === EventVisibility.SOCIETY_ONLY;
+                  setForm((p) => ({
+                    ...p,
+                    host_type: value,
+                    university_id: user?.university_id ?? null,
+                    society_id: newNeedsSociety ? (memberships[0]?.society_id ?? null) : null,
+                  }));
+                }}
+              />
+
+              {needsSociety && memberships.length > 1 && (
+                <View style={styles.subSection}>
+                  <Text style={styles.subSectionLabel}>Which society?</Text>
+                  <PillSelector
+                    options={societyPillOptions}
+                    selected={form.society_id ?? ''}
+                    onSelect={(value) => {
+                      setForm((p) => ({ ...p, society_id: value }));
+                      clearError('society_id');
+                    }}
+                  />
+                  {formErrors.society_id && (
+                    <Text style={styles.fieldError}>{formErrors.society_id}</Text>
+                  )}
+                </View>
+              )}
+
+              {needsSociety && memberships.length === 1 && (
+                <View style={styles.autoPopulatedTag}>
+                  <Text style={styles.autoPopulatedLabel}>Society</Text>
+                  <Text style={styles.autoPopulatedValue}>
+                    {memberships[0].societies.name ?? 'Untitled society'}
+                  </Text>
+                </View>
+              )}
+
+              {needsSociety && memberships.length === 0 && (
+                <Text style={styles.sectionNote}>You're not a member of any society yet.</Text>
+              )}
+            </View>
+
+            {/* Max Participants */}
+            <View style={styles.section}>
+              <View style={styles.sectionLabelRow}>
+                <View style={styles.sectionLabelStack}>
+                  <Text style={styles.sectionLabel}>Max participants</Text>
+                  <Text style={styles.sectionSubLabel}>Leave off for unlimited</Text>
+                </View>
+                <Switch
+                  value={hasMaxParticipants}
+                  onValueChange={(val) => {
+                    setHasMaxParticipants(val);
+                    setForm((p) => ({ ...p, max_participants: val ? 10 : null }));
+                  }}
+                  trackColor={{ false: colors.surfaceAlt, true: colors.accent }}
+                  thumbColor={colors.textPrimary}
+                />
+              </View>
+              {hasMaxParticipants && (
+                <View style={styles.counterRow}>
+                  <TouchableOpacity
+                    style={styles.counterButton}
+                    onPress={() =>
+                      setForm((p) => ({
+                        ...p,
+                        max_participants: Math.max(2, (p.max_participants ?? 10) - 1),
+                      }))
+                    }
+                  >
+                    <Text style={styles.counterButtonText}>−</Text>
+                  </TouchableOpacity>
+                  <View style={styles.counterValueContainer}>
+                    <Users size={16} color={colors.textMuted} />
+                    <Text style={styles.counterValue}>{form.max_participants ?? 10}</Text>
+                  </View>
+                  <TouchableOpacity
+                    style={styles.counterButton}
+                    onPress={() =>
+                      setForm((p) => ({ ...p, max_participants: (p.max_participants ?? 10) + 1 }))
+                    }
+                  >
+                    <Text style={styles.counterButtonText}>+</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+
+            {/* Attend your own activity. Create-only: editing cannot retroactively
+                change whether you attended, and the host may since have left. */}
+            {!isEditing && (
+              <View style={styles.section}>
+                <ToggleRow
+                  label="Join this activity"
+                  sublabel="Add yourself to the attendee list when you publish"
+                  value={form.auto_join !== false}
+                  onValueChange={(val) => setForm((p) => ({ ...p, auto_join: val }))}
+                  style={styles.autoJoinRow}
+                />
+              </View>
+            )}
+
+            {/* Banner Image */}
+            <View style={styles.section}>
+              <Text style={styles.sectionLabel}>Banner image</Text>
+              <ImagePicker
+                placeholder="Add a banner photo"
+                selectedImage={form.banner_image_uri ?? form.banner_image_url ?? undefined}
+                onImageSelected={(uri) => setForm((p) => ({ ...p, banner_image_uri: uri }))}
+                onImageRemoved={() => setForm((p) => ({ ...p, banner_image_uri: null }))}
+              />
+            </View>
+          </>
+        )}
 
         <View style={styles.bottomPadding} />
       </ScrollView>

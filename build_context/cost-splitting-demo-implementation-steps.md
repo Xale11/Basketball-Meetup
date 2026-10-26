@@ -115,8 +115,8 @@ Original checklist:
 ## Step 4: Student screens (`components/activCampus/courtBooking/`) ✅ built (2026-10-26), awaiting on-device test
 
 As built:
-- **Entry:** in `app/create.tsx`, Cost → **Paid** → **Fixed price | Split court cost** (create mode only). "Split court cost" swaps the price field for an explainer, and the footer becomes **Continue to court booking**. That opens `app/court-booking/new.tsx` (modal) prefilled with the name, description and start/end entered so far.
-- **Create screen:** court cards with prices, start time (`DateTimeInput`) plus duration chips (1 h / 1 h 30 / 2 h), min/max steppers, a reservation window (demo: 5 min, 15 min, 1 h, 6 h, 12 h; otherwise 6 h, 12 h) and a live cost-split summary. On success it closes both sheets and opens the event.
+- **Entry:** in `app/create.tsx`, Cost → **Paid** → **Fixed price | Split court cost** (create mode only). "Split court cost" swaps the price field for an explainer, and the footer becomes **Continue to court booking**. That opens `app/court-booking/new.tsx` (modal) prefilled with the name, description and start/end entered so far. Cost sits straight after Description. In split mode the form hides the fields a court booking sets itself (or asks for on its own screen): When?, Category, Tags, Location, Visibility, Join policy, Host type, Max participants, auto-join and the banner.
+- **Create screen:** court cards with prices, start time (`DateTimeInput`) plus duration chips (1 h / 1 h 30 / 2 h), min/max steppers, a reservation window of 6 h (default) or 12 h and a live cost-split summary. On success it closes both sheets and opens the event.
 - **Event screen** (`app/event/[id].tsx`): when `AC_useCourtSession` finds a session, `AC_CourtSessionPanel` sits above "About". It shows status (Reserved with a live countdown / Court booked / Registration closed / Not booked), progress to the minimum, the cost split (court, most you pay, share right now) and "Your place". The footer button becomes `AC_CourtSessionAction`: Join · hold £X / Join · pay £X / Finish paying / Rejoin · no extra charge / Cancel my place, with `AC_CancelConfirmSheet` (phase-specific consequences + **Confirm cancellation**). The Cost stat shows the current share. Edit/Delete are hidden for court sessions.
 - **Demo controls** (`AC_DemoControls`, organiser + demo mode): +1 player, +5 players, Expire hold now, Close registration now.
 - One function, `lib/AC_courtSessionState.ts`, decides the phase, the action and the "your place" text. `lib/AC_courtPricing.ts` handles the money formatting.
@@ -125,7 +125,7 @@ As built:
 Original checklist:
 
 1. `app/create.tsx`: add a "Book a university court" entry → `router.push('/court-booking/new')`.
-2. `app/court-booking/new.tsx` + `AC_CreateCourtSessionForm`: venue chips, `DateTimeInput` for start/end, min/max steppers, hold window (default 15 min in demo), a live commitment summary, and a clash error message.
+2. `app/court-booking/new.tsx` + `AC_CreateCourtSessionForm`: venue chips, `DateTimeInput` for start/end, min/max steppers, hold window (6 h or 12 h), a live commitment summary, and a clash error message.
 3. `app/event/[id].tsx`: if `AC_useCourtSession(id)` returns a session, render `AC_CourtSessionPanel` in place of the join/leave block:
    - `AC_SessionStatusTimeline` (hold countdown vs confirmed)
    - `AC_CommitmentProgress`

@@ -13,7 +13,6 @@ import { useAuth } from '@/hooks/useAuth';
 import { AC_useVenues } from '@/hooks/courtBooking/AC_useVenues';
 import { AC_useCreateCourtSession } from '@/hooks/courtBooking/AC_useCreateCourtSession';
 import { formatMinutes, formatPence, sharePence } from '@/lib/AC_courtPricing';
-import { demoMode } from '@/constants/AC_demoMode';
 
 /**
  * Book a university court (ActivCampus). Reserves the court for a short window
@@ -25,10 +24,10 @@ import { demoMode } from '@/constants/AC_demoMode';
 
 const DURATIONS = [60, 90, 120];
 
-// The spec's production window is 6–12 hours. Demo mode adds short windows so
-// the whole flow fits in a meeting.
-const HOLD_WINDOWS = demoMode ? [5, 15, 60, 360, 720] : [360, 720];
-const DEFAULT_HOLD = demoMode ? 15 : 360;
+// The spec's reservation window: 6 or 12 hours. In a demo, the organiser's
+// "Expire hold now" control ends it early instead.
+const HOLD_WINDOWS = [360, 720];
+const DEFAULT_HOLD = 360;
 
 const MIN_PLAYERS_FLOOR = 2;
 const MAX_PLAYERS_CEILING = 30;
