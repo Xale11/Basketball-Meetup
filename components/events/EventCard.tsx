@@ -11,6 +11,8 @@ import {
   EVENT_CATEGORY_LABEL,
 } from '@/types/event';
 import { useJoinEvent } from '@/hooks/events/useJoinEvent';
+import { AC_useCourtSessionIndex } from '@/hooks/courtBooking/AC_useCourtSessionIndex';
+import { formatPence } from '@/lib/AC_courtPricing';
 import { useLeaveEvent } from '@/hooks/events/useLeaveEvent';
 import { getClassification } from '@/lib/eventClassification';
 import { AC_ClassificationBadge } from '@/components/activCampus/AC_ClassificationBadge';
@@ -82,6 +84,9 @@ export function EventCard({
     return 'Student hosted';
   })();
 
+  const { courtSessions } = AC_useCourtSessionIndex();
+  const court = courtSessions.get(event.id) ?? null;
+
   const { joinEvent, loading: joining } = useJoinEvent();
   const { leaveEvent, loading: leaving } = useLeaveEvent();
   const actionLoading = joining || leaving;
@@ -132,6 +137,26 @@ export function EventCard({
     onPress ? onPress() : router.push({ pathname: '/event/[id]', params: { id: event.id } });
 
   const renderJoinButton = () => {
+    // Court bookings (ActivCampus) are joined by paying on the event page, so
+    // the card only links there; the database rejects a direct join anyway.
+    if (court) {
+      return (
+        <TouchableOpacity
+          style={[s.actionBtn, isJoined ? s.actionBtnJoined : s.actionBtnPrimary]}
+          onPress={openDetails}
+        >
+          {isJoined ? (
+            <CheckCircle2 size={14} color={colors.accentText} />
+          ) : (
+            <PlusCircle size={14} color={colors.textOnAccent} strokeWidth={2.5} />
+          )}
+          <Text style={isJoined ? s.actionBtnJoinedText : s.actionBtnPrimaryText}>
+            {isJoined ? 'Joined' : `Join · up to ${formatPence(court.commitment_pence)}`}
+          </Text>
+        </TouchableOpacity>
+      );
+    }
+
     // Invite-only events the viewer has no invite to expose no join affordance.
     if (isInviteOnly && !participantStatus) return null;
 

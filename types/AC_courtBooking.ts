@@ -37,6 +37,7 @@ export enum CourtRegistrationStatus {
 
 /** Supabase: `ac_session_participants.payment_status`. */
 export enum CourtPaymentStatus {
+  /** A payment attempt in progress. Not a place: a place needs an approved card. */
   PAYMENT_PENDING = 'PAYMENT_PENDING',
   /** Card held, not charged. */
   AUTHORISED = 'AUTHORISED',
@@ -114,6 +115,8 @@ export interface SessionParticipant {
   joined_at: string
   paid_at: string | null
   cancelled_at: string | null
+  /** 'AC_FULL' when the session filled before this player's card was approved. */
+  exception_note: string | null
 }
 
 /** A participant with the profile fields the session panel shows. */
@@ -128,7 +131,7 @@ export interface CourtSessionDetail {
   participants: SessionParticipantWithProfile[]
   /** Holds or payments counting towards the minimum. */
   committedCount: number
-  /** Places taken, including payments in progress. */
+  /** Places taken: approved cards only. An unfinished payment holds nothing. */
   placesTaken: number
 }
 

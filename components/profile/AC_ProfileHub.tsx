@@ -48,6 +48,8 @@ import { TextInputField } from '@/components/ui/TextInputField';
 import { Button } from '@/components/ui/Button';
 import { Event, EVENT_CATEGORIES, EVENT_CATEGORY_LABEL } from '@/types/event';
 import { useTheme, useThemedStyles, Theme } from '@/hooks/useTheme';
+import { AC_BookingCalendarEntry } from '@/components/activCampus/courtBooking/AC_BookingCalendarEntry';
+import { demoMode } from '@/constants/AC_demoMode';
 
 const BIO_LIMIT = 150;
 
@@ -315,6 +317,8 @@ export function AC_ProfileHub() {
             {memberships.length} Societies • {participantEvents.length} Activities Joined
           </Text>
         </LinearGradient>
+
+        {demoMode && <AC_BookingCalendarEntry style={s.calendarEntry} />}
 
         {/* ── Tabs ─────────────────────────────────────────────────────── */}
         <ScrollView
@@ -596,6 +600,7 @@ const makeStyles = (t: Theme) =>
       borderColor: t.colors.chromeBorder,
       ...t.shadow.lg,
     },
+    calendarEntry: { marginBottom: t.spacing.lg },
     avatarWrap: { marginBottom: t.spacing.sm },
     avatar: {
       width: 84,

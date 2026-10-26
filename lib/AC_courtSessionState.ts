@@ -18,7 +18,6 @@ export type CourtPhase = 'reserved' | 'confirming' | 'confirmed' | 'closed' | 'c
 
 export type CourtAction =
   | { kind: 'join'; label: string }
-  | { kind: 'finishPayment'; label: string }
   | { kind: 'rejoin'; label: string }
   | { kind: 'cancel'; label: string }
   | { kind: 'none'; label: string }
@@ -51,8 +50,11 @@ export const phaseOf = (status: CourtSessionStatus): CourtPhase => {
   }
 }
 
+/** A place means an approved card. An unfinished payment attempt is not one. */
 const holdsPlace = (p: SessionParticipant | null) =>
-  !!p && p.registration_status === CourtRegistrationStatus.ACTIVE
+  !!p &&
+  p.registration_status === CourtRegistrationStatus.ACTIVE &&
+  (p.payment_status === CourtPaymentStatus.AUTHORISED || p.payment_status === CourtPaymentStatus.PAID)
 
 function describeMine(p: SessionParticipant | null, phase: CourtPhase, currentShare: number): string | null {
   if (!p) return null
@@ -73,16 +75,20 @@ function describeMine(p: SessionParticipant | null, phase: CourtPhase, currentSh
         ? `Someone took your place, so your ${commitment} was refunded in full.`
         : `Someone took your place. Your ${commitment} refund is on its way.`
     case CourtRegistrationStatus.WITHDRAWN:
-      return p.payment_status === CourtPaymentStatus.REFUNDED
-        ? `You left. ${formatPence(p.refund_pence)} was refunded.`
-        : 'You left. Your card hold was released, so you were not charged.'
+      if (p.exception_note === 'AC_FULL') {
+        return 'The last place went just before your payment completed, so your card hold was released. You were not charged.'
+      }
+      if (p.payment_status === CourtPaymentStatus.REFUNDED) {
+        return `You left. ${formatPence(p.refund_pence)} was refunded.`
+      }
+      // A payment that was never completed: nothing happened, nothing to say.
+      if (!p.paid_at) return null
+      return 'You left. Your card hold was released, so you were not charged.'
     case CourtRegistrationStatus.CANCELLED_LIABLE:
       return `You cancelled. Unless someone takes your place, you still pay your share (currently ${formatPence(currentShare)}).`
   }
 
   switch (p.payment_status) {
-    case CourtPaymentStatus.PAYMENT_PENDING:
-      return 'Your place is held while you finish paying.'
     case CourtPaymentStatus.AUTHORISED:
       return phase === 'cancelled'
         ? 'The court was not booked, so your card hold was released.'
@@ -90,7 +96,7 @@ function describeMine(p: SessionParticipant | null, phase: CourtPhase, currentSh
     case CourtPaymentStatus.PAID:
       return `You paid ${commitment}. The more people join, the more you get back when registration closes.`
     case CourtPaymentStatus.VOIDED:
-      return 'The court was not booked, so your card hold was released. You were not charged.'
+      return p.paid_at ? 'The court was not booked, so your card hold was released. You were not charged.' : null
     default:
       return null
   }
@@ -132,8 +138,6 @@ export function courtViewState(
       kind: 'none',
       label: phase === 'cancelled' ? 'Court not booked' : 'Registration closed',
     }
-  } else if (holdsPlace(mine) && mine!.payment_status === CourtPaymentStatus.PAYMENT_PENDING) {
-    action = { kind: 'finishPayment', label: `Finish paying ${commitment}` }
   } else if (holdsPlace(mine)) {
     action = { kind: 'cancel', label: 'Cancel my place' }
   } else if (mine?.registration_status === CourtRegistrationStatus.CANCELLED_LIABLE) {
@@ -143,6 +147,7 @@ export function courtViewState(
   } else if (isFull) {
     action = { kind: 'none', label: 'Full' }
   } else {
+    // Includes an unfinished payment: joining again picks up the same attempt.
     action = {
       kind: 'join',
       label: phase === 'reserved' ? `Join · hold ${commitment}` : `Join · pay ${commitment}`,

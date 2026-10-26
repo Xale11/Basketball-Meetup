@@ -13,6 +13,7 @@ export const invalidateCourtBooking = (queryClient: QueryClient, eventId: string
     queryClient.invalidateQueries({ queryKey: qk.friends.forEvent(eventId, userId) })
   }
   queryClient.invalidateQueries({ queryKey: ['courtBooking', 'calendar'] })
+  queryClient.invalidateQueries({ queryKey: qk.courtBooking.index })
   queryClient.invalidateQueries({ queryKey: qk.events.lists })
   if (userId) {
     queryClient.invalidateQueries({ queryKey: qk.events.participations(userId) })

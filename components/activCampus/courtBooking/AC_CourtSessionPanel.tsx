@@ -1,4 +1,5 @@
-import { View, Text, StyleSheet } from 'react-native'
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native'
+import { router } from 'expo-router'
 import { CalendarCheck, CalendarClock, CalendarX, Coins, Hourglass, Users } from 'lucide-react-native'
 import { useTheme, useThemedStyles, Theme } from '@/hooks/useTheme'
 import { CourtSessionDetail, SessionParticipant } from '@/types/AC_courtBooking'
@@ -83,6 +84,11 @@ export function AC_CourtSessionPanel({ detail, mine, view, now, isOrganiser }: P
           )}
         </View>
         <Text style={s.statusLine}>{statusLine}</Text>
+        {view.phase !== 'cancelled' && (
+          <TouchableOpacity onPress={() => router.push('/court-booking/calendar')} hitSlop={8}>
+            <Text style={[s.calendarLink, { color: tone.text }]}>View on booking calendar</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Progress */}
@@ -93,7 +99,7 @@ export function AC_CourtSessionPanel({ detail, mine, view, now, isOrganiser }: P
             <Text style={s.cardLabel}>Players</Text>
           </View>
           <Text style={s.cardValue}>
-            {committedCount} committed · {placesTaken} / {session.max_players} places
+            {placesTaken} / {session.max_players} places paid for
           </Text>
         </View>
         <View style={s.track}>
@@ -192,6 +198,7 @@ const makeStyles = (t: Theme) =>
     },
     timerText: { ...t.typography.badge, fontVariant: ['tabular-nums'] },
     statusLine: { ...t.typography.body, color: t.colors.textBody },
+    calendarLink: { ...t.typography.label, textDecorationLine: 'underline' },
 
     card: {
       backgroundColor: t.colors.surface,

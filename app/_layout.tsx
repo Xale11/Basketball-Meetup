@@ -84,6 +84,7 @@ function AppNavigator({ fontsLoaded }: { fontsLoaded: boolean }) {
           <Stack.Screen name="notifications" options={{ presentation: 'modal' }} />
           {/* ActivCampus court bookings. */}
           <Stack.Screen name="court-booking/new" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="court-booking/calendar" />
           <Stack.Screen name="event" />
           <Stack.Screen name="user" />
           <Stack.Screen name="friends" />

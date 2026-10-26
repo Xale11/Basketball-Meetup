@@ -12,8 +12,8 @@ import { AC_CancelConfirmSheet } from './AC_CancelConfirmSheet'
 
 /**
  * The event screen's primary button for a court session: join (and pay in
- * Stripe's sheet), finish an interrupted payment, rejoin, or cancel. Which one
- * shows comes from `courtViewState`.
+ * Stripe's sheet), rejoin, or cancel. Which one shows comes from
+ * `courtViewState`. A place only exists once the card is approved.
  */
 export function AC_CourtSessionAction({ detail, view }: { detail: CourtSessionDetail; view: CourtViewState }) {
   const { theme } = useTheme()
@@ -110,7 +110,7 @@ export function AC_CourtSessionAction({ detail, view }: { detail: CourtSessionDe
     )
   }
 
-  // join / finishPayment / rejoin: all go through `join`.
+  // join / rejoin both go through `join` (which also resumes an unfinished payment).
   return (
     <TouchableOpacity style={s.button} onPress={join} disabled={busy} activeOpacity={0.85}>
       <LinearGradient

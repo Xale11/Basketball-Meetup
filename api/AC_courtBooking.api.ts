@@ -69,11 +69,9 @@ const countsTowardsMinimum = (p: { registration_status: string; payment_status: 
   p.registration_status === CourtRegistrationStatus.ACTIVE &&
   (p.payment_status === CourtPaymentStatus.AUTHORISED || p.payment_status === CourtPaymentStatus.PAID)
 
-const holdsPlace = (p: { registration_status: string; payment_status: string }) =>
-  p.registration_status === CourtRegistrationStatus.ACTIVE &&
-  (p.payment_status === CourtPaymentStatus.PAYMENT_PENDING ||
-    p.payment_status === CourtPaymentStatus.AUTHORISED ||
-    p.payment_status === CourtPaymentStatus.PAID)
+// You only have a place once your card is approved, so a place and a
+// commitment are the same thing. (An unfinished payment holds nothing.)
+const holdsPlace = countsTowardsMinimum
 
 /** The court session behind an event, or null when the event isn't a court booking. */
 export const fetchCourtSession = async (eventId: string): Promise<CourtSessionDetail | null> => {
@@ -101,6 +99,18 @@ export const fetchCourtSession = async (eventId: string): Promise<CourtSessionDe
     committedCount: rows.filter(countsTowardsMinimum).length,
     placesTaken: rows.filter(holdsPlace).length,
   }
+}
+
+/**
+ * Which events are court bookings, keyed by event id. Feed cards use it to send
+ * players to the event page (where they pay) instead of the ordinary one-tap join.
+ */
+export const fetchCourtSessionIndex = async (): Promise<
+  Map<string, Pick<CourtSession, 'status' | 'commitment_pence'>>
+> => {
+  const { data, error } = await supabase.from('ac_court_sessions').select('event_id, status, commitment_pence')
+  if (error) throwSupabaseError('AC_courtBooking.api fetchCourtSessionIndex', error)
+  return new Map((data ?? []).map((r) => [r.event_id, { status: r.status, commitment_pence: r.commitment_pence }]))
 }
 
 type CalendarRow = {

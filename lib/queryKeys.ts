@@ -83,6 +83,8 @@ export const qk = {
   courtBooking: {
     all: ['courtBooking'] as const,
     venues: (universityId: Id) => ['courtBooking', 'venues', universityId] as const,
+    /** event id → status/commitment for every court booking, used by feed cards. */
+    index: ['courtBooking', 'index'] as const,
     session: (eventId: Id) => ['courtBooking', 'session', eventId] as const,
     /** Calendar week, keyed by the week's start as an ISO date. */
     calendar: (weekStart: string) => ['courtBooking', 'calendar', weekStart] as const,

@@ -139,7 +139,17 @@ Original checklist:
 
 ---
 
-## Step 5: Booking calendar + demo controls
+## Step 5: Booking calendar + demo controls ✅ built (2026-10-26), awaiting on-device test
+
+As built (`app/court-booking/calendar.tsx` + `AC_BookingDayTimeline`):
+- Laid out like a sports-centre booking sheet, because a 7-column week is unreadable on a phone. There's week navigation, a Mon–Sun day strip with a dot per booking (amber/green), a legend, and a day summary ("2 confirmed, 1 reserved").
+- The selected day's timeline has **one column per court** and hour rows (08:00–22:00, widening if a booking falls outside). There's a red "now" line on today.
+- Blocks: amber **RESERVED** (time, name, "6/10 paid · 3 h left") or green **CONFIRMED** (time, name, player count). Tapping one opens the event.
+- Data: `AC_useBookingCalendar` (3 s refresh in demo mode) + `AC_useVenues`. Cancelled sessions are excluded.
+- Entry points: "View on booking calendar" in the session panel, and a **Court booking calendar** row on Profile (demo mode, `AC_BookingCalendarEntry`).
+- Demo controls were already built in step 4.
+
+Original checklist:
 
 1. `app/court-booking/calendar.tsx` + `AC_BookingCalendar`: week view built from `View`s, hour rows × day columns, venue filter chips, amber **Reserved** blocks ("6 / 10 paid", time left), green **Confirmed** blocks; tapping opens the event; 3s refetch in demo mode.
 2. Entry points: a Profile row (demo mode) and a "View on calendar" link in the session panel.
